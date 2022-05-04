@@ -1,6 +1,7 @@
 let myHeading = document.querySelector('h1');
 let myImage = document.querySelector('img');
 let myButton = document.querySelector('button');
+let myHTML = document.querySelector('html');
 
 myHeading.textContent = "hello world";
 
@@ -29,3 +30,7 @@ if (!localStorage.getItem('nom')) {
 myButton.addEventListener('click', function () {
 	setUserName();
 });
+
+myHTML.addEventListener('click', function() {
+	alert('Aïe !');
+})
