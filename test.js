@@ -31,6 +31,3 @@ myButton.addEventListener('click', function () {
 	setUserName();
 });
 
-myHTML.addEventListener('click', function() {
-	alert('Aïe !');
-})
