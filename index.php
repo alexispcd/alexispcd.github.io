@@ -72,5 +72,17 @@ if (isset($_POST['name']) && !empty($_POST['name'])){
     <label for="message">Message: <textarea name="message" id="message" rows="8" cols="20"></textarea></label><br><br>
     <button type="submit">Envoyer</button>
 </form>
+
+
+<div style="border: 1px solid black;">
+    <script charset="utf-8" type="text/javascript" src="//js-eu1.hsforms.net/forms/embed/v2.js"></script>
+    <script>
+        hbspt.forms.create({
+            region: "eu1",
+            portalId: "26692960",
+            formId: "a1a11864-60c4-428e-bf4a-da233cd1a57c"
+        });
+    </script>
+</div>
 </body>
 </html>
