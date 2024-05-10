@@ -9,7 +9,7 @@ import Default from "./pages/Default";
 function App() {
     const [token, setToken] = useState("")
     const CLIENT_ID = "3acdcc4d613d4b0babf316734bfcd9aa";
-    const REDIRECT_URI = "http://localhost:3000";
+    const REDIRECT_URI = "http://alexispcd.github.io";
     const scopes = ['user-read-private', 'playlist-read-private', 'user-library-read', 'user-read-email', 'user-top-read'];
     const RESPONSE_TYPE  = "token";
     const AUTH_ENDPOINT = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(scopes.join(' '))}`;
