@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/alexispcd.github.io.iml" filepath="$PROJECT_DIR$/.idea/alexispcd.github.io.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/meloflow.iml" filepath="$PROJECT_DIR$/.idea/meloflow.iml" />
     </modules>
   </component>
 </project>
