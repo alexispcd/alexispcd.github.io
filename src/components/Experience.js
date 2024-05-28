@@ -13,7 +13,6 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import ComputerIcon from '@mui/icons-material/Computer';
 import Education from "./Education";
-import Fade from 'react-reveal/Fade';
 
 const Experience = () => {
     // Sample data for work experience
@@ -76,9 +75,7 @@ const Experience = () => {
                             variant="body2"
                             color="text.secondary"
                         >
-                            <Fade key={index} left={index % 2 !== 0} right={index % 2 === 0}>
-                                {job.period}
-                            </Fade>
+                            {job.period}
                         </TimelineOppositeContent>
                         <TimelineSeparator>
                             <TimelineConnector />
@@ -88,12 +85,10 @@ const Experience = () => {
                             <TimelineConnector />
                         </TimelineSeparator>
                         <TimelineContent sx={{ py: '12px', px: 2 }}>
-                            <Fade key={index} left={index % 2 === 0} right={index % 2 !== 0}>
-                                <Typography variant="h6" component="span">
-                                    {job.position} <span> - {job.company}</span>
-                                </Typography>
-                                <Typography>{job.responsibilities}</Typography>
-                            </Fade>
+                            <Typography variant="h6" component="span">
+                                {job.position} <span> - {job.company}</span>
+                            </Typography>
+                            <Typography>{job.responsibilities}</Typography>
                         </TimelineContent>
                     </TimelineItem>
                 ))}
