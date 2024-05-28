@@ -1,0 +1,26 @@
+.about {
+    background-color: $color-4;
+    border-radius: 100px;
+    padding-top: 150px;
+    position: relative;
+    z-index: 1;
+
+    .section-title {
+        color: $color-1;
+    }
+
+    .about-content {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+        align-items: center;
+
+        .about-description {
+            width: 80%;
+            color: $color-1;
+            font-size: 35px;
+            text-align: center;
+        }
+    }
+}

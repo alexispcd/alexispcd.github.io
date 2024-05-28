@@ -1,0 +1,54 @@
+.education {
+    background-color: $color-4;
+    border-radius: 100px;
+    margin-top: 200px;
+    padding-top: 100px;
+    padding-bottom: 60px;
+    position: relative;
+    z-index: 1;
+
+    .section-title {
+        color: $color-1;
+    }
+
+    .education-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: stretch;
+        flex-wrap: wrap;
+        padding-bottom: 60px;
+
+        .education-entry {
+            width: 25%;
+            background-color: $color-2;
+            border-radius: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            padding: 20px;
+            margin: 40px 0;
+            position: relative;
+
+            .education-degree {
+                color: $color-4;
+                font-size: 40px;
+            }
+
+            .education-institution {
+                text-align: center;
+                font-size: 30px;
+                color: $color-4;
+            }
+
+            .education-period {
+                color: $color-1;
+                padding: 5px 10px;
+                background-color: $color-4;
+                border-radius: 20px;
+                font-size: 20px;
+            }
+        }
+    }
+}
