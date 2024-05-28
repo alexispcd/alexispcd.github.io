@@ -1,0 +1,33 @@
+.portfolio {
+    background-color: $color-2;
+    border-radius: 98px;
+    margin-top: 200px;
+    padding-top: 100px;
+    padding-bottom: 60px;
+
+    .section-title {
+        color: $color-4;
+    }
+
+    .portfolio-content {
+        width: 60%;
+        margin: 0 auto;
+
+        .projects-container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 40px;
+            align-items: stretch;
+            flex-wrap: wrap;
+
+            .projects-sizer {
+                width: 49%;
+            }
+
+            .gutter-sizer {
+                width: 2%;
+            }
+        }
+    }
+}

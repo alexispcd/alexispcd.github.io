@@ -1,0 +1,34 @@
+.experience {
+    background-color: $color-1;
+    border-radius: 100px;
+    padding-top: 150px;
+
+    .section-title {
+        color: $color-4;
+    }
+
+    .MuiTypography-h6 {
+        font-size: 40px;
+    }
+
+    .MuiTypography-body1 {
+        font-size: 30px;
+    }
+
+    .MuiTypography-body2 {
+        font-size: 25px;
+
+    }
+
+    .MuiTimelineConnector-root {
+        background-color: $color-4;
+    }
+
+    .MuiTimelineDot-root {
+        background-color: $color-4;
+
+        path {
+            color: $color-2;
+        }
+    }
+}
