@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker, Popup } from 'react-leaflet'
 import {
   Box, Typography, Slider, Button, List, ListItem, ListItemText,
-  Chip, IconButton, Tooltip, SwipeableDrawer, useMediaQuery
+  Chip, IconButton, Tooltip, SwipeableDrawer, useMediaQuery, CircularProgress 
 } from '@mui/material'
 import { ArrowBack, LightMode, DarkMode, FileDownload, Tune } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
@@ -70,44 +70,24 @@ const fetchElevations = async (points) => {
     const batch = points.slice(i, i + BATCH)
     if (i > 0) await new Promise(r => setTimeout(r, 1500))
 
-    // Tentative OpenTopoData
-    let success = false
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        const locs = batch.map(p => `${p.lat},${p.lon}`).join('|')
-        const res = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${locs}`)
-        const data = await res.json()
-        if (data.results) {
-          results.push(...data.results.map(r => r.elevation ?? 0))
-          success = true
-          break
-        }
-      } catch {
-        await new Promise(r => setTimeout(r, 1000))
-      }
-    }
-
-    // Fallback Open-Elevation
-    if (!success) {
-      try {
-        const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ locations: batch.map(p => ({ latitude: p.lat, longitude: p.lon })) }),
-        })
-        const data = await res.json()
-        if (data.results) results.push(...data.results.map(r => r.elevation ?? 0))
-        else results.push(...batch.map(() => 0))
-      } catch {
-        results.push(...batch.map(() => 0))
-      }
+    try {
+      const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locations: batch.map(p => ({ latitude: p.lat, longitude: p.lon })) }),
+      })
+      const data = await res.json()
+      if (data.results) results.push(...data.results.map(r => r.elevation ?? 0))
+      else results.push(...batch.map(() => 0))
+    } catch {
+      results.push(...batch.map(() => 0))
     }
   }
   return results
 }
 
-const MapClickHandler = ({ onMapClick }) => {
-  useMapEvents({ click: (e) => onMapClick(e.latlng) })
+const MapClickHandler = ({ onMapClick, disabled }) => {
+  useMapEvents({ click: (e) => { if (!disabled) onMapClick(e.latlng) } })
   return null
 }
 
@@ -130,6 +110,8 @@ const CotesRun = ({ dark, setDark }) => {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState([])
   const [activeIdx, setActiveIdx] = useState(null)
+
+  const mapRef = useRef(null)
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -240,7 +222,7 @@ const CotesRun = ({ dark, setDark }) => {
             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</Typography>
             <Typography variant="caption" color="primary" fontWeight={600}>{fmt(params[key])}</Typography>
           </Box>
-          <Slider value={params[key]} onChange={(_, v) => setParam(key, v)} min={min} max={max} step={step} size="small" />
+          <Slider disabled={loading} value={params[key]} onChange={(_, v) => setParam(key, v)} min={min} max={max} step={step} size="small" />
         </Box>
       ))}
       <Button fullWidth variant="contained" onClick={handleSearch} disabled={loading || !center} sx={{ mt: 1 }}>
@@ -249,7 +231,7 @@ const CotesRun = ({ dark, setDark }) => {
     </Box>
   )
 
-  const ResultsList = () => (
+  const ResultsList = ({ mapRef }) => (
     <List sx={{ p: 1 }}>
       {results.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 3 }}>
@@ -259,7 +241,14 @@ const CotesRun = ({ dark, setDark }) => {
       {results.map((r, i) => (
         <ListItem
           key={i}
-          onClick={() => { setActiveIdx(i); if (isMobile) setSheetOpen(false) }}
+          onClick={() => {
+            setActiveIdx(i)
+            if (isMobile) setSheetOpen(false)
+            if (mapRef.current) {
+              const bounds = r.coords.map(c => [c.lat, c.lon])
+              mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 })
+            }
+          }}
           sx={{
             borderRadius: 2, mb: 0.5, cursor: 'pointer', border: '1px solid',
             borderColor: activeIdx === i ? 'primary.main' : 'divider',
@@ -331,7 +320,7 @@ const CotesRun = ({ dark, setDark }) => {
           )}
 
           <Box sx={{ flex: 1, overflow: 'auto' }}>
-            <ResultsList />
+            <ResultsList mapRef={mapRef} />
           </Box>
 
           <Legend />
@@ -340,6 +329,24 @@ const CotesRun = ({ dark, setDark }) => {
 
       {/* ── MAP ── */}
       <Box sx={{ flex: 1, position: 'relative' }}>
+        {loading && (
+          <Box sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(0,0,0,0.35)',
+            gap: 2,
+          }}>
+            <CircularProgress sx={{ color: '#3d6b51' }} size={48} />
+            <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>
+              {status}
+            </Typography>
+          </Box>
+        )}
 
         {/* Boutons flottants mobile */}
         {isMobile && (
@@ -393,6 +400,7 @@ const CotesRun = ({ dark, setDark }) => {
             center={[center.lat, center.lng]}
             zoom={14}
             style={{ height: '100%', width: '100%' }}
+            ref={mapRef}
           >
             <TileLayer
               url={dark
@@ -401,7 +409,7 @@ const CotesRun = ({ dark, setDark }) => {
               }
               attribution="© OpenStreetMap © Carto"
             />
-            <MapClickHandler onMapClick={setCenter} />
+            <MapClickHandler onMapClick={setCenter} disabled={loading} />
             <Marker position={[center.lat, center.lng]} icon={centerIcon} />
             <Circle
               center={[center.lat, center.lng]}
@@ -485,7 +493,7 @@ const CotesRun = ({ dark, setDark }) => {
                     Résultats
                   </Typography>
                 </Box>
-                <ResultsList />
+                <ResultsList mapRef={mapRef} />
                 <Legend />
               </>
             )}
