@@ -87,10 +87,14 @@ const fetchElevations = async (points) => {
 }
 
 const MapClickHandler = ({ onMapClick, disabled }) => {
-  useMapEvents({ click: (e) => { if (!disabled) onMapClick(e.latlng) } })
+  useMapEvents({
+    click: (e) => {
+      if (!disabled && e.originalEvent.target.tagName === 'path') return
+      if (!disabled) onMapClick(e.latlng)
+    }
+  })
   return null
 }
-
 const SLIDERS = [
   { key: 'radius',   label: 'Rayon',        min: 500,  max: 5000, step: 250, fmt: v => `${(v/1000).toFixed(1)} km` },
   { key: 'minElev',  label: 'Dénivelé min', min: 5,    max: 100,  step: 5,   fmt: v => `${v} m` },
@@ -172,6 +176,7 @@ const CotesRun = ({ dark, setDark }) => {
         if (maxGain < params.minElev) continue
         const frac = (bestJ - bestI) / (wElevs.length - 1)
         const hillLen = len * frac
+        if (hillLen < params.minLen) continue
         const slope = hillLen > 0 ? (maxGain / hillLen * 100) : 0
         if (slope < params.minSlope) continue
 
@@ -421,7 +426,12 @@ const CotesRun = ({ dark, setDark }) => {
                 key={i}
                 positions={r.coords.map(c => [c.lat, c.lon])}
                 pathOptions={{ color: slopeColor(parseFloat(r.slope)), weight: activeIdx === i ? 7 : 5, opacity: 0.9 }}
-                eventHandlers={{ click: () => setActiveIdx(i) }}
+                eventHandlers={{
+                  click: (e) => {
+                    L.DomEvent.stopPropagation(e)
+                    setActiveIdx(i)
+                  }
+                }}
               >
                 <Popup>{r.name}<br />▲ {r.slope}% · ↕ {r.gain}m · ⟷ {r.len}m</Popup>
               </Polyline>
