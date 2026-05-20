@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker, Popup } from 'react-leaflet'
 import {
   Box, Typography, Slider, Button, List, ListItem, ListItemText,
-  Chip, IconButton, Tooltip, Drawer, useMediaQuery
+  Chip, IconButton, Tooltip, SwipeableDrawer, useMediaQuery
 } from '@mui/material'
 import { ArrowBack, LightMode, DarkMode, FileDownload, Tune } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
@@ -346,10 +346,17 @@ const CotesRun = ({ dark, setDark }) => {
           <Box sx={{ position: 'absolute', top: 16, left: 0, right: 0, zIndex: 1001, display: 'flex', justifyContent: 'space-between', px: 2 }}>
             <IconButton
               onClick={() => navigate('/')}
-              sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, boxShadow: 1 }}
-              size="small"
+              sx={{
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: 1,
+                width: 36,
+                height: 36,
+                padding: 0,
+                '& .MuiSvgIcon-root': { fontSize: 18 }
+              }}
             >
-              <ArrowBack fontSize="small" />
+              <ArrowBack />
             </IconButton>
 
             <Box sx={{
@@ -366,10 +373,17 @@ const CotesRun = ({ dark, setDark }) => {
 
             <IconButton
               onClick={() => setDark(!dark)}
-              sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, boxShadow: 1 }}
-              size="small"
+              sx={{
+                bgcolor: 'background.paper',
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: 1,
+                width: 36,
+                height: 36,
+                padding: 0,
+                '& .MuiSvgIcon-root': { fontSize: 18 }
+              }}
             >
-              {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+              {dark ? <LightMode /> : <DarkMode />}
             </IconButton>
           </Box>
         )}
@@ -429,19 +443,21 @@ const CotesRun = ({ dark, setDark }) => {
             </Box>
           )}
 
-          <Drawer
-            anchor="bottom"
-            open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-            variant="persistent"
-            sx={{
-              '& .MuiDrawer-paper': {
-                borderRadius: '20px 20px 0 0',
-                maxHeight: '75dvh',
-                overflow: 'auto',
-              },
-            }}
-          >
+        <SwipeableDrawer
+          anchor="bottom"
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          onOpen={() => setSheetOpen(true)}
+          disableSwipeToOpen={false}
+          swipeAreaWidth={56}
+          sx={{
+            '& .MuiDrawer-paper': {
+              borderRadius: '20px 20px 0 0',
+              maxHeight: '75dvh',
+              overflow: 'auto',
+            },
+          }}
+        >
             {/* Handle */}
             <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5, cursor: 'pointer' }} onClick={() => setSheetOpen(false)}>
               <Box sx={{ width: 36, height: 4, bgcolor: 'divider', borderRadius: 2 }} />
@@ -473,7 +489,7 @@ const CotesRun = ({ dark, setDark }) => {
                 <Legend />
               </>
             )}
-          </Drawer>
+          </SwipeableDrawer>
         </>
       )}
     </Box>
