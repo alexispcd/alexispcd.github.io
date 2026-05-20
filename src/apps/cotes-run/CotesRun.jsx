@@ -65,17 +65,42 @@ const fetchWays = async (lat, lon, radius) => {
 const fetchElevations = async (points) => {
   const BATCH = 100
   const results = []
+
   for (let i = 0; i < points.length; i += BATCH) {
     const batch = points.slice(i, i + BATCH)
-    const locs = batch.map(p => `${p.lat},${p.lon}`).join('|')
-    if (i > 0) await new Promise(r => setTimeout(r, 1100))
-    try {
-      const res = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${locs}`)
-      const data = await res.json()
-      if (data.results) results.push(...data.results.map(r => r.elevation ?? 0))
-      else results.push(...batch.map(() => 0))
-    } catch {
-      results.push(...batch.map(() => 0))
+    if (i > 0) await new Promise(r => setTimeout(r, 1500))
+
+    // Tentative OpenTopoData
+    let success = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const locs = batch.map(p => `${p.lat},${p.lon}`).join('|')
+        const res = await fetch(`https://api.opentopodata.org/v1/srtm30m?locations=${locs}`)
+        const data = await res.json()
+        if (data.results) {
+          results.push(...data.results.map(r => r.elevation ?? 0))
+          success = true
+          break
+        }
+      } catch {
+        await new Promise(r => setTimeout(r, 1000))
+      }
+    }
+
+    // Fallback Open-Elevation
+    if (!success) {
+      try {
+        const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locations: batch.map(p => ({ latitude: p.lat, longitude: p.lon })) }),
+        })
+        const data = await res.json()
+        if (data.results) results.push(...data.results.map(r => r.elevation ?? 0))
+        else results.push(...batch.map(() => 0))
+      } catch {
+        results.push(...batch.map(() => 0))
+      }
     }
   }
   return results
