@@ -1,1 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Geist:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
+@import '@tabler/icons-webfont/dist/tabler-icons.min.css';
+
+@theme {
+  --font-serif: 'DM Serif Display', serif;
+  --font-sans: 'Geist', sans-serif;
+
+  --color-cairn-bg: #ffffff;
+  --color-cairn-surface: #f7f7f7;
+  --color-cairn-border: #ebebeb;
+  --color-cairn-text: #111111;
+  --color-cairn-muted: #aaaaaa;
+  --color-cairn-accent: #3d6b51;
+  --color-cairn-accent-light: #eaf3ee;
+
+  --color-cairn-dark-bg: #0f0f12;
+  --color-cairn-dark-surface: #161620;
+  --color-cairn-dark-border: #1e1e2a;
+  --color-cairn-dark-text: #e2e8f0;
+  --color-cairn-dark-muted: #444444;
+  --color-cairn-dark-accent: #5a9e78;
+  --color-cairn-dark-accent-light: #0e1f16;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-cairn-bg);
+  color: var(--color-cairn-text);
+  transition: background-color 0.2s, color 0.2s;
+  padding: 0;         
+  margin: 0;          
+}
+
+body.dark {
+  background-color: var(--color-cairn-dark-bg);
+  color: var(--color-cairn-dark-text);
+}
