@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker, Popup } from 'react-leaflet'
-import { Box, Typography, Slider, Button, List, ListItem, ListItemText, Chip, IconButton, Tooltip } from '@mui/material'
-import { ArrowBack, LightMode, DarkMode, FileDownload } from '@mui/icons-material'
+import {
+  Box, Typography, Slider, Button, List, ListItem, ListItemText,
+  Chip, IconButton, Tooltip, Drawer, useMediaQuery
+} from '@mui/material'
+import { ArrowBack, LightMode, DarkMode, FileDownload, Tune } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@mui/material/styles'
 import L from 'leaflet'
@@ -83,19 +86,25 @@ const MapClickHandler = ({ onMapClick }) => {
   return null
 }
 
+const SLIDERS = [
+  { key: 'radius',   label: 'Rayon',        min: 500,  max: 5000, step: 250, fmt: v => `${(v/1000).toFixed(1)} km` },
+  { key: 'minElev',  label: 'Dénivelé min', min: 5,    max: 100,  step: 5,   fmt: v => `${v} m` },
+  { key: 'minSlope', label: 'Pente min',    min: 2,    max: 15,   step: 1,   fmt: v => `${v} %` },
+  { key: 'minLen',   label: 'Longueur min', min: 50,   max: 1000, step: 50,  fmt: v => `${v} m` },
+]
+
 const CotesRun = ({ dark, setDark }) => {
   const theme = useTheme()
   const navigate = useNavigate()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [sheetOpen, setSheetOpen] = useState(false)
+
   const [center, setCenter] = useState(null)
-  const [radius, setRadius] = useState(1500)
-  const [minElev, setMinElev] = useState(20)
-  const [minSlope, setMinSlope] = useState(4)
-  const [minLen, setMinLen] = useState(100)
+  const [params, setParams] = useState({ radius: 1500, minElev: 20, minSlope: 4, minLen: 100 })
   const [status, setStatus] = useState('Clique sur la carte pour placer ton point de départ')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState([])
   const [activeIdx, setActiveIdx] = useState(null)
-  const mapRef = useRef(null)
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -105,21 +114,24 @@ const CotesRun = ({ dark, setDark }) => {
     }
   }, [])
 
+  const setParam = (key, val) => setParams(p => ({ ...p, [key]: val }))
+
   const handleSearch = async () => {
     if (!center) return
     setLoading(true)
     setResults([])
     setActiveIdx(null)
+    if (isMobile) setSheetOpen(true)
 
     try {
       setStatus('Récupération des voies OSM...')
-      const ways = await fetchWays(center.lat, center.lng, radius)
+      const ways = await fetchWays(center.lat, center.lng, params.radius)
 
       const valid = []
       for (const w of ways) {
         if (!w.geometry || w.geometry.length < 2) continue
         const len = pathLen(w.geometry)
-        if (len < minLen) continue
+        if (len < params.minLen) continue
         const samples = samplePath(w.geometry, Math.min(9, w.geometry.length))
         valid.push({ w, coords: w.geometry, len, samples })
       }
@@ -150,11 +162,11 @@ const CotesRun = ({ dark, setDark }) => {
           }
         }
 
-        if (maxGain < minElev) continue
+        if (maxGain < params.minElev) continue
         const frac = (bestJ - bestI) / (wElevs.length - 1)
         const hillLen = len * frac
         const slope = hillLen > 0 ? (maxGain / hillLen * 100) : 0
-        if (slope < minSlope) continue
+        if (slope < params.minSlope) continue
 
         const si = Math.round(bestI * (coords.length - 1) / (samples.length - 1))
         const ei = Math.round(bestJ * (coords.length - 1) / (samples.length - 1))
@@ -194,130 +206,154 @@ const CotesRun = ({ dark, setDark }) => {
     a.click()
   }
 
+  // ── Contenu partagé sidebar/sheet ──
+  const SlidersBlock = () => (
+    <Box sx={{ p: 2 }}>
+      {SLIDERS.map(({ key, label, min, max, step, fmt }) => (
+        <Box key={key} sx={{ mb: 1.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</Typography>
+            <Typography variant="caption" color="primary" fontWeight={600}>{fmt(params[key])}</Typography>
+          </Box>
+          <Slider value={params[key]} onChange={(_, v) => setParam(key, v)} min={min} max={max} step={step} size="small" />
+        </Box>
+      ))}
+      <Button fullWidth variant="contained" onClick={handleSearch} disabled={loading || !center} sx={{ mt: 1 }}>
+        {loading ? 'Recherche...' : 'Rechercher'}
+      </Button>
+    </Box>
+  )
+
+  const ResultsList = () => (
+    <List sx={{ p: 1 }}>
+      {results.length === 0 && !loading && (
+        <Box sx={{ textAlign: 'center', py: 3 }}>
+          <Typography variant="caption" color="text.secondary">Lance une recherche pour voir les côtes</Typography>
+        </Box>
+      )}
+      {results.map((r, i) => (
+        <ListItem
+          key={i}
+          onClick={() => { setActiveIdx(i); if (isMobile) setSheetOpen(false) }}
+          sx={{
+            borderRadius: 2, mb: 0.5, cursor: 'pointer', border: '1px solid',
+            borderColor: activeIdx === i ? 'primary.main' : 'divider',
+            bgcolor: activeIdx === i ? 'action.selected' : 'background.paper',
+            '&:hover': { borderColor: 'primary.main' },
+          }}
+        >
+          <ListItemText
+            primary={<Typography variant="body2" fontWeight={600} noWrap>{i + 1}. {r.name}</Typography>}
+            secondary={
+              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+                <Chip label={`▲ ${r.slope}%`} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: slopeColor(parseFloat(r.slope)) + '33', color: slopeColor(parseFloat(r.slope)) }} />
+                <Chip label={`↕ ${r.gain}m`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+                <Chip label={`⟷ ${r.len}m`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
+              </Box>
+            }
+          />
+        </ListItem>
+      ))}
+    </List>
+  )
+
+  const Legend = () => (
+    <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+      {[['#ff6b6b', '≥8%'], ['#ffd166', '5–8%'], ['#06d6a0', '4–5%'], ['#4ecdc4', '<4%']].map(([c, l]) => (
+        <Box key={l} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ width: 12, height: 4, borderRadius: 1, bgcolor: c }} />
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>{l}</Typography>
+        </Box>
+      ))}
+    </Box>
+  )
+
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', overflow: 'hidden', position: 'relative' }}>
 
-      {/* Sidebar */}
-      <Box sx={{
-        width: 300, minWidth: 300,
-        display: 'flex', flexDirection: 'column',
-        borderRight: `1px solid ${theme.palette.divider}`,
-        overflow: 'hidden',
-      }}>
-
-        {/* Header */}
-        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Tooltip title="Accueil">
-            <IconButton size="small" onClick={() => navigate('/')}>
-              <ArrowBack fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.2rem' }}>
+      {/* ── SIDEBAR desktop ── */}
+      {!isMobile && (
+        <Box sx={{
+          width: 300, minWidth: 300,
+          display: 'flex', flexDirection: 'column',
+          borderRight: `1px solid ${theme.palette.divider}`,
+          overflow: 'hidden',
+        }}>
+          <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}`, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Tooltip title="Accueil">
+              <IconButton size="small" onClick={() => navigate('/')}><ArrowBack fontSize="small" /></IconButton>
+            </Tooltip>
+            <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.2rem', flex: 1 }}>
               Côtes<em>.Run</em>
             </Typography>
+            <Tooltip title={dark ? 'Mode clair' : 'Mode sombre'}>
+              <IconButton size="small" onClick={() => setDark(!dark)}>
+                {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+              </IconButton>
+            </Tooltip>
           </Box>
-          <Tooltip title={dark ? 'Mode clair' : 'Mode sombre'}>
-            <IconButton size="small" onClick={() => setDark(!dark)}>
+
+          <SlidersBlock />
+
+          <Box sx={{ px: 2, py: 1, borderTop: `1px solid ${theme.palette.divider}`, borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
+            <Typography variant="caption" color="text.secondary">{status}</Typography>
+          </Box>
+
+          {results.length > 0 && (
+            <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
+              <Button size="small" startIcon={<FileDownload />} onClick={exportGPX} fullWidth>Exporter GPX</Button>
+            </Box>
+          )}
+
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            <ResultsList />
+          </Box>
+
+          <Legend />
+        </Box>
+      )}
+
+      {/* ── MAP ── */}
+      <Box sx={{ flex: 1, position: 'relative' }}>
+
+        {/* Boutons flottants mobile */}
+        {isMobile && (
+          <Box sx={{ position: 'absolute', top: 16, left: 0, right: 0, zIndex: 1001, display: 'flex', justifyContent: 'space-between', px: 2 }}>
+            <IconButton
+              onClick={() => navigate('/')}
+              sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, boxShadow: 1 }}
+              size="small"
+            >
+              <ArrowBack fontSize="small" />
+            </IconButton>
+
+            <Box sx={{
+              bgcolor: 'background.paper',
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 6,
+              px: 2, py: 0.75,
+              display: 'flex', alignItems: 'center',
+            }}>
+              <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1rem' }}>
+                Côtes<em>.Run</em>
+              </Typography>
+            </Box>
+
+            <IconButton
+              onClick={() => setDark(!dark)}
+              sx={{ bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, boxShadow: 1 }}
+              size="small"
+            >
               {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
             </IconButton>
-          </Tooltip>
-        </Box>
-
-        {/* Controls */}
-        <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
-          {[
-            { label: 'Rayon', value: radius, set: setRadius, min: 500, max: 5000, step: 250, fmt: v => `${(v / 1000).toFixed(1)} km` },
-            { label: 'Dénivelé min', value: minElev, set: setMinElev, min: 5, max: 100, step: 5, fmt: v => `${v} m` },
-            { label: 'Pente min', value: minSlope, set: setMinSlope, min: 2, max: 15, step: 1, fmt: v => `${v} %` },
-            { label: 'Longueur min', value: minLen, set: setMinLen, min: 50, max: 1000, step: 50, fmt: v => `${v} m` },
-          ].map(({ label, value, set, min, max, step, fmt }) => (
-            <Box key={label} sx={{ mb: 1.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</Typography>
-                <Typography variant="caption" color="primary" fontWeight={600}>{fmt(value)}</Typography>
-              </Box>
-              <Slider value={value} onChange={(_, v) => set(v)} min={min} max={max} step={step} size="small" />
-            </Box>
-          ))}
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={handleSearch}
-            disabled={loading || !center}
-            sx={{ mt: 1 }}
-          >
-            {loading ? 'Recherche...' : 'Rechercher'}
-          </Button>
-        </Box>
-
-        {/* Status */}
-        <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${theme.palette.divider}`, bgcolor: 'background.paper' }}>
-          <Typography variant="caption" color="text.secondary">{status}</Typography>
-        </Box>
-
-        {/* Export */}
-        {results.length > 0 && (
-          <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
-            <Button size="small" startIcon={<FileDownload />} onClick={exportGPX} fullWidth>
-              Exporter GPX
-            </Button>
           </Box>
         )}
 
-        {/* Results */}
-        <List sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-          {results.length === 0 && !loading && (
-            <Box sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
-              <Typography variant="caption">Lance une recherche pour voir les côtes</Typography>
-            </Box>
-          )}
-          {results.map((r, i) => (
-            <ListItem
-              key={i}
-              onClick={() => setActiveIdx(i)}
-              sx={{
-                borderRadius: 2, mb: 0.5, cursor: 'pointer', border: '1px solid',
-                borderColor: activeIdx === i ? 'primary.main' : 'divider',
-                bgcolor: activeIdx === i ? 'action.selected' : 'background.paper',
-                '&:hover': { borderColor: 'primary.main' },
-              }}
-            >
-              <ListItemText
-                primary={
-                  <Typography variant="body2" fontWeight={600} noWrap>{i + 1}. {r.name}</Typography>
-                }
-                secondary={
-                  <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                    <Chip label={`▲ ${r.slope}%`} size="small" sx={{ height: 18, fontSize: '0.65rem', bgcolor: slopeColor(parseFloat(r.slope)) + '33', color: slopeColor(parseFloat(r.slope)) }} />
-                    <Chip label={`↕ ${r.gain}m`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
-                    <Chip label={`⟷ ${r.len}m`} size="small" sx={{ height: 18, fontSize: '0.65rem' }} />
-                  </Box>
-                }
-              />
-            </ListItem>
-          ))}
-        </List>
-
-        {/* Legend */}
-        <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {[['#ff6b6b', '≥8%'], ['#ffd166', '5–8%'], ['#06d6a0', '4–5%'], ['#4ecdc4', '<4%']].map(([c, l]) => (
-            <Box key={l} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 12, height: 4, borderRadius: 1, bgcolor: c }} />
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>{l}</Typography>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-
-      {/* Map */}
-      <Box sx={{ flex: 1, position: 'relative' }}>
-        {center && (
+        {center ? (
           <MapContainer
             center={[center.lat, center.lng]}
             zoom={14}
             style={{ height: '100%', width: '100%' }}
-            ref={mapRef}
           >
             <TileLayer
               url={dark
@@ -330,7 +366,7 @@ const CotesRun = ({ dark, setDark }) => {
             <Marker position={[center.lat, center.lng]} icon={centerIcon} />
             <Circle
               center={[center.lat, center.lng]}
-              radius={radius}
+              radius={params.radius}
               pathOptions={{ color: '#3d6b51', fillColor: '#3d6b51', fillOpacity: 0.05, weight: 1, dashArray: '6,6' }}
             />
             {results.map((r, i) => (
@@ -344,13 +380,77 @@ const CotesRun = ({ dark, setDark }) => {
               </Polyline>
             ))}
           </MapContainer>
-        )}
-        {!center && (
+        ) : (
           <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
             <Typography>Autorise la géolocalisation ou clique sur la carte</Typography>
           </Box>
         )}
       </Box>
+
+      {/* ── BOTTOM SHEET mobile ── */}
+      {isMobile && (
+        <>
+          {/* FAB Rechercher */}
+          {!sheetOpen && (
+            <Box sx={{ position: 'absolute', bottom: 90, right: 16, zIndex: 1000 }}>
+              <Button
+                variant="contained"
+                startIcon={<Tune />}
+                onClick={() => setSheetOpen(true)}
+                sx={{ borderRadius: 6, boxShadow: 3 }}
+              >
+                Régler
+              </Button>
+            </Box>
+          )}
+
+          <Drawer
+            anchor="bottom"
+            open={sheetOpen}
+            onClose={() => setSheetOpen(false)}
+            variant="persistent"
+            sx={{
+              '& .MuiDrawer-paper': {
+                borderRadius: '20px 20px 0 0',
+                maxHeight: '75dvh',
+                overflow: 'auto',
+              },
+            }}
+          >
+            {/* Handle */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5, cursor: 'pointer' }} onClick={() => setSheetOpen(false)}>
+              <Box sx={{ width: 36, height: 4, bgcolor: 'divider', borderRadius: 2 }} />
+            </Box>
+
+            {/* Peek row */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, pb: 1 }}>
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  {results.length > 0 ? `${results.length} côte${results.length > 1 ? 's' : ''} trouvée${results.length > 1 ? 's' : ''}` : 'Paramètres'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">{status}</Typography>
+              </Box>
+              {results.length > 0 && (
+                <Button size="small" startIcon={<FileDownload />} onClick={exportGPX}>GPX</Button>
+              )}
+            </Box>
+
+            <SlidersBlock />
+
+            {results.length > 0 && (
+              <>
+                <Box sx={{ px: 2 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Résultats
+                  </Typography>
+                </Box>
+                <ResultsList />
+                <Legend />
+              </>
+            )}
+          </Drawer>
+        </>
+      )}
     </Box>
   )
 }
