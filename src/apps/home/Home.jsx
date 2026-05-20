@@ -70,7 +70,7 @@ const Home = ({ dark, setDark }) => {
       </Box>
 
       {/* Grid */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
         {apps.map(app => (
           <AppCard key={app.id} app={app} dark={dark} />
         ))}
