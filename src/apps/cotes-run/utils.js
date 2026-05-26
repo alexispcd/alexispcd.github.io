@@ -53,7 +53,7 @@ export const SLIDERS = [
   {
     key: 'len', label: 'Longueur', range: true,
     minKey: 'minLen', maxKey: 'maxLen',
-    min: 50, max: 3000, step: 50,
+    min: 50, max: 1500, step: 50,
     fmt: v => v >= 1000 ? `${(v / 1000).toFixed(1)} km` : `${v} m`,
   },
 ]
