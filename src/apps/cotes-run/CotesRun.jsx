@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker } from 'react-leaflet'
 import { Box, Typography, IconButton, CircularProgress } from '@mui/material'
 import { ArrowBack, LightMode, DarkMode } from '@mui/icons-material'
@@ -123,18 +123,27 @@ const CotesRun = ({ dark, setDark }) => {
           )}
 
           {/* Segments */}
-          {results.map((r, i) => (
-            <Polyline
-              key={i}
-              positions={r.coords.map(c => [c.lat, c.lon])}
-              pathOptions={{
-                color: slopeColor(parseFloat(r.slope)),
-                weight: activeIdx === i ? 6 : 4,
-                opacity: activeIdx === i ? 1 : 0.3,
-              }}
-              eventHandlers={{ click: (e) => handlePolylineClick(e, i) }}
-            />
-          ))}
+          {results.map((r, i) => {
+            const positions = r.coords.map(c => [c.lat, c.lon])
+            return (
+              <Fragment key={i}>
+                <Polyline
+                  positions={positions}
+                  pathOptions={{
+                    color: slopeColor(parseFloat(r.slope)),
+                    weight: activeIdx === i ? 6 : 4,
+                    opacity: activeIdx === i ? 1 : 0.3,
+                    interactive: false,
+                  }}
+                />
+                <Polyline
+                  positions={positions}
+                  pathOptions={{ color: '#000', weight: 20, opacity: 0.001 }}
+                  eventHandlers={{ click: (e) => handlePolylineClick(e, i) }}
+                />
+              </Fragment>
+            )
+          })}
         </MapContainer>
       ) : (
         <Box sx={{ height: '100%', bgcolor: 'background.default' }} />
