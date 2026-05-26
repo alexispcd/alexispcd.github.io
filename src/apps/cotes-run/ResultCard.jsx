@@ -31,7 +31,7 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
     <Box sx={{
       position: 'absolute',
       left: 8, right: 8,
-      bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
+      bottom: 'calc(116px + env(safe-area-inset-bottom, 0px))',
       zIndex: 1000,
       display: 'flex',
       alignItems: 'center',

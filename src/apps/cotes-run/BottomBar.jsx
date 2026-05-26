@@ -28,15 +28,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
       pb: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))',
     }}>
 
-      {/* Pill */}
-      <Box sx={{
-        width: 36, height: 4,
-        bgcolor: 'divider',
-        borderRadius: 2,
-        mx: 'auto',
-        mb: 1.5,
-      }} />
-
       {/* État idle */}
       {phase === 'idle' && (
         <Box sx={{ textAlign: 'center', pb: 0.5 }}>
