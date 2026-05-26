@@ -50,6 +50,7 @@ export const useSearch = () => {
   const [status, setStatus] = useState('')
   const [results, setResults] = useState([])
   const [params, setParams] = useState(DEFAULT_PARAMS)
+  const [toast, setToast] = useState(null) // { message, severity }
   const abortRef = useRef(null)
 
   const setParam = (key, val) => setParams(p => ({ ...p, [key]: val }))
@@ -61,6 +62,7 @@ export const useSearch = () => {
     const { signal } = abortRef.current
     setPhase('searching')
     setResults([])
+    setToast(null)
 
     try {
       setStatus('Récupération des voies OSM...')
@@ -76,8 +78,9 @@ export const useSearch = () => {
       }
 
       if (!valid.length) {
-        setStatus('Aucune voie valide')
+        setToast({ message: 'Aucune voie trouvée dans ce périmètre.', severity: 'info' })
         setPhase('placed')
+        setStatus('')
         return
       }
 
@@ -121,6 +124,12 @@ export const useSearch = () => {
       }
 
       found.sort((a, b) => b.slope - a.slope)
+      if (!found.length) {
+        setToast({ message: 'Aucune côte trouvée. Essaie d\'élargir les filtres.', severity: 'info' })
+        setPhase('placed')
+        setStatus('')
+        return
+      }
       setResults(found)
       setPhase('results')
       setStatus('')
@@ -129,8 +138,9 @@ export const useSearch = () => {
         setPhase('placed')
         setStatus('')
       } else {
-        setStatus('Erreur : ' + e.message)
+        setToast({ message: 'Erreur réseau, réessaie.', severity: 'error' })
         setPhase('placed')
+        setStatus('')
       }
     }
   }, [params])
@@ -146,5 +156,7 @@ export const useSearch = () => {
     setStatus('')
   }
 
-  return { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset }
+  const clearToast = () => setToast(null)
+
+  return { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset, toast, clearToast }
 }
