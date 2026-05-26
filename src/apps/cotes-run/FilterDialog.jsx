@@ -13,8 +13,8 @@ const FilterDialog = ({ open, onClose, params, setParam }) => {
       PaperProps={{
         sx: {
           borderRadius: '20px 20px 0 0',
-          px: 2.5,
-          pt: 2.5,
+          px: 3,
+          pt: 3,
           pb: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))',
         }
       }}
@@ -55,15 +55,14 @@ const FilterDialog = ({ open, onClose, params, setParam }) => {
               value={[params[s.minKey], params[s.maxKey]]}
               onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
               min={s.min} max={s.max} step={s.step}
-              disableSwap
-              size="small"
+              disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
             />
           ) : (
             <Slider
               value={params[s.key]}
               onChange={(_, v) => setParam(s.key, v)}
               min={s.min} max={s.max} step={s.step}
-              size="small"
+              size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
             />
           )}
 
@@ -79,8 +78,6 @@ const FilterDialog = ({ open, onClose, params, setParam }) => {
           )}
         </Box>
       ))}
-
-      <Box sx={{ height: '1px', bgcolor: 'divider', mx: -2.5, mb: 2.5 }} />
 
       <Button
         variant="contained"
