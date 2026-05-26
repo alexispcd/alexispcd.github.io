@@ -1,25 +1,23 @@
-import { useRef } from 'react'
+import { useState } from 'react'
 import { Box, Typography, IconButton } from '@mui/material'
 import { ChevronLeft, ChevronRight, ArrowUpward, SwapHoriz } from '@mui/icons-material'
-import { useTheme } from '@mui/material/styles'
 import { motion, AnimatePresence } from 'framer-motion'
 import { slopeColor } from './utils'
 
 const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
-  const theme = useTheme()
   const r = results[activeIdx]
   const total = results.length
-  const direction = useRef(0)
+  const [direction, setDirection] = useState(0)
 
   const prev = () => {
     if (activeIdx === 0) return
-    direction.current = -1
+    setDirection(-1)
     setActiveIdx(i => i - 1)
   }
 
   const next = () => {
     if (activeIdx === total - 1) return
-    direction.current = 1
+    setDirection(1)
     setActiveIdx(i => i + 1)
   }
 
@@ -48,11 +46,11 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
         <ChevronLeft />
       </IconButton>
 
-      <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative', minHeight: 56 }}>
-        <AnimatePresence mode="popLayout" custom={direction.current}>
+      <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <AnimatePresence mode="popLayout" custom={direction}>
           <motion.div
             key={activeIdx}
-            custom={direction.current}
+            custom={direction}
             variants={variants}
             initial="enter"
             animate="center"
@@ -65,9 +63,10 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
               if (info.offset.x < -60) next()
               else if (info.offset.x > 60) prev()
             }}
-            style={{ cursor: 'grab', position: 'absolute', width: '100%' }}
+            style={{ cursor: 'grab', width: '100%' }}
             whileTap={{ cursor: 'grabbing' }}
           >
+
             <Box sx={{
               bgcolor: 'background.paper',
               borderRadius: 1.5,
