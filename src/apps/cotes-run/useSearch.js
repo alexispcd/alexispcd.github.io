@@ -104,12 +104,12 @@ export const useSearch = () => {
           }
         }
 
-        if (maxGain < params.minElev) continue
+        if (maxGain < params.minElev || maxGain > params.maxElev) continue
         const frac = (bestJ - bestI) / (wElevs.length - 1)
         const hillLen = len * frac
-        if (hillLen < params.minLen) continue
+        if (hillLen < params.minLen || hillLen > params.maxLen) continue
         const slope = hillLen > 0 ? (maxGain / hillLen * 100) : 0
-        if (slope < params.minSlope) continue
+        if (slope < params.minSlope || slope > params.maxSlope) continue
 
         const si = Math.round(bestI * (coords.length - 1) / (samples.length - 1))
         const ei = Math.round(bestJ * (coords.length - 1) / (samples.length - 1))
