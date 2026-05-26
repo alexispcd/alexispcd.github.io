@@ -10,12 +10,14 @@ const FilterDialog = ({ open, onClose, params, setParam }) => {
       anchor="bottom"
       open={open}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          borderRadius: '20px 20px 0 0',
-          px: 3,
-          pt: 3,
-          pb: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))',
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: '20px 20px 0 0',
+            px: 3,
+            pt: 3,
+            pb: 'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))',
+          }
         }
       }}
     >
