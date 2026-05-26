@@ -22,21 +22,20 @@ const fetchWays = async (lat, lon, radius, signal) => {
 }
 
 const fetchElevations = async (points, signal) => {
-  const BATCH = 100
+  const BATCH = 500
   const results = []
   for (let i = 0; i < points.length; i += BATCH) {
     const batch = points.slice(i, i + BATCH)
-    if (i > 0) await new Promise(r => setTimeout(r, 1500))
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     try {
-      const res = await fetch('https://api.open-elevation.com/api/v1/lookup', {
+      const res = await fetch('https://elevation.racemap.com/api/v1/elevations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locations: batch.map(p => ({ latitude: p.lat, longitude: p.lon })) }),
+        body: JSON.stringify(batch.map(p => [p.lat, p.lon])),
         signal,
       })
       const data = await res.json()
-      if (data.results) results.push(...data.results.map(r => r.elevation ?? 0))
+      if (Array.isArray(data)) results.push(...data.map(e => e ?? 0))
       else results.push(...batch.map(() => 0))
     } catch (e) {
       if (e.name === 'AbortError') throw e
@@ -72,7 +71,7 @@ export const useSearch = () => {
         if (!w.geometry || w.geometry.length < 2) continue
         const len = pathLen(w.geometry)
         if (len < params.minLen) continue
-        const samples = samplePath(w.geometry, Math.min(9, w.geometry.length))
+        const samples = samplePath(w.geometry, Math.min(5, w.geometry.length))
         valid.push({ w, coords: w.geometry, len, samples })
       }
 
@@ -82,7 +81,7 @@ export const useSearch = () => {
         return
       }
 
-      const batches = Math.ceil(valid.reduce((s, v) => s + v.samples.length, 0) / 100)
+      const batches = Math.ceil(valid.reduce((s, v) => s + v.samples.length, 0) / 500)
       setStatus(`Altitudes (${batches} requête${batches > 1 ? 's' : ''})...`)
 
       const allPoints = valid.flatMap(v => v.samples)
