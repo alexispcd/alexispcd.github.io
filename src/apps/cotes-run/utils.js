@@ -33,8 +33,14 @@ export const DEFAULT_PARAMS = {
 }
 
 export const SLIDERS = [
-  { key: 'radius',   label: 'Rayon',        min: 500,  max: 5000, step: 250, fmt: v => `${(v/1000).toFixed(1)} km` },
-  { key: 'minElev',  label: 'Dénivelé min', min: 5,    max: 100,  step: 5,   fmt: v => `${v} m` },
-  { key: 'minSlope', label: 'Pente min',    min: 2,    max: 15,   step: 1,   fmt: v => `${v} %` },
-  { key: 'minLen',   label: 'Longueur min', min: 50,   max: 1000, step: 50,  fmt: v => `${v} m` },
+  { key: 'radius',   label: 'Rayon de recherche', min: 500,  max: 5000, step: 250, fmt: v => `${(v/1000).toFixed(1)} km` },
+  { key: 'minElev',  label: 'Dénivelé minimum',   min: 5,    max: 100,  step: 5,   fmt: v => `${v} m` },
+  { key: 'minSlope', label: 'Pente minimum',       min: 2,    max: 15,   step: 1,   fmt: v => `${v} %` },
+  { key: 'minLen',   label: 'Longueur minimum',    min: 50,   max: 1000, step: 50,  fmt: v => `${v} m` },
+]
+
+export const PRESETS = [
+  { label: 'Doux',    params: { radius: 1000, minElev: 10, minSlope: 3, minLen: 50  } },
+  { label: 'Modéré',  params: { radius: 1500, minElev: 20, minSlope: 5, minLen: 100 } },
+  { label: 'Costaud', params: { radius: 2500, minElev: 40, minSlope: 7, minLen: 150 } },
 ]
