@@ -31,7 +31,7 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
     <Box sx={{
       position: 'absolute',
       left: 8, right: 8,
-      bottom: 80,
+      bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))',
       zIndex: 1000,
       display: 'flex',
       alignItems: 'center',
@@ -71,7 +71,6 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
               bgcolor: 'background.paper',
               borderRadius: 1.5,
               px: 1.5, py: 1.25,
-              boxShadow: 2,
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
                 <Typography variant="body2" fontWeight={500} noWrap sx={{ flex: 1, mr: 1 }}>
