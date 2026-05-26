@@ -67,7 +67,7 @@ const CotesRun = ({ dark, setDark }) => {
 
   const handleReset = () => {
     reset()
-    setCenter(null)
+    setPhase('placed')
     setActiveIdx(0)
   }
 
