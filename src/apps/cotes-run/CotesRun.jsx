@@ -18,11 +18,10 @@ const centerIcon = L.divIcon({
   iconAnchor: [7, 7],
 })
 
-const MapClickHandler = ({ onMapClick, disabled }) => {
+const MapClickHandler = ({ onMapClick, disabled, onMove }) => {
   useMapEvents({
-    click: (e) => {
-      if (!disabled) onMapClick(e.latlng)
-    }
+    click: (e) => { if (!disabled) onMapClick(e.latlng) },
+    dragstart: () => onMove(),
   })
   return null
 }
@@ -34,6 +33,7 @@ const CotesRun = ({ dark, setDark }) => {
   const [center, setCenter] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(0)
+  const [mapMoved, setMapMoved] = useState(false)
   const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset } = useSearch()
 
   // Géolocalisation au démarrage
@@ -97,7 +97,7 @@ const CotesRun = ({ dark, setDark }) => {
             }
             attribution="© OpenStreetMap © Carto"
           />
-          <MapClickHandler onMapClick={handleMapClick} disabled={!isMapClickable} />
+          <MapClickHandler onMapClick={handleMapClick} disabled={!isMapClickable} onMove={() => setMapMoved(true)}/>
 
           {/* Pin centre */}
           <Marker position={[center.lat, center.lng]} icon={centerIcon} />
@@ -173,7 +173,7 @@ const CotesRun = ({ dark, setDark }) => {
       </Box>
 
       {/* ── HELPER idle ── */}
-      {phase === 'idle' && (
+      {phase === 'idle' && !mapMoved && (
         <Box sx={{
           position: 'absolute', top: '45%', left: '50%',
           transform: 'translate(-50%, -50%)',
