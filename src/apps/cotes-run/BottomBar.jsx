@@ -21,7 +21,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
       zIndex: 1000,
       bgcolor: 'background.paper',
       borderRadius: '16px 16px 0 0',
-      px: 1.5, py: 1.25,
+      px: 1.5, py: 1.25, pb: 'calc(1.25rem + env(safe-area-inset-bottom, 8px))',
       boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
     }}>
 
