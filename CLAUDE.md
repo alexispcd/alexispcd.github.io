@@ -74,4 +74,4 @@ Light mode: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`
 
 Version is in `package.json`. It is exposed to the app via `__APP_VERSION__` (defined in `vite.config.js`) and displayed on the Home page.
 
-**Claude Code handles version bumps and commits.** Use semver: patch for fixes, minor for new features. Bump the version in `package.json` and commit with a short message matching the repo style (`type: short description`).
+**Claude Code handles version bumps and commits.** Use semver: patch for fixes, minor for new features. Bump the version in `package.json` and commit with a short message matching the repo style (`type: short description`). After each commit, ask the user whether to push to `main`.
