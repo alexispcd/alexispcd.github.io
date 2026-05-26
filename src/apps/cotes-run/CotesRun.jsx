@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker } from 'react-leaflet'
-import { Box, Typography, IconButton, CircularProgress } from '@mui/material'
+import { Box, Typography, IconButton, CircularProgress, Snackbar, Alert } from '@mui/material'
 import { ArrowBack, LightMode, DarkMode } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '@mui/material/styles'
@@ -34,7 +34,7 @@ const CotesRun = ({ dark, setDark }) => {
   const [filterOpen, setFilterOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(0)
   const [mapMoved, setMapMoved] = useState(false)
-  const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset } = useSearch()
+  const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset, toast, clearToast } = useSearch()
 
   // Désactive le scroll/overscroll de la page (iOS bounce notamment)
   useEffect(() => {
@@ -253,6 +253,19 @@ const CotesRun = ({ dark, setDark }) => {
         params={params}
         setParam={setParam}
       />
+
+      {/* ── TOAST ── */}
+      <Snackbar
+        open={!!toast}
+        autoHideDuration={4000}
+        onClose={clearToast}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ top: 72 }}
+      >
+        <Alert onClose={clearToast} severity={toast?.severity} variant="filled" sx={{ width: '100%' }}>
+          {toast?.message}
+        </Alert>
+      </Snackbar>
 
     </Box>
   )
