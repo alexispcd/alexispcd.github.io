@@ -1,4 +1,4 @@
-import { Box, Grid, Typography, IconButton, Tooltip } from '@mui/material'
+import { Box, Typography, IconButton, Tooltip } from '@mui/material'
 import { DarkMode, LightMode } from '@mui/icons-material'
 import AppCard from '../../components/AppCard'
 

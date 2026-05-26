@@ -1,7 +1,7 @@
 import { Card, CardContent, Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 
-const AppCard = ({ app, dark }) => {
+const AppCard = ({ app }) => {
   const theme = useTheme()
   const isActive = app.status === 'active'
 
