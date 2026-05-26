@@ -1,4 +1,4 @@
-import { Card, CardContent, Box, Typography, Chip } from '@mui/material'
+import { Card, CardContent, Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 
 const AppCard = ({ app, dark }) => {
@@ -43,24 +43,9 @@ const AppCard = ({ app, dark }) => {
         </Typography>
 
         {/* Description */}
-        <Typography variant="caption" color="text.secondary" display="block" mb={1.5} lineHeight={1.4}>
+        <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.4}>
           {app.desc}
         </Typography>
-
-        {/* Badge */}
-        <Chip
-          label={isActive ? 'Actif' : 'Bientôt'}
-          size="small"
-          sx={{
-            height: 20,
-            fontSize: '0.6rem',
-            letterSpacing: '0.05em',
-            fontWeight: 500,
-            background: isActive ? theme.palette.primary.light : theme.palette.background.paper,
-            color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-            border: 'none',
-          }}
-        />
 
       </CardContent>
     </Card>

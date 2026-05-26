@@ -68,4 +68,10 @@ Light mode: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`
 ### External APIs (no keys required)
 
 - `https://overpass-api.de/api/interpreter` — OSM road/path data
-- `https://api.open-elevation.com/api/v1/lookup` — elevation lookup (batched, rate-limited)
+- `https://elevation.racemap.com/api/v1/elevations` — elevation lookup (batch 500 points, no delay)
+
+## Versioning
+
+Version is in `package.json`. It is exposed to the app via `__APP_VERSION__` (defined in `vite.config.js`) and displayed on the Home page.
+
+**Claude Code handles version bumps and commits.** Use semver: patch for fixes, minor for new features. Bump the version in `package.json` and commit with a short message matching the repo style (`type: short description`).

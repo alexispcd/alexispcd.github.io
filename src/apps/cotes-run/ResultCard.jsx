@@ -70,7 +70,7 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
           >
             <Box sx={{
               bgcolor: 'background.paper',
-              borderRadius: 1,
+              borderRadius: 1.5,
               px: 1.5, py: 1.25,
               boxShadow: 2,
             }}>

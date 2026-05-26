@@ -54,12 +54,20 @@ const Home = ({ dark, setDark }) => {
             }}
             dangerouslySetInnerHTML={{ __html: 'Le <em>Cairn</em>' }}
           />
-          <Typography
-            variant="overline"
-            sx={{ color: 'text.secondary', letterSpacing: '0.15em', fontSize: '0.65rem' }}
-          >
-            Mes outils perso
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="overline"
+              sx={{ color: 'text.secondary', letterSpacing: '0.15em', fontSize: '0.65rem' }}
+            >
+              Mes outils perso
+            </Typography>
+            <Typography
+              variant="overline"
+              sx={{ color: 'text.disabled', letterSpacing: '0.1em', fontSize: '0.6rem' }}
+            >
+              v{__APP_VERSION__}
+            </Typography>
+          </Box>
         </Box>
 
         <Tooltip title={dark ? 'Mode clair' : 'Mode sombre'}>
