@@ -36,6 +36,17 @@ const CotesRun = ({ dark, setDark }) => {
   const [mapMoved, setMapMoved] = useState(false)
   const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset } = useSearch()
 
+  // Désactive le scroll/overscroll de la page (iOS bounce notamment)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.style.overscrollBehavior = 'none'
+    return () => {
+      document.body.style.overflow = prev
+      document.body.style.overscrollBehavior = ''
+    }
+  }, [])
+
   // Géolocalisation au démarrage
   useEffect(() => {
     if (navigator.geolocation) {
