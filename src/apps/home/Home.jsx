@@ -1,4 +1,4 @@
-import { Box, Typography, IconButton, Tooltip } from '@mui/material'
+import { Box, Typography, IconButton, Tooltip, Divider } from '@mui/material'
 import { DarkMode, LightMode } from '@mui/icons-material'
 import AppCard from '../../components/AppCard'
 
@@ -91,12 +91,15 @@ const Home = ({ dark, setDark }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {categories.map(cat => (
           <Box key={cat.label}>
-            <Typography
-              variant="overline"
-              sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', mb: 1.5, display: 'block' }}
-            >
-              {cat.label}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+              <Typography
+                variant="overline"
+                sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', whiteSpace: 'nowrap' }}
+              >
+                {cat.label}
+              </Typography>
+              <Divider sx={{ flex: 1 }} />
+            </Box>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
               {cat.apps.map(app => (
                 <AppCard key={app.id} app={app} dark={dark} />
