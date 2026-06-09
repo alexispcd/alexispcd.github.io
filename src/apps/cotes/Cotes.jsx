@@ -26,7 +26,7 @@ const MapClickHandler = ({ onMapClick, disabled, onMove }) => {
   return null
 }
 
-const CotesRun = ({ dark, setDark }) => {
+const Cotes = ({ dark, setDark }) => {
   const theme = useTheme()
   const navigate = useNavigate()
   const mapRef = useRef(null)
@@ -175,7 +175,7 @@ const CotesRun = ({ dark, setDark }) => {
           pointerEvents: 'none',
         }}>
           <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1rem' }}>
-            Côtes<em>.Run</em>
+            Côtes
           </Typography>
         </Box>
 
@@ -271,4 +271,4 @@ const CotesRun = ({ dark, setDark }) => {
   )
 }
 
-export default CotesRun
+export default Cotes
