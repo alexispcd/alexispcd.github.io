@@ -37,7 +37,7 @@ const AuthGate = ({ children }) => {
   }
 
   const handleVerifyCode = async () => {
-    if (code.length !== 6) return
+    if (code.length !== 8) return
     setLoading(true)
     setErrorMsg('')
     const { error } = await supabase.auth.verifyOtp({
@@ -119,10 +119,10 @@ const AuthGate = ({ children }) => {
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
-              label="Code à 6 chiffres"
+              label="Code à 8 chiffres"
               type="number"
               value={code}
-              onChange={e => setCode(e.target.value.slice(0, 6))}
+              onChange={e => setCode(e.target.value.slice(0, 8))}
               onKeyDown={e => e.key === 'Enter' && handleVerifyCode()}
               disabled={loading}
               size="small"
@@ -134,7 +134,7 @@ const AuthGate = ({ children }) => {
             <Button
               variant="contained"
               onClick={handleVerifyCode}
-              disabled={loading || code.length !== 6}
+              disabled={loading || code.length !== 8}
               fullWidth
               sx={{ textTransform: 'none' }}
             >
