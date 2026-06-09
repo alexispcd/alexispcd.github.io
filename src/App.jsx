@@ -15,14 +15,12 @@ const App = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home dark={dark} setDark={setDark} />} />
-          <Route path="/cotes" element={
-            <AuthGate>
-              <Cotes dark={dark} setDark={setDark} />
-            </AuthGate>
-          } />
-        </Routes>
+        <AuthGate>
+          <Routes>
+            <Route path="/" element={<Home dark={dark} setDark={setDark} />} />
+            <Route path="/cotes" element={<Cotes dark={dark} setDark={setDark} />} />
+          </Routes>
+        </AuthGate>
       </BrowserRouter>
     </ThemeProvider>
   )
