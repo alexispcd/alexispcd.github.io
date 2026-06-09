@@ -10,6 +10,7 @@ const AppCard = ({ app }) => {
       onClick={() => app.href && (window.location.href = app.href)}
       sx={{
         cursor: app.href ? 'pointer' : 'default',
+        opacity: isActive ? 1 : 0.45,
         border: isActive
           ? `2px solid ${theme.palette.primary.main}`
           : `1px solid ${theme.palette.divider}`,

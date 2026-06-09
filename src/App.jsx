@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
-import CotesRun from './apps/cotes-run/CotesRun'
+import Cotes from './apps/cotes/Cotes'
 
 const App = () => {
   const [dark, setDark] = useDarkMode()
@@ -16,7 +16,7 @@ const App = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home dark={dark} setDark={setDark} />} />
-          <Route path="/cotes-run" element={<CotesRun dark={dark} setDark={setDark} />} />
+          <Route path="/cotes" element={<Cotes dark={dark} setDark={setDark} />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

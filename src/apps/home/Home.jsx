@@ -2,30 +2,40 @@ import { Box, Typography, IconButton, Tooltip } from '@mui/material'
 import { DarkMode, LightMode } from '@mui/icons-material'
 import AppCard from '../../components/AppCard'
 
-const apps = [
+const categories = [
   {
-    id: 'cotes-run',
-    name: 'Côtes.Run',
-    desc: 'Dénivelé pour séances running',
-    icon: 'ti-trending-up',
-    status: 'active',
-    href: '/cotes-run',
+    label: 'Sport',
+    apps: [
+      {
+        id: 'cotes',
+        name: 'Côtes',
+        desc: 'Dénivelé pour séances running',
+        icon: 'ti-trending-up',
+        status: 'active',
+        href: '/cotes',
+      },
+      {
+        id: 'training',
+        name: 'Training',
+        desc: 'Plans et suivi Coros',
+        icon: 'ti-run',
+        status: 'soon',
+        href: null,
+      },
+    ],
   },
   {
-    id: 'veille',
-    name: 'Veille',
-    desc: 'Ressources tech à suivre',
-    icon: 'ti-rss',
-    status: 'soon',
-    href: '/veille',
-  },
-  {
-    id: 'new',
-    name: 'Nouvelle app',
-    desc: 'Prochainement…',
-    icon: 'ti-plus',
-    status: 'soon',
-    href: null,
+    label: 'Dev',
+    apps: [
+      {
+        id: 'veille',
+        name: 'Veille',
+        desc: 'Ressources tech à suivre',
+        icon: 'ti-rss',
+        status: 'soon',
+        href: null,
+      },
+    ],
   },
 ]
 
@@ -77,10 +87,22 @@ const Home = ({ dark, setDark }) => {
         </Tooltip>
       </Box>
 
-      {/* Grid */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-        {apps.map(app => (
-          <AppCard key={app.id} app={app} dark={dark} />
+      {/* Catégories */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {categories.map(cat => (
+          <Box key={cat.label}>
+            <Typography
+              variant="overline"
+              sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', mb: 1.5, display: 'block' }}
+            >
+              {cat.label}
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+              {cat.apps.map(app => (
+                <AppCard key={app.id} app={app} dark={dark} />
+              ))}
+            </Box>
+          </Box>
         ))}
       </Box>
 

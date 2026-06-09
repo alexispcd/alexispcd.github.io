@@ -1,77 +1,127 @@
-# CLAUDE.md
+# Le Cairn — Contexte projet
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Stack
+- React 19, Vite 8, MUI 9, React Router v7
+- PWA via vite-plugin-pwa
+- Déployé sur GitHub Pages (statique)
+- Supabase : auth + BDD + Edge Functions
+- API Anthropic via Supabase Edge Functions uniquement (jamais côté client)
 
-## Commands
+## Structure src/
+- `apps/home/` — page d'accueil
+- `apps/cotes-run/` — outil Côtes (ex Côtes.Run)
+- `apps/training/` — outil Training (à créer)
+- `apps/veille/` — outil Veille dev (à créer, futur)
+- `components/AppCard.jsx` — carte outil réutilisable
+- `styles/theme.js` — thème MUI dark, primary #5a9e78
+- `lib/supabase.js` — client Supabase (à créer)
 
-```bash
-npm run dev       # Start dev server (Vite HMR)
-npm run build     # Production build
-npm run preview   # Preview production build locally
-npm run lint      # Run ESLint
-```
+## Conventions
+- Arrow functions, un composant par fichier
+- Pas de form HTML natif, uniquement handlers React
+- Anglais pour le code, français pour les labels UI
 
-No test suite is configured.
+---
 
-## Architecture
+## Feuille de route
 
-**Cairn** is a personal PWA (Progressive Web App) — a launcher for small tools. It is a React 19 + Vite app styled with MUI v9 and deployed as a standalone PWA via `vite-plugin-pwa`.
+### Étape 1 — Home catégorisée (à faire en premier)
+- Renommer Côtes.Run → Côtes dans toute la codebase
+- Restructurer Home.jsx avec catégories : Sport (Côtes + Training) et Dev (Veille)
+- Ajouter Training et Veille comme cartes "coming soon"
+- Ajouter bouton retour vers / dans Côtes
 
-### Routing
+### Étape 2 — Auth Supabase
+- Créer src/lib/supabase.js
+- Composant AuthGate qui protège toutes les routes sauf /
+- Login par magic link (email uniquement, usage perso)
+- Variables d'env : VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
 
-`src/App.jsx` is the root. It owns the `dark`/`setDark` state (persisted via `useDarkMode`) and a single MUI `ThemeProvider`. Each route maps to one self-contained app:
+### Étape 3 — Supabase Edge Functions
+- Fonction generate-plan : vérifie auth Supabase, appelle API Anthropic
+- Fonction coros-data : récupère données Coros via MCP (mcpeu.coros.com/mcp)
+- Clé Anthropic uniquement dans les secrets Supabase, jamais dans le client
 
-- `/` → `src/apps/home/Home.jsx` — grid of app cards
-- `/cotes-run` → `src/apps/cotes-run/CotesRun.jsx` — the only active app
+### Étape 4 — Training dashboard
+- Route /training
+- Appel Edge Function coros-data au chargement
+- Affichage : stats semaine, 5 dernières séances, semaine type du plan actif
+- Bouton "Générer un plan"
 
-`dark` and `setDark` are drilled down as props to every route component so they can render a dark-mode toggle.
+### Étape 5 — Génération et gestion du plan
+- Formulaire de contexte avant génération (voir specs ci-dessous)
+- Appel Edge Function generate-plan avec données Coros + contexte utilisateur
+- Sauvegarde en BDD Supabase table training_plans (jsonb)
+- Affichage plan semaine par semaine, séance par séance
 
-### Adding a new app
+### Étape 6 — Veille dev (futur)
+- Table watch_items en BDD
+- À concevoir plus tard
 
-1. Create a directory under `src/apps/<app-name>/` with a root `<AppName>.jsx`.
-2. Add a `<Route>` in `src/App.jsx`.
-3. Add an entry to the `apps` array in `src/apps/home/Home.jsx` with `status: 'active'`.
+---
 
-### Theme
+## Supabase — schéma BDD
 
-`src/styles/theme.js` exports a factory `(dark: boolean) => MuiTheme`. The primary color is forest-green (`#3d6b51` light / `#5a9e78` dark). Font is Geist for body text and DM Serif Display for titles. Do not override MUI component defaults without adding them to the `components` section of this theme.
+profiles (id uuid, email text)
 
-### Côtes.Run — the hill-finder app
+training_plans (
+  id uuid,
+  user_id uuid,
+  generated_at timestamp,
+  race_name text,
+  race_date date,
+  race_distance text,
+  target_time text,
+  weeks jsonb
+)
 
-The app lets runners find nearby climbs by clicking on a map. It is structured as a phase state machine:
+watch_items (
+  id uuid,
+  user_id uuid,
+  url text,
+  title text,
+  tags text[],
+  read_at timestamp
+)
 
-```
-idle → placed → searching → results
-```
+---
 
-**`useSearch.js`** — all async logic lives here. It:
-1. Queries the **Overpass API** for OSM highway ways inside a bounding box.
-2. Samples each way (up to 9 points) and sends batches of 100 to **open-elevation.com** for elevation data (1.5 s delay between batches to avoid rate limits).
-3. Filters results by `minElev`, `minSlope`, and `minLen` from `DEFAULT_PARAMS`/`SLIDERS` in `utils.js`.
-4. Sorts by slope descending and exposes results via the `useSearch` hook.
+## Specs Training — Génération de plan
 
-**`utils.js`** — pure helpers: `haversine`, `pathLen`, `samplePath`, `slopeColor` (color by slope %), and the `DEFAULT_PARAMS` / `SLIDERS` config used by both the hook and `FilterDialog`.
+### Contexte demandé à l'utilisateur avant génération
+- Nom de la course
+- Date de la course
+- Distance (semi, 10km, marathon...)
+- Objectif de temps
+- Déjà couru cette course ? Si oui, temps précédents
+- Remarques libres (blessure, contrainte particulière)
 
-**`CotesRun.jsx`** — map UI using `react-leaflet`. Renders a CartoDB tile layer (dark or light variant), a center `Marker`, a dashed `Circle` for the search radius, and `Polyline`s for each result colored by slope via `slopeColor`.
+### Découpage hebdomadaire fixe
+- Zone A : lundi ou mardi → séance course
+- Zone B : mercredi, jeudi ou vendredi → séance course qualité (fractionné ou tempo)
+- Zone C : samedi ou dimanche → sortie longue
+- + 1 séance renfo/semaine (jour flexible, contenu détaillé généré par Claude)
 
-**`ResultCard.jsx`** — slide-in card at the bottom of the map showing the active result. Supports swipe gestures via `framer-motion` drag.
+### Renforcement musculaire
+- Matériel disponible : tapis de sol uniquement (chaise possible mais à minimiser)
+- Contenu détaillé : exercices + séries + temps de repos
+- Orienté course à pied (gainage, fessiers, ischio, proprioception)
 
-**`BottomBar.jsx`** — context-sensitive action bar below the map (Search / Cancel / Reset buttons).
+### Règles de gestion des séances sautées
+- 1 séance sautée → adapter les séances restantes de la semaine courante
+- 2 séances sautées → adapter fin de semaine courante + alléger semaine suivante (-15 à -20% volume, pas d'intensité haute)
+- 3+ séances sautées → proposer une régénération du plan à partir de la semaine courante
 
-**`FilterDialog.jsx`** — MUI dialog with sliders driven by `SLIDERS` config from `utils.js`.
+### Philosophie du plan
+- Basé sur les capacités réelles (données Coros : FC, allures, HRV, charge)
+- Pas de copier-coller des séances passées — progressif et adapté à l'objectif
+- 3 blocs : Construction → Intensification → Affûtage
+- Calibrer les zones FC et allures cibles à partir de l'historique Coros
 
-### Map tile URLs
+---
 
-Dark mode: `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`  
-Light mode: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`
-
-### External APIs (no keys required)
-
-- `https://overpass-api.de/api/interpreter` — OSM road/path data
-- `https://elevation.racemap.com/api/v1/elevations` — elevation lookup (batch 500 points, no delay)
-
-## Versioning
-
-Version is in `package.json`. It is exposed to the app via `__APP_VERSION__` (defined in `vite.config.js`) and displayed on the Home page.
-
-**Claude Code handles version bumps and commits.** Use semver: patch for fixes, minor for new features. Bump the version in `package.json` and commit with a short message matching the repo style (`type: short description`). After each commit, ask the user whether to push to `main`.
+## Contexte utilisateur
+- Coros Pace 3, connecté via MCP EU (mcpeu.coros.com/mcp)
+- Objectif actuel : Auray-Vannes 2026 (semi-marathon), déjà couru en 2024 et 2025
+- Coureur régulier, pratique aussi tennis et aviron
+- App mobile exclusivement (pas de layout desktop nécessaire)
