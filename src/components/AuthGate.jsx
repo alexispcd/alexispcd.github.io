@@ -7,36 +7,51 @@ const AuthGate = ({ children }) => {
   const theme = useTheme()
   const [session, setSession] = useState(undefined)
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState('idle') // idle | loading | success | error
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState('email') // email | code
+  const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-    })
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
     return () => subscription.unsubscribe()
   }, [])
 
-  const handleSend = async () => {
+  const handleSendCode = async () => {
     if (!email.trim()) return
-    setStatus('loading')
+    setLoading(true)
     setErrorMsg('')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { shouldCreateUser: true },
     })
+    setLoading(false)
     if (error) {
       setErrorMsg(error.message)
-      setStatus('error')
     } else {
-      setStatus('success')
+      setStep('code')
     }
   }
 
-  // En attente de la session initiale
+  const handleVerifyCode = async () => {
+    if (code.length !== 6) return
+    setLoading(true)
+    setErrorMsg('')
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'email',
+    })
+    setLoading(false)
+    if (error) {
+      setErrorMsg('Code invalide ou expiré')
+      setCode('')
+    }
+  }
+
   if (session === undefined) {
     return (
       <Box sx={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
@@ -45,10 +60,8 @@ const AuthGate = ({ children }) => {
     )
   }
 
-  // Connecté
   if (session) return children
 
-  // Écran login
   return (
     <Box sx={{
       height: '100dvh',
@@ -71,61 +84,69 @@ const AuthGate = ({ children }) => {
         gap: 3,
       }}>
         <Box>
-          <Typography
-            sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.5rem', fontWeight: 400, mb: 0.5 }}
-          >
+          <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.5rem', fontWeight: 400, mb: 0.5 }}>
             Le <em>Cairn</em>
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Connexion par lien magique
+            {step === 'email' ? 'Connexion par code email' : `Code envoyé à ${email}`}
           </Typography>
         </Box>
 
-        {status === 'success' ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="primary.main" fontWeight={500}>
-              Lien envoyé !
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Vérifie ta boîte mail et clique sur le lien pour te connecter.
-            </Typography>
-            <Button
-              variant="text"
-              size="small"
-              sx={{ alignSelf: 'flex-start', px: 0, color: 'text.secondary' }}
-              onClick={() => { setStatus('idle'); setEmail('') }}
-            >
-              Renvoyer
-            </Button>
-          </Box>
-        ) : (
+        {step === 'email' ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Adresse email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-              disabled={status === 'loading'}
+              onKeyDown={e => e.key === 'Enter' && handleSendCode()}
+              disabled={loading}
               size="small"
               fullWidth
               autoComplete="email"
             />
-            {status === 'error' && (
-              <Typography variant="caption" color="error">
-                {errorMsg}
-              </Typography>
-            )}
+            {errorMsg && <Typography variant="caption" color="error">{errorMsg}</Typography>}
             <Button
               variant="contained"
-              onClick={handleSend}
-              disabled={status === 'loading' || !email.trim()}
+              onClick={handleSendCode}
+              disabled={loading || !email.trim()}
               fullWidth
               sx={{ textTransform: 'none' }}
             >
-              {status === 'loading'
-                ? <CircularProgress size={18} sx={{ color: 'inherit' }} />
-                : 'Envoyer le lien'}
+              {loading ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Envoyer le code'}
+            </Button>
+          </Box>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Code à 6 chiffres"
+              type="number"
+              value={code}
+              onChange={e => setCode(e.target.value.slice(0, 6))}
+              onKeyDown={e => e.key === 'Enter' && handleVerifyCode()}
+              disabled={loading}
+              size="small"
+              fullWidth
+              autoFocus
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+            />
+            {errorMsg && <Typography variant="caption" color="error">{errorMsg}</Typography>}
+            <Button
+              variant="contained"
+              onClick={handleVerifyCode}
+              disabled={loading || code.length !== 6}
+              fullWidth
+              sx={{ textTransform: 'none' }}
+            >
+              {loading ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Se connecter'}
+            </Button>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => { setStep('email'); setCode(''); setErrorMsg('') }}
+              sx={{ alignSelf: 'flex-start', px: 0, color: 'text.secondary', textTransform: 'none' }}
+            >
+              ← Changer d'email
             </Button>
           </Box>
         )}
