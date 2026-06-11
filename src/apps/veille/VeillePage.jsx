@@ -38,12 +38,15 @@ const VeillePage = () => {
     setSyncing(true)
     try {
       await fetchRssFeeds()
+    } catch (err) {
+      console.error('fetch-rss error:', err)
+    }
+    try {
       await reload()
     } catch (err) {
-      console.error('Sync error:', err)
-    } finally {
-      setSyncing(false)
+      console.error('loadArticles error:', err)
     }
+    setSyncing(false)
   }, [reload])
 
   useEffect(() => {
