@@ -125,3 +125,87 @@ watch_items (
 - Objectif actuel : Auray-Vannes 2026 (semi-marathon), déjà couru en 2024 et 2025
 - Coureur régulier, pratique aussi tennis et aviron
 - App mobile exclusivement (pas de layout desktop nécessaire)
+
+---
+
+## Specs Veille — Outil de veille informatique
+
+### Concept
+Agrégateur RSS personnel avec génération de fiches par Claude.
+Les articles arrivent automatiquement via les flux RSS configurés.
+
+### Flux RSS pré-chargés
+- Le Monde Informatique : https://www.lemondeinformatique.fr/flux-rss.xml
+- Journal du Net : https://www.journaldunet.com/rss/
+- ZDNet France : https://www.zdnet.fr/feeds/rss/actualites/
+- The Hacker News : https://feeds.feedburner.com/TheHackersNews
+- ANSSI : https://www.ssi.gouv.fr/feed/
+- Krebs on Security : https://krebsonsecurity.com/feed/
+- AWS Blog : https://aws.amazon.com/blogs/aws/feed/
+- InfoQ Cloud : https://feed.infoq.com/cloud
+- Anthropic Blog : https://www.anthropic.com/rss.xml
+- MIT Technology Review AI : https://www.technologyreview.com/topic/artificial-intelligence/feed
+- dev.to : https://dev.to/feed
+- CSS Tricks : https://css-tricks.com/feed/
+- Towards Data Science : https://towardsdatascience.com/feed
+- CoinTelegraph : https://cointelegraph.com/rss
+
+### Thèmes
+Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans mention MAALSI) :
+1. SI et environnement
+2. Cybersécurité
+3. Cloud et virtualisation
+4. Big Data
+5. Développement
+6. Mobilité
+7. Management et stratégie
+8. Blockchain
+9. Intelligence artificielle
+10. Optimisation du SI
+
+### Fonctionnalités
+- Sync RSS automatique à l'ouverture
+- Filtrage par thème (chips horizontaux)
+- Statut lu / non lu
+- Favoris
+- Résumé à la demande via Claude (bouton sur chaque article)
+
+### Fiche générée par Claude
+- Résumé (5 lignes max)
+- 3 points clés
+- Tags thèmes suggérés automatiquement
+- Champ note perso (éditable, sauvegardé en BDD)
+
+### Supabase — tables
+watch_items (
+  id uuid,
+  user_id uuid,
+  url text,
+  title text,
+  source text,
+  published_at timestamp,
+  tags text[],
+  is_read boolean default false,
+  is_favorite boolean default false,
+  summary text,
+  key_points jsonb,
+  note text,
+  read_at timestamp
+)
+
+rss_feeds (
+  id uuid,
+  user_id uuid,
+  url text,
+  name text,
+  theme text
+)
+
+### Edge Functions
+- fetch-rss : récupère et parse les flux RSS, insère les nouveaux articles dans watch_items
+- summarize-article : reçoit { url, title, content }, appelle Claude, retourne { summary, keyPoints, suggestedTags }
+
+### Architecture
+- Sync RSS côté client au chargement (fetch CORS via un proxy ou Edge Function)
+- Résumé à la demande uniquement (pas automatique)
+- Sauvegarde fiche en BDD après génération
