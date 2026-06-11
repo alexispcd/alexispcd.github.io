@@ -3,39 +3,41 @@ import { Box, IconButton, Typography, Button, Divider, CircularProgress, Chip } 
 import { ArrowBack, Star, StarBorder, OpenInNew, AutoAwesome } from '@mui/icons-material'
 import { useTheme } from '@mui/material/styles'
 import FicheView from './FicheView'
+import supabase from '../../lib/supabase'
 
 const formatDate = (iso) => {
   const d = new Date(iso)
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-const MOCK_SUMMARY = {
-  summary: 'Cet article présente les dernières évolutions du domaine et leurs implications pratiques pour les équipes techniques. Les auteurs analysent les tendances de fond et proposent des pistes concrètes pour anticiper les changements à venir dans les organisations.',
-  key_points: [
-    'Les nouveaux standards modifient en profondeur les pratiques actuelles des équipes',
-    'L\'adoption progressive est recommandée pour limiter les risques de transition',
-    'Des outils open source facilitent désormais la mise en conformité et le suivi',
-  ],
-  tags: [],
-}
-
 const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetSummary }) => {
   const theme = useTheme()
   const [summarizing, setSummarizing] = useState(false)
+  const [summarizeError, setSummarizeError] = useState(null)
 
   const handleSummarize = async () => {
     setSummarizing(true)
-    // TODO: call Supabase Edge Function summarize-article
-    // const { data } = await supabase.functions.invoke('summarize-article', {
-    //   body: { url: article.url, title: article.title }
-    // })
-    await new Promise(r => setTimeout(r, 1800))
-    onSetSummary({
-      summary: MOCK_SUMMARY.summary,
-      key_points: MOCK_SUMMARY.key_points,
-      tags: article.tags,
-    })
-    setSummarizing(false)
+    setSummarizeError(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('summarize-article', {
+        body: {
+          articleId: article.id,
+          url: article.url,
+          title: article.title,
+        },
+      })
+      if (error) throw error
+      onSetSummary({
+        summary: data.summary,
+        key_points: data.keyPoints,
+        tags: data.suggestedTags,
+      })
+    } catch (err) {
+      console.error('Summarize error:', err)
+      setSummarizeError('Erreur lors de la génération. Réessayer ?')
+    } finally {
+      setSummarizing(false)
+    }
   }
 
   return (
@@ -80,7 +82,7 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
           <Typography variant="caption" color="text.secondary">
             {formatDate(article.published_at)}
           </Typography>
-          {article.tags.map(tag => (
+          {article.tags?.map(tag => (
             <Chip
               key={tag}
               label={tag}
@@ -139,6 +141,11 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
                 Résumé, points clés et thèmes suggérés par Claude
               </Typography>
             </Box>
+            {summarizeError && (
+              <Typography variant="caption" color="error.main">
+                {summarizeError}
+              </Typography>
+            )}
             <Button
               variant="contained"
               size="small"

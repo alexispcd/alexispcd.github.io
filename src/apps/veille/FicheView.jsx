@@ -1,17 +1,26 @@
-import { useState } from 'react'
-import { Box, Typography, Chip, TextField, Button, Divider } from '@mui/material'
+import { useState, useEffect, useRef } from 'react'
+import { Box, Typography, Chip, TextField, Divider } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 
 const FicheView = ({ article, onUpdateNote }) => {
   const theme = useTheme()
   const [note, setNote] = useState(article.note || '')
-  const [saved, setSaved] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved'
+  const timerRef = useRef(null)
 
-  const handleSave = () => {
-    onUpdateNote(note)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleNoteChange = (e) => {
+    const val = e.target.value
+    setNote(val)
+    setSaveStatus('saving')
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(async () => {
+      await onUpdateNote(val)
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }, 1000)
   }
+
+  useEffect(() => () => clearTimeout(timerRef.current), [])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -33,7 +42,7 @@ const FicheView = ({ article, onUpdateNote }) => {
           Points clés
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-          {article.key_points.map((point, i) => (
+          {article.key_points?.map((point, i) => (
             <Box key={i} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
               <Box sx={{
                 width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
@@ -60,7 +69,7 @@ const FicheView = ({ article, onUpdateNote }) => {
           Thèmes
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
-          {article.tags.map(tag => (
+          {article.tags?.map(tag => (
             <Chip
               key={tag}
               label={tag}
@@ -80,9 +89,21 @@ const FicheView = ({ article, onUpdateNote }) => {
 
       {/* Note perso */}
       <Box>
-        <Typography variant="overline" sx={{ color: 'text.disabled', letterSpacing: '0.12em', fontSize: '0.6rem' }}>
-          Ma note
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="overline" sx={{ color: 'text.disabled', letterSpacing: '0.12em', fontSize: '0.6rem' }}>
+            Ma note
+          </Typography>
+          {saveStatus === 'saving' && (
+            <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
+              Sauvegarde…
+            </Typography>
+          )}
+          {saveStatus === 'saved' && (
+            <Typography variant="caption" color="success.main" sx={{ fontSize: '0.65rem' }}>
+              Sauvegardé ✓
+            </Typography>
+          )}
+        </Box>
         <TextField
           multiline
           minRows={2}
@@ -91,21 +112,8 @@ const FicheView = ({ article, onUpdateNote }) => {
           size="small"
           placeholder="Ajouter une note personnelle…"
           value={note}
-          onChange={e => { setNote(e.target.value); setSaved(false) }}
-          sx={{ mt: 1 }}
+          onChange={handleNoteChange}
         />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-          <Button
-            size="small"
-            variant={saved ? 'text' : 'outlined'}
-            color={saved ? 'success' : 'primary'}
-            onClick={handleSave}
-            disabled={note === (article.note || '') && !saved}
-            sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-          >
-            {saved ? 'Sauvegardé ✓' : 'Sauvegarder'}
-          </Button>
-        </Box>
       </Box>
     </Box>
   )

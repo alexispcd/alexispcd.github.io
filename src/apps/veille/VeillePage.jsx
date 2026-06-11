@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
-import { Box, IconButton, Typography, Chip } from '@mui/material'
+import { useState, useCallback, useEffect } from 'react'
+import { Box, IconButton, Typography, Chip, CircularProgress } from '@mui/material'
 import { ArrowBack, Sync } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import ArticleCard from './ArticleCard'
 import ArticleDetail from './ArticleDetail'
-import { MOCK_ARTICLES } from '../../lib/rss'
+import { fetchRssFeeds, loadArticles } from '../../lib/rss'
+import supabase from '../../lib/supabase'
 
 const THEMES = [
   'Tous',
@@ -22,40 +23,67 @@ const THEMES = [
 
 const VeillePage = () => {
   const navigate = useNavigate()
-  const [articles, setArticles] = useState(MOCK_ARTICLES)
+  const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
   const [selectedId, setSelectedId] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+
+  const reload = useCallback(async () => {
+    const data = await loadArticles()
+    setArticles(data)
+  }, [])
+
+  const sync = useCallback(async () => {
+    setSyncing(true)
+    try {
+      await fetchRssFeeds()
+      await reload()
+    } catch (err) {
+      console.error('Sync error:', err)
+    } finally {
+      setSyncing(false)
+    }
+  }, [reload])
+
+  useEffect(() => {
+    setLoading(true)
+    sync().finally(() => setLoading(false))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = filter === 'Tous'
     ? articles
-    : articles.filter(a => a.tags.includes(filter))
+    : articles.filter(a => a.tags?.includes(filter))
 
-  const handleSync = async () => {
-    setSyncing(true)
-    // TODO: call fetchRssFeeds() and merge with existing articles
-    await new Promise(r => setTimeout(r, 1200))
-    setSyncing(false)
-  }
-
-  const handleSelect = useCallback((article) => {
+  const handleSelect = async (article) => {
     setArticles(prev => prev.map(a => a.id === article.id ? { ...a, is_read: true } : a))
     setSelectedId(article.id)
-  }, [])
+    if (!article.is_read) {
+      await supabase
+        .from('watch_items')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', article.id)
+    }
+  }
 
-  const handleToggleFavorite = useCallback((id, e) => {
+  const handleToggleFavorite = async (id, e) => {
     e?.stopPropagation()
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, is_favorite: !a.is_favorite } : a))
-  }, [])
+    const article = articles.find(a => a.id === id)
+    if (!article) return
+    const newVal = !article.is_favorite
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, is_favorite: newVal } : a))
+    await supabase.from('watch_items').update({ is_favorite: newVal }).eq('id', id)
+  }
 
-  const handleUpdateNote = useCallback((id, note) => {
+  const handleUpdateNote = async (id, note) => {
     setArticles(prev => prev.map(a => a.id === id ? { ...a, note } : a))
-  }, [])
+    await supabase.from('watch_items').update({ note }).eq('id', id)
+  }
 
   const handleSetSummary = useCallback((id, { summary, key_points, tags }) => {
     setArticles(prev => prev.map(a =>
       a.id === id
-        ? { ...a, summary, key_points, tags: [...new Set([...a.tags, ...tags])] }
+        ? { ...a, summary, key_points, tags: [...new Set([...(a.tags ?? []), ...tags])] }
         : a
     ))
   }, [])
@@ -91,18 +119,18 @@ const VeillePage = () => {
         </IconButton>
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 1 }}>
           <Typography variant="h6" fontWeight={600}>Veille</Typography>
-          {unreadCount > 0 && (
+          {!loading && unreadCount > 0 && (
             <Typography variant="caption" color="primary.main" fontWeight={600}>
               {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
             </Typography>
           )}
         </Box>
-        <IconButton size="small" onClick={handleSync} disabled={syncing}>
+        <IconButton size="small" onClick={sync} disabled={syncing || loading}>
           <Sync
             fontSize="small"
             sx={{
               transition: 'none',
-              animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
+              animation: (syncing || loading) ? 'veilleSync 1s linear infinite' : 'none',
               '@keyframes veilleSync': {
                 '0%': { transform: 'rotate(0deg)' },
                 '100%': { transform: 'rotate(360deg)' },
@@ -140,7 +168,11 @@ const VeillePage = () => {
         px: 2, pb: 4,
         display: 'flex', flexDirection: 'column', gap: 1.5,
       }}>
-        {filtered.length === 0 ? (
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : filtered.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center' }}>
             Aucun article pour ce thème
           </Typography>
