@@ -18,10 +18,14 @@ export const RSS_FEEDS = [
 ]
 
 export const fetchRssFeeds = async () => {
-  const { error } = await supabase.functions.invoke('fetch-rss', {
+  const { data, error } = await supabase.functions.invoke('fetch-rss', {
     body: { feeds: RSS_FEEDS },
   })
-  if (error) throw error
+  if (error) {
+    console.error('[fetch-rss] invoke error:', error)
+    throw error
+  }
+  console.log('[fetch-rss] result:', data)
 }
 
 export const loadArticles = async () => {
