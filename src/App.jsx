@@ -5,6 +5,7 @@ import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import Cotes from './apps/cotes/Cotes'
+import VeillePage from './apps/veille/VeillePage'
 import AuthGate from './components/AuthGate'
 
 const App = () => {
@@ -19,6 +20,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home dark={dark} setDark={setDark} />} />
             <Route path="/cotes" element={<Cotes dark={dark} setDark={setDark} />} />
+            <Route path="/veille" element={<VeillePage />} />
           </Routes>
         </AuthGate>
       </BrowserRouter>
