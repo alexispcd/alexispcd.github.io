@@ -51,7 +51,7 @@ const VeillePage = () => {
 
   useEffect(() => {
     setLoading(true)
-    sync().finally(() => setLoading(false))
+    reload().finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = filter === 'Tous'
@@ -133,7 +133,7 @@ const VeillePage = () => {
             fontSize="small"
             sx={{
               transition: 'none',
-              animation: (syncing || loading) ? 'veilleSync 1s linear infinite' : 'none',
+              animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
               '@keyframes veilleSync': {
                 '0%': { transform: 'rotate(0deg)' },
                 '100%': { transform: 'rotate(360deg)' },
@@ -142,6 +142,21 @@ const VeillePage = () => {
           />
         </IconButton>
       </Box>
+
+      {/* Sync banner */}
+      {syncing && (
+        <Box sx={{
+          display: 'flex', alignItems: 'center', gap: 1,
+          px: 2, py: 0.75,
+          bgcolor: 'action.hover',
+          borderBottom: '1px solid', borderColor: 'divider',
+        }}>
+          <CircularProgress size={12} thickness={5} />
+          <Typography variant="caption" color="text.secondary">
+            Synchronisation en cours...
+          </Typography>
+        </Box>
+      )}
 
       {/* Theme chips */}
       <Box sx={{

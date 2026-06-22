@@ -1,11 +1,23 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
+import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
+
+const SYSTEM_FEEDS = [
+  { name: "Journal du Net", url: "https://www.journaldunet.com/rss/", theme: "Management et stratégie" },
+  { name: "ZDNet France", url: "https://www.zdnet.fr/feeds/rss/actualites/", theme: "Développement" },
+  { name: "The Hacker News", url: "https://feeds.feedburner.com/TheHackersNews", theme: "Cybersécurité" },
+  { name: "Krebs on Security", url: "https://krebsonsecurity.com/feed/", theme: "Cybersécurité" },
+  { name: "AWS Blog", url: "https://aws.amazon.com/blogs/aws/feed/", theme: "Cloud et virtualisation" },
+  { name: "dev.to", url: "https://dev.to/feed", theme: "Développement" },
+  { name: "Towards Data Science", url: "https://medium.com/feed/towards-data-science", theme: "Big Data" },
+  { name: "CoinTelegraph", url: "https://cointelegraph.com/rss", theme: "Blockchain" },
+]
 
 interface FeedInput {
   url: string
@@ -19,22 +31,34 @@ interface FeedResult {
   error?: string
 }
 
-function extractItems(doc: Document): Element[] {
-  // Check for parseerror first
-  if (doc.querySelector("parsererror")) return []
-  const items = Array.from(doc.querySelectorAll("item"))
-  if (items.length > 0) return items
-  return Array.from(doc.querySelectorAll("entry"))
+type ParsedNode = Record<string, unknown>
+
+function toArray(val: unknown): ParsedNode[] {
+  if (!val) return []
+  return Array.isArray(val) ? (val as ParsedNode[]) : [val as ParsedNode]
 }
 
-function extractUrl(item: Element): string {
-  // Atom: <link href="..."/>
-  const linkEl = item.querySelector("link")
-  if (linkEl?.getAttribute("href")) return linkEl.getAttribute("href")!
-  // RSS 2.0: <link>https://...</link>
-  if (linkEl?.textContent?.trim()) return linkEl.textContent.trim()
-  // guid as fallback
-  return item.querySelector("guid")?.textContent?.trim() ?? ""
+function extractItems(parsed: ParsedNode): ParsedNode[] {
+  const rssItems = (parsed as any).rss?.channel?.item
+  if (rssItems) return toArray(rssItems)
+  const atomEntries = (parsed as any).feed?.entry
+  if (atomEntries) return toArray(atomEntries)
+  return []
+}
+
+function extractText(val: unknown): string {
+  if (!val) return ""
+  if (typeof val === "string") return val.trim()
+  if (typeof val === "object" && val !== null && "#text" in val) return String((val as any)["#text"]).trim()
+  return String(val).trim()
+}
+
+function extractUrl(item: ParsedNode): string {
+  if (item.link && typeof item.link === "string") return item.link.trim()
+  if (item.link && typeof item.link === "object" && "@href" in (item.link as object)) {
+    return String((item.link as any)["@href"]).trim()
+  }
+  return extractText(item.guid)
 }
 
 async function processFeed(
@@ -44,10 +68,13 @@ async function processFeed(
 ): Promise<FeedResult> {
   let res: Response
   try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 5000)
     res = await fetch(feed.url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; CairnBot/1.0)" },
-      signal: AbortSignal.timeout(10000),
+      signal: controller.signal,
     })
+    clearTimeout(timer)
   } catch (err) {
     return { feed: feed.name, inserted: 0, error: `fetch failed: ${err}` }
   }
@@ -56,23 +83,23 @@ async function processFeed(
     return { feed: feed.name, inserted: 0, error: `HTTP ${res.status}` }
   }
 
-  let xml: string
+  let xmlText: string
   try {
-    xml = await res.text()
+    xmlText = await res.text()
   } catch (err) {
     return { feed: feed.name, inserted: 0, error: `read failed: ${err}` }
   }
 
-  let doc: Document
+  let parsed: ParsedNode
   try {
-    doc = new DOMParser().parseFromString(xml, "text/xml")
+    parsed = parse(xmlText) as ParsedNode
   } catch (err) {
     return { feed: feed.name, inserted: 0, error: `parse failed: ${err}` }
   }
 
-  const items = extractItems(doc)
+  const items = extractItems(parsed)
   if (items.length === 0) {
-    return { feed: feed.name, inserted: 0, error: "no items found (parseerror or empty feed)" }
+    return { feed: feed.name, inserted: 0, error: "no items found (empty feed or unrecognized format)" }
   }
 
   let inserted = 0
@@ -80,11 +107,11 @@ async function processFeed(
     const url = extractUrl(item)
     if (!url) continue
 
-    const title = item.querySelector("title")?.textContent?.trim() ?? "(sans titre)"
+    const title = extractText(item.title) || "(sans titre)"
     const pubDateRaw =
-      item.querySelector("pubDate")?.textContent ??
-      item.querySelector("published")?.textContent ??
-      item.querySelector("updated")?.textContent
+      extractText(item.pubDate) ||
+      extractText(item.published) ||
+      extractText(item.updated) || null
     const published_at = pubDateRaw
       ? new Date(pubDateRaw).toISOString()
       : new Date().toISOString()
@@ -125,31 +152,42 @@ Deno.serve(async (req) => {
     return Response.json({ error: "Missing authorization" }, { status: 401, headers: CORS })
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  )
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  const isSystemCall = authHeader === `Bearer ${serviceRoleKey}`
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
+  let supabase: ReturnType<typeof createClient>
+  let userId: string
+  let feeds: FeedInput[]
+
+  if (isSystemCall) {
+    supabase = createClient(supabaseUrl, serviceRoleKey)
+    userId = Deno.env.get("CRON_USER_ID") ?? ""
+    if (!userId) {
+      return Response.json({ error: "CRON_USER_ID not configured" }, { status: 500, headers: CORS })
+    }
+    feeds = SYSTEM_FEEDS
+  } else {
+    supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
+    }
+    userId = user.id
+    const body = await req.json().catch(() => ({}))
+    feeds = Array.isArray(body?.feeds) ? body.feeds : SYSTEM_FEEDS
   }
 
-  const body = await req.json()
-  const feeds: FeedInput[] = body.feeds
-  if (!feeds || !Array.isArray(feeds)) {
-    return Response.json({ error: "Missing feeds array" }, { status: 400, headers: CORS })
+  const results: FeedResult[] = []
+  for (const f of feeds.slice(0, 8)) {
+    results.push(await processFeed(f, supabase, userId))
+    await new Promise((r) => setTimeout(r, 200))
   }
-
-  // Fetch all feeds in parallel
-  const results = await Promise.all(feeds.map((f) => processFeed(f, supabase, user.id)))
 
   const totalInserted = results.reduce((s, r) => s + r.inserted, 0)
   const errors = results.filter((r) => r.error)
 
-  return Response.json(
-    { inserted: totalInserted, feeds: results, errors },
-    { headers: CORS },
-  )
+  return Response.json({ inserted: totalInserted, feeds: results, errors }, { headers: CORS })
 })
