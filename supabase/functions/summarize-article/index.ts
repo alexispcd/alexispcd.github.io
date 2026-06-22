@@ -49,19 +49,20 @@ Deno.serve(async (req) => {
     ? `Titre : ${title}\n\nContenu :\n${content}`
     : `Titre : ${title}\nURL : ${url}`
 
-  const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+  const mistralRes = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "x-api-key": Deno.env.get("ANTHROPIC_API_KEY")!,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+      "Authorization": `Bearer ${Deno.env.get("MISTRAL_API_KEY")!}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system:
-        "Tu es un expert en veille technologique. Réponds uniquement en JSON valide, sans markdown ni texte autour.",
+      model: "mistral-small-latest",
       messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un expert en veille technologique. Réponds uniquement en JSON valide avec les clés summary, keyPoints et suggestedTags.",
+        },
         {
           role: "user",
           content: `Analyse cet article et génère une fiche de veille.
@@ -71,41 +72,41 @@ ${userMessage}
 Réponds avec ce JSON exact :
 {
   "summary": "résumé en 5 lignes maximum",
-  "key_points": ["point 1", "point 2", "point 3"],
-  "suggested_tags": ["tag1", "tag2"]
+  "keyPoints": ["point 1", "point 2", "point 3"],
+  "suggestedTags": ["tag1", "tag2"]
 }
 
-Les suggested_tags doivent être choisis parmi ces thèmes uniquement :
+Les suggestedTags doivent être choisis parmi ces thèmes uniquement :
 ${THEMES.join(", ")}`,
         },
       ],
+      response_format: { type: "json_object" },
     }),
   })
 
-  if (!anthropicRes.ok) {
-    const err = await anthropicRes.text()
-    console.error("Anthropic API error:", err)
-    return Response.json({ error: "Anthropic API error" }, { status: 502, headers: CORS })
+  if (!mistralRes.ok) {
+    const err = await mistralRes.text()
+    console.error("Mistral API error:", err)
+    return Response.json({ error: "Mistral API error" }, { status: 502, headers: CORS })
   }
 
-  const anthropicData = await anthropicRes.json()
-  const rawText = anthropicData.content?.[0]?.text ?? "{}"
+  const mistralData = await mistralRes.json()
+  const rawText = mistralData.choices?.[0]?.message?.content ?? "{}"
 
-  let parsed: { summary: string; key_points: string[]; suggested_tags: string[] }
+  let parsed: { summary: string; keyPoints: string[]; suggestedTags: string[] }
   try {
     parsed = JSON.parse(rawText)
   } catch {
-    console.error("Failed to parse Anthropic response:", rawText)
-    return Response.json({ error: "Invalid JSON from Anthropic" }, { status: 502, headers: CORS })
+    console.error("Failed to parse Mistral response:", rawText)
+    return Response.json({ error: "Invalid JSON from Mistral" }, { status: 502, headers: CORS })
   }
 
   const result = {
     summary: parsed.summary ?? "",
-    keyPoints: parsed.key_points ?? [],
-    suggestedTags: parsed.suggested_tags ?? [],
+    keyPoints: parsed.keyPoints ?? [],
+    suggestedTags: parsed.suggestedTags ?? [],
   }
 
-  // Update watch_items if articleId provided
   if (articleId) {
     await supabase
       .from("watch_items")

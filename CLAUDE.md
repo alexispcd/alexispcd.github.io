@@ -5,7 +5,8 @@
 - PWA via vite-plugin-pwa
 - Déployé sur GitHub Pages (statique)
 - Supabase : auth + BDD + Edge Functions
-- API Anthropic via Supabase Edge Functions uniquement (jamais côté client)
+- API Anthropic via Supabase Edge Functions uniquement (jamais côté client) — utilisée pour generate-plan
+- API Mistral via Supabase Edge Functions — utilisée pour summarize-article (mistral-small-latest, gratuit)
 
 ## Structure src/
 - `apps/home/` — page d'accueil
@@ -41,6 +42,7 @@
 - Fonction generate-plan : vérifie auth Supabase, appelle API Anthropic
 - Fonction coros-data : récupère données Coros via MCP (mcpeu.coros.com/mcp)
 - Clé Anthropic uniquement dans les secrets Supabase, jamais dans le client
+- Clé Mistral (MISTRAL_API_KEY) dans les secrets Supabase — utilisée par summarize-article
 
 ### Étape 4 — Training dashboard
 - Route /training
@@ -135,19 +137,19 @@ Agrégateur RSS personnel avec génération de fiches par Claude.
 Les articles arrivent automatiquement via les flux RSS configurés.
 
 ### Flux RSS pré-chargés
-- Le Monde Informatique : https://www.lemondeinformatique.fr/flux-rss.xml
+- Le Monde Informatique : https://www.lemondeinformatique.fr/flux-rss/thematique/toute-l-informatique/1.xml
 - Journal du Net : https://www.journaldunet.com/rss/
 - ZDNet France : https://www.zdnet.fr/feeds/rss/actualites/
 - The Hacker News : https://feeds.feedburner.com/TheHackersNews
-- ANSSI : https://www.ssi.gouv.fr/feed/
+- ANSSI : https://www.cert.ssi.gouv.fr/feed/
 - Krebs on Security : https://krebsonsecurity.com/feed/
 - AWS Blog : https://aws.amazon.com/blogs/aws/feed/
 - InfoQ Cloud : https://feed.infoq.com/cloud
-- Anthropic Blog : https://www.anthropic.com/rss.xml
+- Anthropic Blog : https://www.anthropic.com/news/rss.xml
 - MIT Technology Review AI : https://www.technologyreview.com/topic/artificial-intelligence/feed
 - dev.to : https://dev.to/feed
 - CSS Tricks : https://css-tricks.com/feed/
-- Towards Data Science : https://towardsdatascience.com/feed
+- Towards Data Science : https://medium.com/feed/towards-data-science
 - CoinTelegraph : https://cointelegraph.com/rss
 
 ### Thèmes
@@ -164,13 +166,13 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 10. Optimisation du SI
 
 ### Fonctionnalités
-- Sync RSS automatique à l'ouverture
+- Sync RSS via cron Supabase (pg_cron, toutes les 6h) + bouton refresh manuel
 - Filtrage par thème (chips horizontaux)
 - Statut lu / non lu
 - Favoris
-- Résumé à la demande via Claude (bouton sur chaque article)
+- Résumé à la demande via Mistral (bouton sur chaque article)
 
-### Fiche générée par Claude
+### Fiche générée par Mistral (mistral-small-latest)
 - Résumé (5 lignes max)
 - 3 points clés
 - Tags thèmes suggérés automatiquement
@@ -203,7 +205,7 @@ rss_feeds (
 
 ### Edge Functions
 - fetch-rss : récupère et parse les flux RSS, insère les nouveaux articles dans watch_items
-- summarize-article : reçoit { url, title, content }, appelle Claude, retourne { summary, keyPoints, suggestedTags }
+- summarize-article : reçoit { url, title, content }, appelle Mistral (mistral-small-latest), retourne { summary, keyPoints, suggestedTags }
 
 ### Architecture
 - Sync RSS côté client au chargement (fetch CORS via un proxy ou Edge Function)
