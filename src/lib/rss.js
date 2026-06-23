@@ -27,7 +27,7 @@ export const RSS_FEEDS = [
 ]
 
 export const fetchRssFeeds = async () => {
-  const batchSize = 5
+  const batchSize = 2
   let batchOffset = 0
   let totalInserted = 0
 

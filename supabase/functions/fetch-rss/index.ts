@@ -76,11 +76,31 @@ function extractUrl(item: ParsedNode): string {
   return extractText(item.guid)
 }
 
+// Tronque le XML aux N premiers items pour limiter la taille parsée
+function truncateXml(xml: string, maxItems: number): string {
+  // Détecte le tag de fermeture d'item (RSS 2.0 ou Atom)
+  const closeTag = xml.includes("</item>") ? "</item>" : "</entry>"
+  let pos = 0
+  for (let i = 0; i < maxItems; i++) {
+    const next = xml.indexOf(closeTag, pos)
+    if (next === -1) return xml // moins de maxItems items, rien à tronquer
+    pos = next + closeTag.length
+  }
+  // Ferme proprement les balises parentes
+  const suffix = xml.includes("</channel>")
+    ? "</channel></rss>"
+    : xml.includes("</feed>") ? "</feed>" : ""
+  return xml.slice(0, pos) + suffix
+}
+
 async function processFeed(
   feed: FeedInput,
   supabase: ReturnType<typeof createClient>,
   userId: string,
 ): Promise<FeedResult> {
+  const t0 = Date.now()
+  console.log(`[${feed.name}] start`)
+
   let res: Response
   try {
     const controller = new AbortController()
@@ -91,10 +111,12 @@ async function processFeed(
     })
     clearTimeout(timer)
   } catch (err) {
+    console.log(`[${feed.name}] fetch failed in ${Date.now() - t0}ms: ${err}`)
     return { feed: feed.name, inserted: 0, error: `fetch failed: ${err}` }
   }
 
   if (!res.ok) {
+    console.log(`[${feed.name}] HTTP ${res.status} in ${Date.now() - t0}ms`)
     return { feed: feed.name, inserted: 0, error: `HTTP ${res.status}` }
   }
 
@@ -105,14 +127,24 @@ async function processFeed(
     return { feed: feed.name, inserted: 0, error: `read failed: ${err}` }
   }
 
+  const rawBytes = xmlText.length
+  if (rawBytes > 200_000) {
+    console.log(`[${feed.name}] large feed: ${rawBytes} bytes, truncating to 20 items`)
+    xmlText = truncateXml(xmlText, 20)
+    console.log(`[${feed.name}] truncated to ${xmlText.length} bytes`)
+  }
+
   let parsed: ParsedNode
   try {
     parsed = parse(xmlText) as ParsedNode
   } catch (err) {
+    console.log(`[${feed.name}] parse failed in ${Date.now() - t0}ms: ${err}`)
     return { feed: feed.name, inserted: 0, error: `parse failed: ${err}` }
   }
 
   const items = extractItems(parsed)
+  console.log(`[${feed.name}] done in ${Date.now() - t0}ms, ${items.length} items, ${rawBytes} bytes`)
+
   if (items.length === 0) {
     return { feed: feed.name, inserted: 0, error: "no items found (empty feed or unrecognized format)" }
   }
@@ -173,7 +205,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}))
   const batchOffset: number = body.batchOffset ?? 0
-  const batchSize: number = body.batchSize ?? 5
+  const batchSize: number = body.batchSize ?? 2
 
   let supabase: ReturnType<typeof createClient>
   let userId: string
