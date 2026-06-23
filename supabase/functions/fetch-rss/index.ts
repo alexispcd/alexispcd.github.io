@@ -171,9 +171,14 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   const isSystemCall = authHeader === `Bearer ${serviceRoleKey}`
 
+  const body = await req.json().catch(() => ({}))
+  const batchOffset: number = body.batchOffset ?? 0
+  const batchSize: number = body.batchSize ?? 5
+
   let supabase: ReturnType<typeof createClient>
   let userId: string
   let feeds: FeedInput[]
+  let depth: number
 
   if (isSystemCall) {
     supabase = createClient(supabaseUrl, serviceRoleKey)
@@ -182,6 +187,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: "CRON_USER_ID not configured" }, { status: 500, headers: CORS })
     }
     feeds = SYSTEM_FEEDS
+    depth = body.depth ?? 0
   } else {
     supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
@@ -191,18 +197,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
     }
     userId = user.id
-    const body = await req.json().catch(() => ({}))
     feeds = Array.isArray(body?.feeds) ? body.feeds : SYSTEM_FEEDS
+    depth = 0
   }
 
+  const batch = feeds.slice(batchOffset, batchOffset + batchSize)
+  const hasMore = batchOffset + batchSize < feeds.length
+  const nextOffset = batchOffset + batchSize
+
   const results: FeedResult[] = []
-  for (const f of feeds) {
+  for (const f of batch) {
     results.push(await processFeed(f, supabase, userId))
     await new Promise((r) => setTimeout(r, 200))
   }
 
-  const totalInserted = results.reduce((s, r) => s + r.inserted, 0)
+  const inserted = results.reduce((s, r) => s + r.inserted, 0)
   const errors = results.filter((r) => r.error)
 
-  return Response.json({ inserted: totalInserted, feeds: results, errors }, { headers: CORS })
+  // En mode system, se ré-invoquer pour le batch suivant (max 5 ré-invocations)
+  if (isSystemCall && hasMore && depth < 5) {
+    fetch(`${supabaseUrl}/functions/v1/fetch-rss`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ batchOffset: nextOffset, depth: depth + 1 }),
+    }).catch((err) => console.error("Self-invoke error:", err))
+  }
+
+  return Response.json({ processed: batch.length, inserted, hasMore, nextOffset, feeds: results, errors }, { headers: CORS })
 })

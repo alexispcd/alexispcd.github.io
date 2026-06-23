@@ -27,14 +27,26 @@ export const RSS_FEEDS = [
 ]
 
 export const fetchRssFeeds = async () => {
-  const { data, error } = await supabase.functions.invoke('fetch-rss', {
-    body: { feeds: RSS_FEEDS },
-  })
-  if (error) {
-    console.error('[fetch-rss] invoke error:', error)
-    throw error
+  const batchSize = 5
+  let batchOffset = 0
+  let totalInserted = 0
+
+  while (true) {
+    const { data, error } = await supabase.functions.invoke('fetch-rss', {
+      body: { feeds: RSS_FEEDS, batchOffset, batchSize },
+    })
+    if (error) {
+      console.error('[fetch-rss] invoke error:', error)
+      throw error
+    }
+    totalInserted += data.inserted ?? 0
+    console.log(`[fetch-rss] batch ${batchOffset}: ${data.inserted} insérés`)
+    if (!data.hasMore) break
+    batchOffset = data.nextOffset
   }
-  console.log('[fetch-rss] result:', data)
+
+  console.log(`[fetch-rss] total: ${totalInserted} insérés`)
+  return totalInserted
 }
 
 export const loadArticles = async () => {
