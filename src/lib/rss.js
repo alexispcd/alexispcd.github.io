@@ -1,5 +1,7 @@
 import supabase from './supabase'
 
+// SYNC: cette liste doit rester identique à SYSTEM_FEEDS dans supabase/functions/fetch-rss/index.ts
+// (impossible de partager le fichier : Supabase Edge Functions ne remonte pas les imports hors de son répertoire)
 export const RSS_FEEDS = [
   { name: 'Le Monde Informatique', url: 'https://www.lemondeinformatique.fr/flux-rss/thematique/toute-l-informatique/1.xml', theme: 'Optimisation du SI' },
   { name: 'Journal du Net', url: 'https://www.journaldunet.com/rss/', theme: 'Management et stratégie' },
