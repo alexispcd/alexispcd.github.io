@@ -128,11 +128,8 @@ async function processFeed(
   }
 
   const rawBytes = xmlText.length
-  if (rawBytes > 200_000) {
-    console.log(`[${feed.name}] large feed: ${rawBytes} bytes, truncating to 20 items`)
-    xmlText = truncateXml(xmlText, 20)
-    console.log(`[${feed.name}] truncated to ${xmlText.length} bytes`)
-  }
+  xmlText = truncateXml(xmlText, 15)
+  console.log(`[${feed.name}] xml: ${rawBytes} bytes raw → ${xmlText.length} bytes after truncation`)
 
   let parsed: ParsedNode
   try {
@@ -150,7 +147,7 @@ async function processFeed(
   }
 
   let inserted = 0
-  for (const item of items.slice(0, 20)) {
+  for (const item of items.slice(0, 15)) {
     const url = extractUrl(item)
     if (!url) continue
 
@@ -205,7 +202,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}))
   const batchOffset: number = body.batchOffset ?? 0
-  const batchSize: number = body.batchSize ?? 2
+  const batchSize: number = body.batchSize ?? 3
 
   let supabase: ReturnType<typeof createClient>
   let userId: string
