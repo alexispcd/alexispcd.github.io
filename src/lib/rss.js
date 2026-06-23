@@ -15,6 +15,13 @@ export const RSS_FEEDS = [
   { name: 'CSS Tricks', url: 'https://css-tricks.com/feed/', theme: 'Développement' },
   { name: 'Towards Data Science', url: 'https://medium.com/feed/towards-data-science', theme: 'Big Data' },
   { name: 'CoinTelegraph', url: 'https://cointelegraph.com/rss', theme: 'Blockchain' },
+  { name: 'GreenIT.fr', url: 'https://www.greenit.fr/feed/', theme: 'SI et environnement' },
+  { name: 'FrAndroid', url: 'https://www.frandroid.com/feed', theme: 'Mobilité' },
+  { name: 'InfoQ Mobile', url: 'https://feed.infoq.com/mobile/', theme: 'Mobilité' },
+  { name: 'Usine Digitale', url: 'https://www.usine-digitale.fr/rss', theme: 'Management et stratégie' },
+  { name: 'Clubic', url: 'https://www.clubic.com/feed/news.rss', theme: 'Optimisation du SI' },
+  { name: 'InfoQ Architecture', url: 'https://feed.infoq.com/architecture-design/', theme: 'Cloud et virtualisation' },
+  { name: 'InfoQ AI/ML/Data', url: 'https://feed.infoq.com/ai-ml-data-eng/', theme: 'Big Data' },
 ]
 
 export const fetchRssFeeds = async () => {

@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
   }
 
   const results: FeedResult[] = []
-  for (const f of feeds.slice(0, 8)) {
+  for (const f of feeds) {
     results.push(await processFeed(f, supabase, userId))
     await new Promise((r) => setTimeout(r, 200))
   }
