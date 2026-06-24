@@ -5,7 +5,7 @@ import ArticleCard from './ArticleCard'
 import ArticleDetail from './ArticleDetail'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
-import AppHeader from '../../components/AppHeader'
+import { HEADER_HEIGHT } from '../../components/AppHeader'
 
 const THEMES = [
   'Tous',
@@ -21,7 +21,7 @@ const THEMES = [
   'Optimisation du SI',
 ]
 
-const VeillePage = ({ dark, setDark }) => {
+const VeillePage = () => {
   const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
   const [selectedId, setSelectedId] = useState(null)
@@ -107,55 +107,51 @@ const VeillePage = ({ dark, setDark }) => {
   const unreadCount = articles.filter(a => !a.is_read).length
 
   return (
-    <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{ position: 'sticky', top: 0, zIndex: 10, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider' }}>
-        <AppHeader
-          toolName="Veille"
-          subtitle={!loading && unreadCount > 0 ? `${unreadCount} non lu${unreadCount > 1 ? 's' : ''}` : undefined}
-          dark={dark}
-          setDark={setDark}
-          endSlot={
-            <IconButton size="small" onClick={sync} disabled={syncing || loading} sx={{ p: 0.75 }}>
-              <Sync
-                fontSize="small"
-                sx={{
-                  transition: 'none',
-                  animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
-                  '@keyframes veilleSync': {
-                    '0%': { transform: 'rotate(0deg)' },
-                    '100%': { transform: 'rotate(360deg)' },
-                  },
-                }}
-              />
-            </IconButton>
-          }
-        />
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', pt: `${HEADER_HEIGHT}px` }}>
+
+      {/* Barre d'action (refresh + compteur) */}
+      <Box sx={{
+        display: 'flex', alignItems: 'center',
+        px: 2, py: 0.75,
+        borderBottom: '1px solid', borderColor: 'divider',
+        flexShrink: 0,
+      }}>
+        <Box sx={{ flex: 1 }}>
+          {!loading && unreadCount > 0 && (
+            <Typography variant="caption" color="primary.main" fontWeight={600}>
+              {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
+            </Typography>
+          )}
+          {syncing && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={11} thickness={5} />
+              <Typography variant="caption" color="text.secondary">
+                Synchronisation en cours...
+              </Typography>
+            </Box>
+          )}
+        </Box>
+        <IconButton size="small" onClick={sync} disabled={syncing || loading} sx={{ p: 0.75 }}>
+          <Sync
+            fontSize="small"
+            sx={{
+              transition: 'none',
+              animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
+              '@keyframes veilleSync': {
+                '0%': { transform: 'rotate(0deg)' },
+                '100%': { transform: 'rotate(360deg)' },
+              },
+            }}
+          />
+        </IconButton>
       </Box>
 
-      {/* Sync banner */}
-      {syncing && (
-        <Box sx={{
-          display: 'flex', alignItems: 'center', gap: 1,
-          px: 2, py: 0.75,
-          bgcolor: 'action.hover',
-          borderBottom: '1px solid', borderColor: 'divider',
-        }}>
-          <CircularProgress size={12} thickness={5} />
-          <Typography variant="caption" color="text.secondary">
-            Synchronisation en cours...
-          </Typography>
-        </Box>
-      )}
-
-      {/* Theme chips */}
+      {/* Filtres thème */}
       <Box sx={{
         display: 'flex', gap: 1, overflowX: 'auto',
-        px: 2, py: 1.5,
-        flexShrink: 0,
+        px: 2, py: 1.5, flexShrink: 0,
         '&::-webkit-scrollbar': { display: 'none' },
-        msOverflowStyle: 'none',
-        scrollbarWidth: 'none',
+        msOverflowStyle: 'none', scrollbarWidth: 'none',
       }}>
         {THEMES.map(theme => (
           <Chip
@@ -170,7 +166,7 @@ const VeillePage = ({ dark, setDark }) => {
         ))}
       </Box>
 
-      {/* Article list */}
+      {/* Liste articles */}
       <Box sx={{
         flex: 1, overflowY: 'auto',
         px: 2, pb: 4,

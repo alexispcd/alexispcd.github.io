@@ -4,6 +4,7 @@ import { ArrowBack, Star, StarBorder, OpenInNew, AutoAwesome } from '@mui/icons-
 import { useTheme } from '@mui/material/styles'
 import FicheView from './FicheView'
 import supabase from '../../lib/supabase'
+import { HEADER_HEIGHT } from '../../components/AppHeader'
 
 const formatDate = (iso) => {
   const d = new Date(iso)
@@ -41,12 +42,12 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
   }
 
   return (
-    <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
+    <Box sx={{ height: '100%', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden', pt: `${HEADER_HEIGHT}px` }}>
+      {/* Header local (retour liste + favori) */}
       <Box sx={{
         display: 'flex', alignItems: 'center', gap: 1,
-        px: 2, pt: 3, pb: 2,
-        position: 'sticky', top: 0, zIndex: 10,
+        px: 2, py: 1.5,
+        flexShrink: 0,
         bgcolor: 'background.default',
         borderBottom: '1px solid',
         borderColor: 'divider',

@@ -1,6 +1,6 @@
 import { Box, Typography, Divider } from '@mui/material'
 import AppCard from '../../components/AppCard'
-import AppHeader from '../../components/AppHeader'
+import { HEADER_HEIGHT } from '../../components/AppHeader'
 
 const categories = [
   {
@@ -39,13 +39,11 @@ const categories = [
   },
 ]
 
-const Home = ({ dark, setDark }) => {
+const Home = () => {
   return (
-    <Box sx={{ minHeight: '100vh', maxWidth: 720, mx: 'auto' }}>
+    <Box sx={{ height: '100%', overflowY: 'auto' }}>
+      <Box sx={{ maxWidth: 720, mx: 'auto', px: 4, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }}>
 
-      <AppHeader showBack={false} dark={dark} setDark={setDark} sx={{ px: 2, pt: 2 }} />
-
-      <Box sx={{ px: 4, pt: 3, pb: 6 }}>
         {/* Branding */}
         <Box sx={{ mb: 6 }}>
           <Typography
@@ -91,14 +89,14 @@ const Home = ({ dark, setDark }) => {
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
                 {cat.apps.map(app => (
-                  <AppCard key={app.id} app={app} dark={dark} />
+                  <AppCard key={app.id} app={app} />
                 ))}
               </Box>
             </Box>
           ))}
         </Box>
-      </Box>
 
+      </Box>
     </Box>
   )
 }

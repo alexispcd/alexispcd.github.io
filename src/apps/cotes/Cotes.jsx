@@ -9,7 +9,6 @@ import { slopeColor } from './utils'
 import FilterDialog from './FilterDialog'
 import ResultCard from './ResultCard'
 import BottomBar from './BottomBar'
-import AppHeader from '../../components/AppHeader'
 
 const centerIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;background:#3d6b51;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(61,107,81,.2)"></div>`,
@@ -25,7 +24,7 @@ const MapClickHandler = ({ onMapClick, disabled, onMove }) => {
   return null
 }
 
-const Cotes = ({ dark, setDark }) => {
+const Cotes = ({ dark }) => {
   const theme = useTheme()
   const mapRef = useRef(null)
   const [center, setCenter] = useState(null)
@@ -88,7 +87,7 @@ const Cotes = ({ dark, setDark }) => {
   const isMapClickable = phase === 'idle' || phase === 'placed'
 
   return (
-    <Box sx={{ height: '100dvh', width: '100%', position: 'relative', overflow: 'hidden' }}>
+    <Box sx={{ height: '100%', width: '100%', position: 'relative', overflow: 'hidden' }}>
 
       {/* ── CARTE ── */}
       {center ? (
@@ -147,18 +146,6 @@ const Cotes = ({ dark, setDark }) => {
         <Box sx={{ height: '100%', bgcolor: 'background.default' }} />
       )}
 
-      {/* ── TOP BAR ── */}
-      <AppHeader
-        toolName="Côtes"
-        dark={dark}
-        setDark={setDark}
-        sx={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          zIndex: 1001,
-          bgcolor: dark ? 'rgba(15,15,18,0.82)' : 'rgba(255,255,255,0.88)',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-        }}
-      />
 
       {/* ── HELPER idle ── */}
       {phase === 'idle' && !mapMoved && (
