@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Box, IconButton, Typography, Chip, CircularProgress } from '@mui/material'
-import { ArrowBack, Sync } from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
+import { Sync } from '@mui/icons-material'
 import ArticleCard from './ArticleCard'
 import ArticleDetail from './ArticleDetail'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
+import AppHeader from '../../components/AppHeader'
 
 const THEMES = [
   'Tous',
@@ -21,8 +21,7 @@ const THEMES = [
   'Optimisation du SI',
 ]
 
-const VeillePage = () => {
-  const navigate = useNavigate()
+const VeillePage = ({ dark, setDark }) => {
   const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
   const [selectedId, setSelectedId] = useState(null)
@@ -110,37 +109,28 @@ const VeillePage = () => {
   return (
     <Box sx={{ minHeight: '100dvh', bgcolor: 'background.default', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
-      <Box sx={{
-        display: 'flex', alignItems: 'center', gap: 1,
-        px: 2, pt: 3, pb: 2,
-        position: 'sticky', top: 0, zIndex: 10,
-        bgcolor: 'background.default',
-        borderBottom: '1px solid', borderColor: 'divider',
-      }}>
-        <IconButton size="small" onClick={() => navigate('/')}>
-          <ArrowBack fontSize="small" />
-        </IconButton>
-        <Box sx={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: 1 }}>
-          <Typography variant="h6" fontWeight={600}>Veille</Typography>
-          {!loading && unreadCount > 0 && (
-            <Typography variant="caption" color="primary.main" fontWeight={600}>
-              {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
-            </Typography>
-          )}
-        </Box>
-        <IconButton size="small" onClick={sync} disabled={syncing || loading}>
-          <Sync
-            fontSize="small"
-            sx={{
-              transition: 'none',
-              animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
-              '@keyframes veilleSync': {
-                '0%': { transform: 'rotate(0deg)' },
-                '100%': { transform: 'rotate(360deg)' },
-              },
-            }}
-          />
-        </IconButton>
+      <Box sx={{ position: 'sticky', top: 0, zIndex: 10, bgcolor: 'background.default', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <AppHeader
+          toolName="Veille"
+          subtitle={!loading && unreadCount > 0 ? `${unreadCount} non lu${unreadCount > 1 ? 's' : ''}` : undefined}
+          dark={dark}
+          setDark={setDark}
+          endSlot={
+            <IconButton size="small" onClick={sync} disabled={syncing || loading} sx={{ p: 0.75 }}>
+              <Sync
+                fontSize="small"
+                sx={{
+                  transition: 'none',
+                  animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
+                  '@keyframes veilleSync': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
+                  },
+                }}
+              />
+            </IconButton>
+          }
+        />
       </Box>
 
       {/* Sync banner */}

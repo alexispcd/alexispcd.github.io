@@ -20,7 +20,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home dark={dark} setDark={setDark} />} />
             <Route path="/cotes" element={<Cotes dark={dark} setDark={setDark} />} />
-            <Route path="/veille" element={<VeillePage />} />
+            <Route path="/veille" element={<VeillePage dark={dark} setDark={setDark} />} />
           </Routes>
         </AuthGate>
       </BrowserRouter>

@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker } from 'react-leaflet'
-import { Box, Typography, IconButton, CircularProgress, Snackbar, Alert } from '@mui/material'
-import { ArrowBack, LightMode, DarkMode } from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
+import { Box, Typography, CircularProgress, Snackbar, Alert } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -11,6 +9,7 @@ import { slopeColor } from './utils'
 import FilterDialog from './FilterDialog'
 import ResultCard from './ResultCard'
 import BottomBar from './BottomBar'
+import AppHeader from '../../components/AppHeader'
 
 const centerIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;background:#3d6b51;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(61,107,81,.2)"></div>`,
@@ -28,7 +27,6 @@ const MapClickHandler = ({ onMapClick, disabled, onMove }) => {
 
 const Cotes = ({ dark, setDark }) => {
   const theme = useTheme()
-  const navigate = useNavigate()
   const mapRef = useRef(null)
   const [center, setCenter] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
@@ -150,47 +148,17 @@ const Cotes = ({ dark, setDark }) => {
       )}
 
       {/* ── TOP BAR ── */}
-      <Box sx={{
-        position: 'absolute', top: 16, left: 0, right: 0,
-        zIndex: 1001,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        px: 2,
-        pointerEvents: 'none',
-      }}>
-        <IconButton
-          onClick={() => navigate('/')}
-          sx={{
-            bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`,
-            boxShadow: 1, width: 36, height: 36, padding: 0,
-            pointerEvents: 'all',
-            '& .MuiSvgIcon-root': { fontSize: 18 },
-          }}
-        >
-          <ArrowBack />
-        </IconButton>
-
-        <Box sx={{
-          bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`,
-          borderRadius: 6, px: 2, py: 0.75,
-          pointerEvents: 'none',
-        }}>
-          <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1rem' }}>
-            Côtes
-          </Typography>
-        </Box>
-
-        <IconButton
-          onClick={() => setDark(!dark)}
-          sx={{
-            bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`,
-            boxShadow: 1, width: 36, height: 36, padding: 0,
-            pointerEvents: 'all',
-            '& .MuiSvgIcon-root': { fontSize: 18 },
-          }}
-        >
-          {dark ? <LightMode /> : <DarkMode />}
-        </IconButton>
-      </Box>
+      <AppHeader
+        toolName="Côtes"
+        dark={dark}
+        setDark={setDark}
+        sx={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          zIndex: 1001,
+          bgcolor: dark ? 'rgba(15,15,18,0.82)' : 'rgba(255,255,255,0.88)',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+        }}
+      />
 
       {/* ── HELPER idle ── */}
       {phase === 'idle' && !mapMoved && (

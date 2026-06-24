@@ -1,6 +1,6 @@
-import { Box, Typography, IconButton, Tooltip, Divider } from '@mui/material'
-import { DarkMode, LightMode } from '@mui/icons-material'
+import { Box, Typography, Divider } from '@mui/material'
 import AppCard from '../../components/AppCard'
+import AppHeader from '../../components/AppHeader'
 
 const categories = [
   {
@@ -41,17 +41,13 @@ const categories = [
 
 const Home = ({ dark, setDark }) => {
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      maxWidth: 720,
-      mx: 'auto',
-      px: 4,
-      py: 6,
-    }}>
+    <Box sx={{ minHeight: '100vh', maxWidth: 720, mx: 'auto' }}>
 
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 6 }}>
-        <Box>
+      <AppHeader showBack={false} dark={dark} setDark={setDark} sx={{ px: 2, pt: 2 }} />
+
+      <Box sx={{ px: 4, pt: 3, pb: 6 }}>
+        {/* Branding */}
+        <Box sx={{ mb: 6 }}>
           <Typography
             variant="h1"
             sx={{
@@ -80,33 +76,27 @@ const Home = ({ dark, setDark }) => {
           </Box>
         </Box>
 
-        <Tooltip title={dark ? 'Mode clair' : 'Mode sombre'}>
-          <IconButton onClick={() => setDark(!dark)} size="small" sx={{ mt: 0.5 }}>
-            {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {/* Catégories */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {categories.map(cat => (
-          <Box key={cat.label}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-              <Typography
-                variant="overline"
-                sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', whiteSpace: 'nowrap' }}
-              >
-                {cat.label}
-              </Typography>
-              <Divider sx={{ flex: 1 }} />
+        {/* Catégories */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {categories.map(cat => (
+            <Box key={cat.label}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                <Typography
+                  variant="overline"
+                  sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', whiteSpace: 'nowrap' }}
+                >
+                  {cat.label}
+                </Typography>
+                <Divider sx={{ flex: 1 }} />
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+                {cat.apps.map(app => (
+                  <AppCard key={app.id} app={app} dark={dark} />
+                ))}
+              </Box>
             </Box>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-              {cat.apps.map(app => (
-                <AppCard key={app.id} app={app} dark={dark} />
-              ))}
-            </Box>
-          </Box>
-        ))}
+          ))}
+        </Box>
       </Box>
 
     </Box>

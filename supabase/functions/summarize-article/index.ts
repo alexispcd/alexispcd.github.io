@@ -85,9 +85,9 @@ ${THEMES.join(", ")}`,
   })
 
   if (!mistralRes.ok) {
-    const err = await mistralRes.text()
-    console.error("Mistral API error:", err)
-    return Response.json({ error: "Mistral API error" }, { status: 502, headers: CORS })
+    const errText = await mistralRes.text()
+    console.error("Mistral error:", mistralRes.status, errText)
+    return Response.json({ error: "Mistral API error", status: mistralRes.status, detail: errText }, { status: 502, headers: CORS })
   }
 
   const mistralData = await mistralRes.json()
