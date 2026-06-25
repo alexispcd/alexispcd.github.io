@@ -4,6 +4,7 @@ import { DirectionsRun, ErrorOutlined } from '@mui/icons-material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { getActivePlan, generatePlan, subscribeToPlan } from '../../lib/training'
 import PlanWizard from './wizard/PlanWizard'
+import PlanDashboard from './dashboard/PlanDashboard'
 
 const TrainingPage = () => {
   const [plan, setPlan] = useState(undefined)
@@ -85,6 +86,33 @@ const TrainingPage = () => {
     )
   }
 
+  // Plan prêt → dashboard
+  if (plan?.generation_status === 'ready') {
+    return <PlanDashboard plan={plan} />
+  }
+
+  // Plan en génération (chargé depuis la BDD, pas de wizard en cours)
+  if (plan?.generation_status === 'generating') {
+    return (
+      <Box sx={{
+        height: '100%', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        pt: `${HEADER_HEIGHT}px`, px: 3, gap: 3, textAlign: 'center',
+      }}>
+        <CircularProgress size={40} thickness={3} />
+        <Box>
+          <Typography variant="body1" fontWeight={600} gutterBottom>
+            Génération de ton plan en cours...
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Claude analyse tes données Coros et construit ton plan. Tu peux fermer et revenir, ça continue en arrière-plan.
+          </Typography>
+        </Box>
+      </Box>
+    )
+  }
+
+  // États vides / erreur
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
       <Box sx={{ maxWidth: 720, mx: 'auto', px: 2, py: 3 }}>
@@ -138,17 +166,6 @@ const TrainingPage = () => {
             <Button variant="contained" disableElevation onClick={() => setWizardOpen(true)}>
               Créer un plan
             </Button>
-          </Box>
-        )}
-
-        {plan && (
-          <Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              Plan actif
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {plan.race_name ?? 'Sans nom'} — {plan.race_distance}
-            </Typography>
           </Box>
         )}
 

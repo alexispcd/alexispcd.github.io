@@ -55,6 +55,99 @@ export const generatePlan = async (context) => {
   return res.json() // { planId, status }
 }
 
+export const markSessionDone = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .update({ status: 'faite', completed_at: new Date().toISOString() })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const resetSession = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .update({ status: 'à_venir', completed_at: null, coros_label_id: null })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const skipSession = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .update({ status: 'sautée' })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const unskipSession = async (sessionId) => {
+  // 1. Remettre la séance sautée à venir
+  const { data: restored, error: unskipErr } = await supabase
+    .from('training_sessions')
+    .update({ status: 'à_venir' })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (unskipErr) throw unskipErr
+
+  // 2. Trouver toutes les séances adaptées à cause de ce saut
+  const { data: adapted, error: findErr } = await supabase
+    .from('training_sessions')
+    .select('id, previous_details')
+    .eq('adapted_by_session_id', sessionId)
+  if (findErr) throw findErr
+
+  // 3. Restaurer chaque séance adaptée depuis previous_details
+  if (adapted?.length) {
+    await Promise.all(adapted.map(s =>
+      supabase
+        .from('training_sessions')
+        .update({
+          details: s.previous_details,
+          previous_details: null,
+          status: 'à_venir',
+          adapted_at: null,
+          adapted_by_session_id: null,
+        })
+        .eq('id', s.id)
+    ))
+  }
+
+  return restored
+}
+
+export const adaptSessions = async (planId, skippedSessionId) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/adapt-sessions`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ planId, skippedSessionId }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? `Erreur adaptation (${res.status})`)
+  }
+
+  return res.json() // { adaptedCount: N }
+}
+
 export const subscribeToPlan = (planId, callback) => {
   // Polling toutes les 4s (fallback si Realtime non activé)
   const interval = setInterval(async () => {

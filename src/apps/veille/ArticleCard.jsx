@@ -15,6 +15,7 @@ const ArticleCard = ({ article, onClick, onToggleFavorite }) => {
       onClick={onClick}
       sx={{
         cursor: 'pointer',
+        flexShrink: 0,
         opacity: article.is_read ? 0.6 : 1,
         border: `1px solid ${theme.palette.divider}`,
         transition: 'all 0.15s',
