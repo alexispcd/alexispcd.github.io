@@ -142,7 +142,7 @@ function PhysioTarget({ type, fitnessSnapshot }) {
 }
 
 // ── composant principal ────────────────────────────────────────────────────
-const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdaptationDone }) => {
+const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdaptationDone, readOnly = false }) => {
   const [confirmDone,  setConfirmDone]  = useState(false)
   const [confirmSkip,  setConfirmSkip]  = useState(false)
   const [confirmReset,  setConfirmReset]  = useState(false)
@@ -325,7 +325,7 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
           </Box>
 
           {/* Actions */}
-          <Box sx={{ px: 2, pt: 1.5, pb: 3.5, flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {!readOnly && <Box sx={{ px: 2, pt: 1.5, pb: 3.5, flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {canMarkDone && (
               <Button variant="contained" disableElevation fullWidth startIcon={<CheckCircle />}
                 onClick={() => setConfirmDone(true)}>
@@ -353,7 +353,7 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
                 Annuler la validation
               </Button>
             )}
-          </Box>
+          </Box>}
 
         </DialogContent>
       </Dialog>

@@ -148,6 +148,65 @@ export const adaptSessions = async (planId, skippedSessionId) => {
   return res.json() // { adaptedCount: N }
 }
 
+export const getAllPlans = async () => {
+  const { data, error } = await supabase
+    .from('training_plans')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const plans = data ?? []
+  return [
+    ...plans.filter(p => p.status === 'active'),
+    ...plans.filter(p => p.status !== 'active'),
+  ]
+}
+
+export const getPlanById = async (planId) => {
+  const { data, error } = await supabase
+    .from('training_plans')
+    .select('*')
+    .eq('id', planId)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const archivePlan = async (planId) => {
+  const { error } = await supabase
+    .from('training_plans')
+    .update({ status: 'archived' })
+    .eq('id', planId)
+  if (error) throw error
+}
+
+export const deletePlan = async (planId) => {
+  const { error } = await supabase
+    .from('training_plans')
+    .delete()
+    .eq('id', planId)
+  if (error) throw error
+}
+
+export const getCorosFitness = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coros-fitness`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
+  }
+
+  return res.json()
+}
+
 export const subscribeToPlan = (planId, callback) => {
   // Polling toutes les 4s (fallback si Realtime non activé)
   const interval = setInterval(async () => {

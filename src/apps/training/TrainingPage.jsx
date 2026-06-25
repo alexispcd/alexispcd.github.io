@@ -1,31 +1,54 @@
-import { useState, useEffect, useRef } from 'react'
-import { Box, Typography, Button, CircularProgress } from '@mui/material'
-import { DirectionsRun, ErrorOutlined } from '@mui/icons-material'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Box, Typography, CircularProgress } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { getActivePlan, generatePlan, subscribeToPlan } from '../../lib/training'
+import { generatePlan, subscribeToPlan, getPlanById } from '../../lib/training'
+import PlanList from './PlanList'
 import PlanWizard from './wizard/PlanWizard'
 import PlanDashboard from './dashboard/PlanDashboard'
 
 const TrainingPage = () => {
-  const [plan, setPlan] = useState(undefined)
-  const [error, setError] = useState(null)
-  const [wizardOpen, setWizardOpen] = useState(false)
-  const [generatingPlanId, setGeneratingPlanId] = useState(null)
+  // 'list' | 'dashboard' | 'wizard' | 'generating'
+  const [view, setView]               = useState('list')
+  const [selectedPlan, setSelectedPlan] = useState(null)
+  const [readOnly, setReadOnly]         = useState(false)
   const [generateError, setGenerateError] = useState(null)
+  const [listRefreshKey, setListRefreshKey] = useState(0)
   const unsubscribeRef = useRef(null)
 
-  useEffect(() => {
-    getActivePlan()
-      .then(setPlan)
-      .catch(err => { setError(err.message); setPlan(null) })
-  }, [])
+  useEffect(() => () => { unsubscribeRef.current?.() }, [])
 
-  useEffect(() => {
-    return () => { unsubscribeRef.current?.() }
-  }, [])
+  const refreshList = useCallback(() => setListRefreshKey(k => k + 1), [])
+
+  const handleSelectPlan = useCallback((plan, isReadOnly = false) => {
+    // Plan encore en cours de génération → ré-abonnement
+    if (plan.generation_status === 'generating') {
+      setView('generating')
+      unsubscribeRef.current = subscribeToPlan(plan.id, async (status, errMsg) => {
+        unsubscribeRef.current = null
+        if (status === 'ready') {
+          try {
+            const updated = await getPlanById(plan.id)
+            setSelectedPlan(updated)
+            setReadOnly(false)
+            setView('dashboard')
+          } catch {
+            refreshList()
+            setView('list')
+          }
+        } else {
+          setGenerateError(errMsg ?? 'Erreur lors de la génération du plan.')
+          setView('list')
+        }
+      })
+      return
+    }
+    setSelectedPlan(plan)
+    setReadOnly(isReadOnly)
+    setView('dashboard')
+  }, [refreshList])
 
   const handleGenerate = async (context) => {
-    setWizardOpen(false)
+    setView('generating')
     setGenerateError(null)
 
     let planId
@@ -34,39 +57,40 @@ const TrainingPage = () => {
       planId = result.planId
     } catch (err) {
       setGenerateError(err.message)
+      setView('list')
       return
     }
 
-    setGeneratingPlanId(planId)
-
     unsubscribeRef.current = subscribeToPlan(planId, async (status, errMsg) => {
       unsubscribeRef.current = null
-      setGeneratingPlanId(null)
       if (status === 'ready') {
         try {
-          const updated = await getActivePlan()
-          setPlan(updated)
+          const plan = await getPlanById(planId)
+          setSelectedPlan(plan)
+          setReadOnly(false)
+          setView('dashboard')
         } catch {
-          setError('Plan généré mais erreur au chargement, recharge la page.')
+          refreshList()
+          setView('list')
         }
       } else {
         setGenerateError(errMsg ?? 'Erreur lors de la génération du plan.')
+        setView('list')
       }
     })
   }
 
-  const handleRetry = () => {
-    setGenerateError(null)
-    setWizardOpen(true)
+  const handleBackToList = useCallback(() => {
+    refreshList()
+    setSelectedPlan(null)
+    setView('list')
+  }, [refreshList])
+
+  if (view === 'wizard') {
+    return <PlanWizard onGenerate={handleGenerate} onBack={handleBackToList} />
   }
 
-  // Écran wizard
-  if (wizardOpen) {
-    return <PlanWizard onGenerate={handleGenerate} />
-  }
-
-  // Écran génération en cours
-  if (generatingPlanId) {
+  if (view === 'generating') {
     return (
       <Box sx={{
         height: '100%', display: 'flex', flexDirection: 'column',
@@ -86,91 +110,24 @@ const TrainingPage = () => {
     )
   }
 
-  // Plan prêt → dashboard
-  if (plan?.generation_status === 'ready') {
-    return <PlanDashboard plan={plan} />
-  }
-
-  // Plan en génération (chargé depuis la BDD, pas de wizard en cours)
-  if (plan?.generation_status === 'generating') {
+  if (view === 'dashboard' && selectedPlan) {
     return (
-      <Box sx={{
-        height: '100%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        pt: `${HEADER_HEIGHT}px`, px: 3, gap: 3, textAlign: 'center',
-      }}>
-        <CircularProgress size={40} thickness={3} />
-        <Box>
-          <Typography variant="body1" fontWeight={600} gutterBottom>
-            Génération de ton plan en cours...
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Claude analyse tes données Coros et construit ton plan. Tu peux fermer et revenir, ça continue en arrière-plan.
-          </Typography>
-        </Box>
-      </Box>
+      <PlanDashboard
+        plan={selectedPlan}
+        readOnly={readOnly}
+        onBack={handleBackToList}
+      />
     )
   }
 
-  // États vides / erreur
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 720, mx: 'auto', px: 2, py: 3 }}>
-
-        {plan === undefined && !error && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-            <CircularProgress size={28} />
-          </Box>
-        )}
-
-        {error && (
-          <Typography variant="body2" color="error" sx={{ textAlign: 'center', py: 8 }}>
-            {error}
-          </Typography>
-        )}
-
-        {generateError && (
-          <Box sx={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: 2, py: 8, textAlign: 'center',
-          }}>
-            <ErrorOutlined sx={{ fontSize: 48, color: 'error.main' }} />
-            <Box>
-              <Typography variant="body1" fontWeight={600} gutterBottom>
-                Erreur lors de la génération
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {generateError}
-              </Typography>
-            </Box>
-            <Button variant="contained" disableElevation onClick={handleRetry}>
-              Réessayer
-            </Button>
-          </Box>
-        )}
-
-        {plan === null && !error && !generateError && (
-          <Box sx={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: 2, py: 8, textAlign: 'center',
-          }}>
-            <DirectionsRun sx={{ fontSize: 48, color: 'text.disabled' }} />
-            <Box>
-              <Typography variant="body1" fontWeight={600} gutterBottom>
-                Aucun plan actif
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Crée un plan pour commencer à suivre ton entraînement.
-              </Typography>
-            </Box>
-            <Button variant="contained" disableElevation onClick={() => setWizardOpen(true)}>
-              Créer un plan
-            </Button>
-          </Box>
-        )}
-
-      </Box>
-    </Box>
+    <PlanList
+      refreshKey={listRefreshKey}
+      generateError={generateError}
+      onClearError={() => setGenerateError(null)}
+      onSelectPlan={handleSelectPlan}
+      onNewPlan={() => { setGenerateError(null); setView('wizard') }}
+    />
   )
 }
 

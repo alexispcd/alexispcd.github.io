@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Box, Typography, IconButton, Chip, CircularProgress } from '@mui/material'
+import { Box, Typography, IconButton, Chip, CircularProgress, Button } from '@mui/material'
 import { ChevronLeft, ChevronRight, EmojiEvents, Schedule } from '@mui/icons-material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { getPlanSessions } from '../../../lib/training'
@@ -27,7 +27,7 @@ function formatRange(start, end) {
   return `${start.toLocaleDateString('fr-FR', opts)} – ${end.toLocaleDateString('fr-FR', opts)}`
 }
 
-const PlanDashboard = ({ plan }) => {
+const PlanDashboard = ({ plan, readOnly = false, onBack }) => {
   const [sessions,       setSessions]       = useState(null)
   const [maxWeek,        setMaxWeek]        = useState(1)
   const [selectedWeek,   setSelectedWeek]   = useState(1)
@@ -80,19 +80,44 @@ const PlanDashboard = ({ plan }) => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
 
-      {/* En-tête plan */}
-      <Box sx={{ px: 2, pt: 2.5, pb: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
-          <EmojiEvents sx={{ fontSize: 14, color: 'primary.main' }} />
-          <Typography variant="overline" color="primary"
-            sx={{ fontSize: '0.6rem', letterSpacing: '0.12em', lineHeight: 1 }}>
-            Plan actif
-          </Typography>
+      {/* Retour vers la liste */}
+      {onBack && (
+        <Box sx={{ px: 0.5, pt: 0.5 }}>
+          <Button
+            startIcon={<ChevronLeft />}
+            onClick={onBack}
+            size="small"
+            sx={{ color: 'text.secondary', fontWeight: 400, fontSize: '0.82rem', letterSpacing: 0 }}
+          >
+            Mes plans
+          </Button>
         </Box>
+      )}
 
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 1.25 }}>
-          {plan.race_name ?? 'Plan en cours'}
-        </Typography>
+      {/* En-tête plan */}
+      <Box sx={{ px: 2, pt: onBack ? 1 : 2.5, pb: 2 }}>
+        {!readOnly && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+            <EmojiEvents sx={{ fontSize: 14, color: 'primary.main' }} />
+            <Typography variant="overline" color="primary"
+              sx={{ fontSize: '0.6rem', letterSpacing: '0.12em', lineHeight: 1 }}>
+              Plan actif
+            </Typography>
+          </Box>
+        )}
+
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.25 }}>
+          <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
+            {plan.race_name ?? 'Plan en cours'}
+          </Typography>
+          {readOnly && (
+            <Chip
+              label={plan.status === 'completed' ? 'Terminé' : 'Archivé'}
+              size="small"
+              sx={{ height: 20, fontSize: '0.62rem', '& .MuiChip-label': { px: 0.75 }, mt: 0.25, flexShrink: 0 }}
+            />
+          )}
+        </Box>
 
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {plan.race_distance && (
@@ -208,6 +233,7 @@ const PlanDashboard = ({ plan }) => {
           setDetailSession(updated)
         }}
         onAdaptationDone={reloadSessions}
+        readOnly={readOnly}
       />
 
     </Box>

@@ -1,37 +1,79 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Typography, Button, LinearProgress } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
+import { getCorosFitness } from '../../../lib/training'
 import Step1Course from './Step1Course'
 import Step2Fitness from './Step2Fitness'
 import Step3Objectif from './Step3Objectif'
-import Step4Previous from './Step4Previous'
 import Step5Summary from './Step5Summary'
 
 const STEPS = [
-  { label: 'La course',             skippable: false, Component: Step1Course  },
-  { label: 'Forme / VMA',           skippable: false, Component: Step2Fitness  },
-  { label: 'Objectif',              skippable: false, Component: Step3Objectif },
-  { label: 'Éditions précédentes',  skippable: true,  Component: Step4Previous },
-  { label: 'Récapitulatif',         skippable: false, Component: Step5Summary  },
+  { label: 'La course',      skippable: false, Component: Step1Course   },
+  { label: 'Forme / VMA',   skippable: false, Component: Step2Fitness   },
+  { label: 'Objectif',      skippable: false, Component: Step3Objectif  },
+  { label: 'Récapitulatif', skippable: false, Component: Step5Summary   },
 ]
+
+const toDateStr = (d) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const nextMondayStr = () => {
+  const d = new Date()
+  const daysUntil = (1 - d.getDay() + 7) % 7 || 7
+  d.setDate(d.getDate() + daysUntil)
+  return toDateStr(d)
+}
 
 const INITIAL_CONTEXT = {
   raceName: '',
-  raceType: null,        // '10km' | 'semi' | 'marathon' | 'trail'
+  raceType: null,
   raceDate: '',
   trailDistance: '',
   trailElevation: '',
-  vmaSource: 'coros',   // 'coros' | 'manual' | 'test'
+  startDate: nextMondayStr(),
+  startDateMode: 'next_monday',
+  vmaSource: 'coros',
   vmaManual: '',
-  targetPalier: null,   // 'realistic' | 'ambitious' | 'very_ambitious'
+  fitnessSnapshot: null,
+  targetPalier: null,
   targetTime: '',
-  previousRaces: [],
   notes: '',
 }
 
-const PlanWizard = ({ onGenerate }) => {
+const PlanWizard = ({ onGenerate, onBack }) => {
   const [step, setStep] = useState(1)
   const [planContext, setPlanContext] = useState(INITIAL_CONTEXT)
+  const [corosFitnessState, setCorosFitnessState] = useState({ status: 'loading', data: null, error: '' })
+  const fetchingRef = useRef(false)
+
+  const fetchCorosFitness = async () => {
+    if (fetchingRef.current) return
+    fetchingRef.current = true
+    setCorosFitnessState({ status: 'loading', data: null, error: '' })
+    try {
+      const data = await getCorosFitness()
+      setCorosFitnessState({ status: 'ready', data, error: '' })
+      setPlanContext(prev =>
+        prev.vmaSource === 'coros' ? { ...prev, fitnessSnapshot: data } : prev
+      )
+    } catch (err) {
+      setCorosFitnessState({
+        status: 'error',
+        data: null,
+        error: err?.message ?? 'Impossible de récupérer les données Coros.',
+      })
+    } finally {
+      fetchingRef.current = false
+    }
+  }
+
+  useEffect(() => {
+    fetchCorosFitness()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateContext = (partial) => setPlanContext(prev => ({ ...prev, ...partial }))
 
@@ -40,7 +82,6 @@ const PlanWizard = ({ onGenerate }) => {
     else setStep(s => s + 1)
   }
   const handleBack = () => setStep(s => s - 1)
-  const handleSkip = () => setStep(s => s + 1)
 
   const { label, skippable, Component } = STEPS[step - 1]
 
@@ -69,7 +110,12 @@ const PlanWizard = ({ onGenerate }) => {
 
       {/* Contenu de l'étape */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pt: 1 }}>
-        <Component planContext={planContext} updateContext={updateContext} />
+        <Component
+          planContext={planContext}
+          updateContext={updateContext}
+          corosFitnessState={corosFitnessState}
+          onRetryFitness={fetchCorosFitness}
+        />
       </Box>
 
       {/* Navigation */}
@@ -78,13 +124,18 @@ const PlanWizard = ({ onGenerate }) => {
           {step === STEPS.length ? 'Générer mon plan' : 'Continuer'}
         </Button>
         {skippable && (
-          <Button fullWidth onClick={handleSkip} sx={{ color: 'text.secondary' }}>
+          <Button fullWidth onClick={() => setStep(s => s + 1)} sx={{ color: 'text.secondary' }}>
             Passer cette étape
           </Button>
         )}
         {step > 1 && (
           <Button fullWidth onClick={handleBack} sx={{ color: 'text.secondary' }}>
             Retour
+          </Button>
+        )}
+        {step === 1 && onBack && (
+          <Button fullWidth onClick={onBack} sx={{ color: 'text.secondary' }}>
+            Annuler
           </Button>
         )}
       </Box>

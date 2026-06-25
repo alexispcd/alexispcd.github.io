@@ -11,24 +11,27 @@ const RACE_TYPE_LABELS = {
   '10km': '10 km', semi: 'Semi-marathon', marathon: 'Marathon', trail: 'Trail',
 }
 const VMA_SOURCE_LABELS = {
-  coros: 'Coros', manual: 'Manuelle', test: 'Test à planifier',
+  coros: 'Coros', manual: 'Manuelle',
 }
 const PALIER_LABELS = {
   realistic: 'Réaliste', ambitious: 'Ambitieux', very_ambitious: 'Très ambitieux',
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return null
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+
 const Step5Summary = ({ planContext, updateContext }) => {
-  const weeksUntil = planContext.raceDate
-    ? Math.round((new Date(planContext.raceDate) - new Date()) / (7 * 24 * 3600 * 1000))
+  const weeks = planContext.raceDate && planContext.startDate
+    ? Math.round((new Date(planContext.raceDate) - new Date(planContext.startDate)) / (7 * 24 * 3600 * 1000))
     : null
 
   const objectifLabel = planContext.targetPalier
     ? `${PALIER_LABELS[planContext.targetPalier]} — ${planContext.targetTime}`
     : planContext.targetTime || null
-
-  const previousLabel = planContext.previousRaces?.length > 0
-    ? planContext.previousRaces.map(r => r.label).join(', ')
-    : null
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pb: 2 }}>
@@ -40,20 +43,20 @@ const Step5Summary = ({ planContext, updateContext }) => {
 
       <Box sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
         <Box sx={{ px: 2 }}>
-          <Row label="Course"     value={planContext.raceName} />
+          <Row label="Course" value={planContext.raceName} />
           <Divider />
-          <Row label="Type"       value={RACE_TYPE_LABELS[planContext.raceType]} />
+          <Row label="Type" value={RACE_TYPE_LABELS[planContext.raceType]} />
           {planContext.raceType === 'trail' && <>
             <Divider />
             <Row label="Distance trail" value={planContext.trailDistance} />
             <Divider />
-            <Row label="D+"             value={planContext.trailElevation ? `${planContext.trailElevation} m` : null} />
+            <Row label="D+" value={planContext.trailElevation ? `${planContext.trailElevation} m` : null} />
           </>}
           <Divider />
-          <Row label="Date" value={planContext.raceDate
-            ? new Date(planContext.raceDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-            : null} />
-          {weeksUntil > 0 && <><Divider /><Row label="Durée du plan" value={`${weeksUntil} semaines`} /></>}
+          <Row label="Date de course" value={formatDate(planContext.raceDate)} />
+          <Divider />
+          <Row label="Début du plan" value={formatDate(planContext.startDate)} />
+          {weeks > 0 && <><Divider /><Row label="Durée du plan" value={`${weeks} semaines`} /></>}
           <Divider />
           <Row label="Source VMA" value={VMA_SOURCE_LABELS[planContext.vmaSource]} />
           {planContext.vmaSource === 'manual' && planContext.vmaManual && <>
@@ -61,7 +64,6 @@ const Step5Summary = ({ planContext, updateContext }) => {
             <Row label="VMA" value={`${planContext.vmaManual} km/h`} />
           </>}
           {objectifLabel && <><Divider /><Row label="Objectif" value={objectifLabel} /></>}
-          {previousLabel && <><Divider /><Row label="Éditions liées" value={previousLabel} /></>}
         </Box>
       </Box>
 

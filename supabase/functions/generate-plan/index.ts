@@ -7,11 +7,15 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const SYSTEM_PROMPT = `Tu es un coach running expert spécialisé en plans d'entraînement personnalisés.
+function buildSystemPrompt(hasFitnessSnapshot: boolean): string {
+  return `Tu es un coach running expert spécialisé en plans d'entraînement personnalisés.
 Tu as accès aux données d'entraînement Coros de l'athlète via les outils MCP.
 
 Processus obligatoire avant de générer le plan :
-1. Appelle queryFitnessAssessmentOverview pour obtenir le snapshot de forme (VO2max, seuil, VMA dérivée, prédictions).
+${hasFitnessSnapshot
+    ? "1. Les données de forme sont déjà fournies dans le prompt — n'appelle PAS queryFitnessAssessmentOverview."
+    : "1. Appelle queryFitnessAssessmentOverview pour obtenir le snapshot de forme (VO2max, seuil, VMA dérivée, prédictions)."
+  }
 2. Appelle querySportRecords avec sportTypeCodes=[100], limit=20 pour voir l'historique des 6 dernières semaines.
 
 Règles de génération du plan :
@@ -28,23 +32,38 @@ Règles de génération du plan :
 - Sois concis dans tous les champs "notes" : 1 phrase max, pas de répétition
 
 Réponds UNIQUEMENT avec le JSON, sans aucun texte avant ni après, sans bloc markdown \`\`\`. Commence directement par { et termine par }.`
+}
+
+interface FitnessSnapshot {
+  vo2max: number
+  threshold_pace: string
+  running_level: string
+  vma_derived?: number
+  predictions: { five_k?: string; ten_k?: string; half?: string; marathon?: string }
+  source: string
+  captured_at: string
+}
 
 interface PlanContext {
   raceName?: string
   raceType?: string
   raceDate?: string
+  startDate?: string
   trailDistance?: string
   trailElevation?: number
   targetTime?: string
+  targetPalier?: string
   vmaSource?: string
   vmaManual?: string
+  fitnessSnapshot?: FitnessSnapshot
   previousRaces?: Array<{ label: string; time: string }>
   notes?: string
 }
 
 function buildUserPrompt(context: PlanContext): string {
-  const weeksUntil = context.raceDate
-    ? Math.round((new Date(context.raceDate).getTime() - Date.now()) / (7 * 24 * 3600 * 1000))
+  const startDate = context.startDate ?? new Date().toISOString().split("T")[0]
+  const weeksUntil = context.raceDate && startDate
+    ? Math.round((new Date(context.raceDate).getTime() - new Date(startDate).getTime()) / (7 * 24 * 3600 * 1000))
     : null
 
   const raceDistance = context.raceType === "trail"
@@ -57,11 +76,25 @@ function buildUserPrompt(context: PlanContext): string {
     `Course : ${context.raceName ?? "Non précisé"}`,
     `Distance : ${raceDistance}`,
     `Date de course : ${context.raceDate ?? "Non précisé"}`,
+    `Date de début : ${startDate}`,
     `Nombre de semaines : ${weeksUntil ?? "À calculer depuis la date"}`,
-    `Date de début : ${new Date().toISOString().split("T")[0]}`,
     `Objectif : ${context.targetTime ?? "Non précisé"}`,
     `Source VMA : ${context.vmaSource ?? "coros"}${context.vmaManual ? ` — VMA ${context.vmaManual} km/h` : ""}`,
   ]
+
+  if (context.fitnessSnapshot) {
+    const s = context.fitnessSnapshot
+    const vma = s.vma_derived ?? (s.vo2max ? parseFloat((s.vo2max / 3.5).toFixed(1)) : null)
+    lines.push(
+      "",
+      "Snapshot de forme Coros (ne pas rappeler queryFitnessAssessmentOverview) :",
+      `  VO2max : ${s.vo2max}`,
+      `  Seuil : ${s.threshold_pace}`,
+      `  Niveau : ${s.running_level}`,
+      ...(vma ? [`  VMA dérivée : ${vma} km/h`] : []),
+      `  Prédictions : 5k ${s.predictions?.five_k ?? "—"}, 10k ${s.predictions?.ten_k ?? "—"}, semi ${s.predictions?.half ?? "—"}, marathon ${s.predictions?.marathon ?? "—"}`,
+    )
+  }
 
   if (context.previousRaces?.length) {
     lines.push(`Courses précédentes : ${context.previousRaces.map((r) => `${r.label} (${r.time})`).join(", ")}`)
@@ -147,6 +180,17 @@ async function generatePlanInBackground(
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY manquante")
 
+    const hasFitnessSnapshot = !!(
+      context.fitnessSnapshot ||
+      (context.vmaSource === "manual" && context.vmaManual)
+    )
+
+    const mcpConfigs: Record<string, { enabled: boolean }> = {
+      querySportRecords: { enabled: true },
+      queryActivityLapData: { enabled: true },
+    }
+    if (!hasFitnessSnapshot) mcpConfigs.queryFitnessAssessmentOverview = { enabled: true }
+
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -158,17 +202,13 @@ async function generatePlanInBackground(
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
         max_tokens: 16000,
-        system: SYSTEM_PROMPT,
+        system: buildSystemPrompt(hasFitnessSnapshot),
         messages: [{ role: "user", content: buildUserPrompt(context) }],
         tools: [{
           type: "mcp_toolset",
           mcp_server_name: "coros",
           default_config: { enabled: false },
-          configs: {
-            queryFitnessAssessmentOverview: { enabled: true },
-            querySportRecords: { enabled: true },
-            queryActivityLapData: { enabled: true },
-          },
+          configs: mcpConfigs,
         }],
         mcp_servers: [{
           type: "url",
@@ -227,7 +267,7 @@ async function generatePlanInBackground(
     // Marquer le plan comme prêt
     const { error: updateError } = await supabaseAdmin.from("training_plans").update({
       generation_status: "ready",
-      fitness_snapshot: planData.fitness_snapshot ?? null,
+      fitness_snapshot: context.fitnessSnapshot ?? planData.fitness_snapshot ?? null,
     }).eq("id", planId)
     if (updateError) throw new Error(`Update plan: ${updateError.message}`)
 
@@ -311,7 +351,7 @@ async function handleRequest(req: Request): Promise<Response> {
     vma_source: context.vmaSource ?? "coros",
     previous_races: context.previousRaces ?? [],
     notes: context.notes ?? null,
-    start_date: new Date().toISOString().split("T")[0],
+    start_date: context.startDate ?? new Date().toISOString().split("T")[0],
     status: "active",
     generation_status: "generating",
   }
