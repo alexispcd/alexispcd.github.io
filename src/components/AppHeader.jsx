@@ -9,6 +9,7 @@ import {
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import supabase from '../lib/supabase'
+import { glassSx } from '../styles/glass'
 
 // Hauteur occupée par le header flottant (py:1.5 *2 + bouton 36px)
 export const HEADER_HEIGHT = 60
@@ -25,21 +26,6 @@ const AppHeader = ({
   const navigate = useNavigate()
   const [accountAnchor, setAccountAnchor] = useState(null)
   const [actionsAnchor, setActionsAnchor] = useState(null)
-
-  const glass = {
-    backdropFilter: 'blur(24px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-    bgcolor: dark ? 'rgba(15,15,18,0.45)' : 'rgba(255,255,255,0.55)',
-    boxShadow: dark
-      ? 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 12px rgba(0,0,0,0.35)'
-      : 'inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 12px rgba(0,0,0,0.10)',
-    border: dark
-      ? '1px solid rgba(255,255,255,0.07)'
-      : '1px solid rgba(0,0,0,0.07)',
-  }
-
-  // Style partagé pour les menus déroulants (popups)
-  const menuPaper = { ...glass, borderRadius: 2, minWidth: 200 }
 
   const hasActions = actions.length > 0
 
@@ -61,7 +47,7 @@ const AppHeader = ({
         {showBack ? (
           <IconButton
             onClick={() => navigate('/')}
-            sx={{ ...glass, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <ArrowBack sx={{ fontSize: 18 }} />
           </IconButton>
@@ -77,7 +63,7 @@ const AppHeader = ({
             <Box
               onClick={(e) => setActionsAnchor(e.currentTarget)}
               sx={{
-                ...glass,
+                ...glassSx,
                 display: 'flex', alignItems: 'center', gap: 0.5,
                 borderRadius: 6, px: 2, height: 36,
                 cursor: 'pointer',
@@ -94,7 +80,7 @@ const AppHeader = ({
               onClose={() => setActionsAnchor(null)}
               transformOrigin={{ horizontal: 'center', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'center', vertical: 'bottom' }}
-              PaperProps={{ sx: menuPaper }}
+              PaperProps={{ sx: { ...glassSx, borderRadius: 2, minWidth: 200 } }}
             >
               {actions.map((action) => (
                 <MenuItem
@@ -108,7 +94,7 @@ const AppHeader = ({
             </Menu>
           </>
         ) : toolName ? (
-          <Box sx={{ ...glass, display: 'flex', alignItems: 'center', borderRadius: 6, px: 2, height: 36 }}>
+          <Box sx={{ ...glassSx, display: 'flex', alignItems: 'center', borderRadius: 6, px: 2, height: 36 }}>
             <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, lineHeight: 1 }}>
               {toolName}
             </Typography>
@@ -122,7 +108,7 @@ const AppHeader = ({
       <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center' }}>
         <IconButton
           onClick={(e) => setAccountAnchor(e.currentTarget)}
-          sx={{ ...glass, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <AccountCircle sx={{ fontSize: 18 }} />
         </IconButton>
@@ -133,7 +119,7 @@ const AppHeader = ({
           onClose={() => setAccountAnchor(null)}
           transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          PaperProps={{ sx: { ...menuPaper, minWidth: 230 } }}
+          PaperProps={{ sx: { ...glassSx, borderRadius: 2, minWidth: 230 } }}
         >
           <Box sx={{ px: 2, py: 1.5 }}>
             <Typography variant="caption" color="text.secondary" display="block">

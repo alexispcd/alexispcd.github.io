@@ -9,24 +9,11 @@ import {
 } from '@mui/icons-material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { getAllPlans, archivePlan, deletePlan } from '../../lib/training'
+import { glassSx, GLASS_BACKDROP } from '../../styles/glass'
 
-const LIQUID_PAPER = {
-  sx: {
-    backdropFilter: 'blur(24px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-    bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(22,22,32,0.90)' : 'rgba(255,255,255,0.90)',
-    border: '1px solid',
-    borderColor: (t) => t.palette.mode === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-    borderRadius: 3,
-    boxShadow: (t) => t.palette.mode === 'dark'
-      ? 'inset 0 1px 0 rgba(255,255,255,0.05)'
-      : 'inset 0 1px 0 rgba(255,255,255,0.75)',
-    mx: 2,
-    maxWidth: 360,
-    width: 'calc(100% - 32px)',
-  },
+const DIALOG_PAPER = {
+  sx: { ...glassSx, borderRadius: 3, mx: 2, maxWidth: 360, width: 'calc(100% - 32px)' },
 }
-const LIQUID_BACKDROP = { sx: { bgcolor: 'rgba(0,0,0,0.25)' } }
 
 function formatDate(dateStr) {
   if (!dateStr) return null
@@ -300,8 +287,8 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
       <Dialog
         open={pendingAction?.type === 'archive'}
         onClose={() => !actionLoading && setPendingAction(null)}
-        PaperProps={LIQUID_PAPER}
-        BackdropProps={LIQUID_BACKDROP}
+        PaperProps={DIALOG_PAPER}
+        BackdropProps={GLASS_BACKDROP}
       >
         <DialogTitle sx={{ pb: 1, fontWeight: 700, fontSize: '1rem' }}>
           Archiver ce plan ?
@@ -326,8 +313,8 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
       <Dialog
         open={pendingAction?.type === 'delete'}
         onClose={() => !actionLoading && setPendingAction(null)}
-        PaperProps={LIQUID_PAPER}
-        BackdropProps={LIQUID_BACKDROP}
+        PaperProps={DIALOG_PAPER}
+        BackdropProps={GLASS_BACKDROP}
       >
         <DialogTitle sx={{ pb: 1, fontWeight: 700, fontSize: '1rem' }}>
           Supprimer définitivement ?

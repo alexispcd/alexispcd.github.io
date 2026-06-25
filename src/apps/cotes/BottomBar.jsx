@@ -1,9 +1,10 @@
 import { Box, Button } from '@mui/material'
 import { TuneRounded, MyLocationRounded } from '@mui/icons-material'
-import { useTheme, alpha } from '@mui/material/styles'
+import { useTheme } from '@mui/material/styles'
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustomParams, center }) => {
   const theme = useTheme()
+  const dark = theme.palette.mode === 'dark'
 
   const btnBase = {
     borderRadius: 99,
@@ -19,10 +20,17 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
       position: 'absolute',
       bottom: 0, left: 0, right: 0,
       zIndex: 1000,
-      background: alpha(theme.palette.background.paper, 0.9),
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderTop: `1px solid ${theme.palette.divider}`,
+      background: dark
+        ? 'linear-gradient(180deg, rgba(52,52,68,0.28) 0%, rgba(18,18,28,0.36) 100%)'
+        : 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(228,234,252,0.24) 100%)',
+      backdropFilter: 'blur(28px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+      borderTop: dark
+        ? '1px solid rgba(255,255,255,0.07)'
+        : '1px solid rgba(0,0,0,0.06)',
+      boxShadow: dark
+        ? 'inset 0 1px 0 rgba(255,255,255,0.08)'
+        : 'inset 0 1px 0 rgba(255,255,255,0.80)',
       px: 2,
       pt: 1.25,
       pb: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))',
