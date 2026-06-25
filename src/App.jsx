@@ -6,6 +6,7 @@ import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import Cotes from './apps/cotes/Cotes'
 import VeillePage from './apps/veille/VeillePage'
+import TrainingPage from './apps/training/TrainingPage'
 import AuthGate from './components/AuthGate'
 import AppHeader from './components/AppHeader'
 import supabase from './lib/supabase'
@@ -62,6 +63,7 @@ const App = () => {
               <Route path="/" element={<Home />} />
               <Route path="/cotes" element={<Cotes dark={dark} />} />
               <Route path="/veille" element={<VeillePage />} />
+              <Route path="/training" element={<TrainingPage />} />
             </Routes>
           </AppLayout>
         </AuthGate>
