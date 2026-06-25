@@ -99,7 +99,7 @@ const Step3Objectif = ({ planContext, updateContext }) => {
         <SectionLabel>Ou saisir un temps précis</SectionLabel>
         <TextField
           fullWidth size="small"
-          placeholder="ex : 1h37'30\""
+          placeholder="ex : 1h37'30"
           value={planContext.targetPalier ? '' : planContext.targetTime}
           onChange={handleCustomTime}
         />
