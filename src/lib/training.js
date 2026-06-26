@@ -124,6 +124,30 @@ export const unskipSession = async (sessionId) => {
   return restored
 }
 
+export const regeneratePlan = async (planId) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/regenerate-plan`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ planId }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? `Erreur serveur (${res.status})`)
+  }
+
+  return res.json() // { planId, status }
+}
+
 export const adaptSessions = async (planId, skippedSessionId) => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Non authentifié')

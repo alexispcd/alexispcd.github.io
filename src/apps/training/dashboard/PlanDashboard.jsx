@@ -27,7 +27,7 @@ function formatRange(start, end) {
   return `${start.toLocaleDateString('fr-FR', opts)} – ${end.toLocaleDateString('fr-FR', opts)}`
 }
 
-const PlanDashboard = ({ plan, readOnly = false, onBack }) => {
+const PlanDashboard = ({ plan, readOnly = false, onBack, onRegeneratePlan }) => {
   const [sessions,       setSessions]       = useState(null)
   const [maxWeek,        setMaxWeek]        = useState(1)
   const [selectedWeek,   setSelectedWeek]   = useState(1)
@@ -233,6 +233,7 @@ const PlanDashboard = ({ plan, readOnly = false, onBack }) => {
           setDetailSession(updated)
         }}
         onAdaptationDone={reloadSessions}
+        onRegeneratePlan={onRegeneratePlan}
         readOnly={readOnly}
       />
 

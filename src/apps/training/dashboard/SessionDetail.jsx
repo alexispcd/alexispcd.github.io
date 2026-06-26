@@ -143,7 +143,7 @@ function PhysioTarget({ type, fitnessSnapshot }) {
 const _corosCache = new Map()
 
 // ── composant principal ────────────────────────────────────────────────────
-const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdaptationDone, readOnly = false }) => {
+const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdaptationDone, onRegeneratePlan, readOnly = false }) => {
   const [confirmDone,  setConfirmDone]  = useState(false)
   const [confirmSkip,  setConfirmSkip]  = useState(false)
   const [confirmReset,  setConfirmReset]  = useState(false)
@@ -296,7 +296,11 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
     try {
       const result = await adaptSessions(plan?.id, session.id)
       if (!adaptDismissed.current) {
-        setAdaptState({ count: result?.adaptedCount ?? 0 })
+        if (result?.regenerate) {
+          setAdaptState({ count: 0, regenerate: true })
+        } else {
+          setAdaptState({ count: result?.adaptedCount ?? 0 })
+        }
       }
     } catch (err) {
       console.error('[Training] adaptSessions error:', err.message)
@@ -765,14 +769,36 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
           </>
         )}
 
-        {adaptIsDone && (
+        {adaptIsDone && adaptState?.regenerate && (
           <>
             <DialogTitle sx={{ pb: 1, fontWeight: 700, fontSize: '1rem' }}>
-              {adaptState?.error ? 'Séance sautée' : 'Séance sautée'}
+              Plusieurs séances manquées
+            </DialogTitle>
+            <DialogContentText sx={{ px: 3, pb: 2, fontSize: '0.875rem', color: 'text.secondary' }}>
+              Tu as manqué plusieurs séances récemment. Veux-tu régénérer la suite de ton plan en fonction de ta situation actuelle ?
+            </DialogContentText>
+            <DialogActions sx={{ px: 2, pb: 2.5, gap: 1 }}>
+              <Button fullWidth onClick={handleAdaptClose} sx={{ color: 'text.secondary' }}>
+                Plus tard
+              </Button>
+              <Button fullWidth variant="contained" disableElevation onClick={() => {
+                handleAdaptClose()
+                onRegeneratePlan?.(plan?.id)
+              }}>
+                Régénérer la suite
+              </Button>
+            </DialogActions>
+          </>
+        )}
+
+        {adaptIsDone && !adaptState?.regenerate && (
+          <>
+            <DialogTitle sx={{ pb: 1, fontWeight: 700, fontSize: '1rem' }}>
+              Séance sautée
             </DialogTitle>
             <DialogContentText sx={{ px: 3, pb: 2, fontSize: '0.875rem', color: 'text.secondary' }}>
               {adaptState?.unavailable
-                ? 'La séance a été marquée comme sautée. L\'adaptation automatique sera disponible prochainement.'
+                ? "La séance a été marquée comme sautée. L'adaptation automatique sera disponible prochainement."
                 : adaptState?.error
                   ? `La séance a été sautée, mais l'adaptation a échoué : ${adaptState.error}`
                   : `${adaptState?.count ?? 0} séance${adaptState?.count !== 1 ? 's' : ''} adaptée${adaptState?.count !== 1 ? 's' : ''} dans le plan.`
