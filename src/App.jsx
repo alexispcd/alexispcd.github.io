@@ -1,44 +1,63 @@
-import { ThemeProvider, CssBaseline, Box } from '@mui/material'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
+import { ThemeProvider, CssBaseline, Box } from '@mui/material'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import Cotes from './apps/cotes/Cotes'
 import VeillePage from './apps/veille/VeillePage'
+import ArticleDetail from './apps/veille/ArticleDetail'
 import TrainingPage from './apps/training/TrainingPage'
+import PlanDashboard from './apps/training/dashboard/PlanDashboard'
+import PlanWizard from './apps/training/wizard/PlanWizard'
 import AuthGate from './components/AuthGate'
 import AppHeader from './components/AppHeader'
 import supabase from './lib/supabase'
+import { AppCtx, useAppCtx } from './lib/context'
 
-const TOOL_NAMES = {
-  '/cotes': 'Côtes',
-  '/veille': 'Veille',
-  '/training': 'Training',
-}
+const AppLayout = () => {
+  const { dark, setDark, user } = useAppCtx()
+  const matches = useMatches()
+  const handle = matches.at(-1)?.handle ?? {}
+  const navigate = useNavigate()
 
-const AppLayout = ({ dark, setDark, user, children }) => {
-  const location = useLocation()
-  const showBack = location.pathname !== '/'
-  const toolName = TOOL_NAMES[location.pathname] ?? null
+  const showBack = handle.showBack !== false && handle.backTo !== undefined
+  const handleBack = handle.backTo !== undefined
+    ? () => navigate(handle.backTo)
+    : () => navigate(-1)
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
-      {/* Le contenu remplit toute la hauteur, le header flotte par-dessus */}
       <Box sx={{ height: '100%', overflow: 'hidden' }}>
-        {children}
+        <Outlet />
       </Box>
       <AppHeader
-        toolName={toolName}
+        toolName={handle.title ?? null}
         showBack={showBack}
+        onBack={handleBack}
         dark={dark}
         setDark={setDark}
         user={user}
-        sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1301 }}
+        sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
       />
     </Box>
   )
 }
+
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <Home />, handle: { showBack: false } },
+      { path: '/cotes', element: <Cotes />, handle: { title: 'Côtes', backTo: '/' } },
+      { path: '/veille', element: <VeillePage />, handle: { title: 'Veille', backTo: '/' } },
+      { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
+      { path: '/training', element: <TrainingPage />, handle: { title: 'Training', backTo: '/' } },
+      { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
+      { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/training' } },
+    ],
+  },
+])
 
 const App = () => {
   const [dark, setDark] = useDarkMode()
@@ -56,18 +75,11 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
+      <AppCtx.Provider value={{ dark, setDark, user }}>
         <AuthGate>
-          <AppLayout dark={dark} setDark={setDark} user={user}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/cotes" element={<Cotes dark={dark} />} />
-              <Route path="/veille" element={<VeillePage />} />
-              <Route path="/training" element={<TrainingPage />} />
-            </Routes>
-          </AppLayout>
+          <RouterProvider router={router} />
         </AuthGate>
-      </BrowserRouter>
+      </AppCtx.Provider>
     </ThemeProvider>
   )
 }

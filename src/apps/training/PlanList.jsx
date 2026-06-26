@@ -126,7 +126,7 @@ const PastPlanCard = ({ plan, onTap, onMenu }) => (
 )
 
 // ── Composant principal ──────────────────────────────────────────────────────
-const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, onNewPlan }) => {
+const PlanList = ({ onSelectPlan, onNewPlan }) => {
   const [plans, setPlans] = useState(null)
   const [menuState, setMenuState] = useState(null) // { anchorEl, plan }
   const [pendingAction, setPendingAction] = useState(null) // { type: 'archive'|'delete', plan }
@@ -145,7 +145,7 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
   useEffect(() => {
     setPlans(null)
     load()
-  }, [refreshKey, load])
+  }, [load])
 
   const activePlan = plans?.find(p => p.status === 'active') ?? null
   const pastPlans  = plans?.filter(p => p.status !== 'active') ?? []
@@ -186,12 +186,6 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
       {/* Contenu scrollable */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pb: '96px' }}>
 
-        {generateError && (
-          <Alert severity="error" onClose={onClearError} sx={{ mt: 2, mb: 1 }}>
-            {generateError}
-          </Alert>
-        )}
-
         {loading && (
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
             <CircularProgress size={28} />
@@ -224,7 +218,7 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
             </Typography>
             <ActivePlanCard
               plan={activePlan}
-              onTap={() => onSelectPlan(activePlan, false)}
+              onTap={() => onSelectPlan(activePlan)}
               onMenu={(e) => openMenu(e, activePlan)}
             />
           </Box>
@@ -242,7 +236,7 @@ const PlanList = ({ refreshKey = 0, generateError, onClearError, onSelectPlan, o
                 <PastPlanCard
                   key={plan.id}
                   plan={plan}
-                  onTap={() => onSelectPlan(plan, true)}
+                  onTap={() => onSelectPlan(plan)}
                   onMenu={(e) => openMenu(e, plan)}
                 />
               ))}

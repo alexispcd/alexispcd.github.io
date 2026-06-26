@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import {
   Box, IconButton, Typography, Menu, MenuItem,
-  Divider, ListItemIcon, ListItemText,
+  Divider, ListItemIcon, ListItemText, Avatar,
 } from '@mui/material'
 import {
-  ArrowBack, AccountCircle, ExpandMore,
+  ArrowBack, ExpandMore,
   DarkMode, LightMode, Logout,
 } from '@mui/icons-material'
-import { useNavigate } from 'react-router-dom'
 import supabase from '../lib/supabase'
 import { glassSx } from '../styles/glass'
 
@@ -18,16 +17,17 @@ const AppHeader = ({
   toolName,
   actions = [],
   showBack = true,
+  onBack,
   dark,
   setDark,
   user,
   sx = {},
 }) => {
-  const navigate = useNavigate()
   const [accountAnchor, setAccountAnchor] = useState(null)
   const [actionsAnchor, setActionsAnchor] = useState(null)
 
   const hasActions = actions.length > 0
+  const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
 
   const handleSignOut = async () => {
     setAccountAnchor(null)
@@ -46,7 +46,7 @@ const AppHeader = ({
       <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center' }}>
         {showBack ? (
           <IconButton
-            onClick={() => navigate('/')}
+            onClick={onBack}
             sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <ArrowBack sx={{ fontSize: 18 }} />
@@ -110,7 +110,9 @@ const AppHeader = ({
           onClick={(e) => setAccountAnchor(e.currentTarget)}
           sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <AccountCircle sx={{ fontSize: 18 }} />
+          <Avatar sx={{ width: 22, height: 22, fontSize: '0.7rem', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+            {userInitial}
+          </Avatar>
         </IconButton>
 
         <Menu
@@ -121,13 +123,18 @@ const AppHeader = ({
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           PaperProps={{ sx: { ...glassSx, borderRadius: 2, minWidth: 230 } }}
         >
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography variant="caption" color="text.secondary" display="block">
-              Connecté en tant que
-            </Typography>
-            <Typography variant="body2" fontWeight={500} noWrap>
-              {user?.email ?? '…'}
-            </Typography>
+          <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: 'primary.main', color: 'primary.contrastText', flexShrink: 0 }}>
+              {userInitial}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                Connecté en tant que
+              </Typography>
+              <Typography variant="body2" fontWeight={500} noWrap>
+                {user?.email ?? '…'}
+              </Typography>
+            </Box>
           </Box>
           <Divider />
           <MenuItem onClick={() => { setDark(!dark); setAccountAnchor(null) }}>

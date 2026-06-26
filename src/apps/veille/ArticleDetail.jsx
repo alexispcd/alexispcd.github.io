@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useLocation } from 'react-router-dom'
 import { Box, IconButton, Typography, Button, Divider, CircularProgress, Chip } from '@mui/material'
-import { ArrowBack, Star, StarBorder, OpenInNew, AutoAwesome } from '@mui/icons-material'
+import { Star, StarBorder, OpenInNew, AutoAwesome } from '@mui/icons-material'
 import { useTheme } from '@mui/material/styles'
 import FicheView from './FicheView'
 import supabase from '../../lib/supabase'
@@ -11,24 +12,58 @@ const formatDate = (iso) => {
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetSummary }) => {
+const ArticleDetail = () => {
+  const { articleId } = useParams()
+  const { state } = useLocation()
   const theme = useTheme()
+
+  const [article, setArticle] = useState(state?.article ?? null)
+  const [loading, setLoading] = useState(!state?.article)
   const [summarizing, setSummarizing] = useState(false)
   const [summarizeError, setSummarizeError] = useState(null)
+
+  // Fallback fetch if no route state (direct link / refresh)
+  useEffect(() => {
+    if (state?.article) return
+    supabase
+      .from('watch_items')
+      .select('*')
+      .eq('id', articleId)
+      .single()
+      .then(({ data, error }) => {
+        if (!error) setArticle(data)
+        setLoading(false)
+      })
+  }, [articleId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleFavorite = async () => {
+    const newVal = !article.is_favorite
+    setArticle(prev => ({ ...prev, is_favorite: newVal }))
+    await supabase.from('watch_items').update({ is_favorite: newVal }).eq('id', article.id)
+  }
+
+  const handleUpdateNote = async (note) => {
+    await supabase.from('watch_items').update({ note }).eq('id', article.id)
+  }
+
+  const handleSetSummary = ({ summary, key_points, tags }) => {
+    setArticle(prev => ({
+      ...prev,
+      summary,
+      key_points,
+      tags: [...new Set([...(prev.tags ?? []), ...tags])],
+    }))
+  }
 
   const handleSummarize = async () => {
     setSummarizing(true)
     setSummarizeError(null)
     try {
       const { data, error } = await supabase.functions.invoke('summarize-article', {
-        body: {
-          articleId: article.id,
-          url: article.url,
-          title: article.title,
-        },
+        body: { articleId: article.id, url: article.url, title: article.title },
       })
       if (error) throw error
-      onSetSummary({
+      handleSetSummary({
         summary: data.summary,
         key_points: data.keyPoints,
         tags: data.suggestedTags,
@@ -41,9 +76,25 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
     }
   }
 
+  if (loading) {
+    return (
+      <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
+        <CircularProgress size={28} />
+      </Box>
+    )
+  }
+
+  if (!article) {
+    return (
+      <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
+        <Typography color="text.secondary">Article introuvable.</Typography>
+      </Box>
+    )
+  }
+
   return (
     <Box sx={{ height: '100%', bgcolor: 'background.default', display: 'flex', flexDirection: 'column', overflow: 'hidden', pt: `${HEADER_HEIGHT}px` }}>
-      {/* Header local (retour liste + favori) */}
+      {/* Barre source + favori */}
       <Box sx={{
         display: 'flex', alignItems: 'center', gap: 1,
         px: 2, py: 1.5,
@@ -52,9 +103,6 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
         borderBottom: '1px solid',
         borderColor: 'divider',
       }}>
-        <IconButton size="small" onClick={onBack}>
-          <ArrowBack fontSize="small" />
-        </IconButton>
         <Typography
           variant="body2"
           fontWeight={600}
@@ -64,7 +112,7 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
         </Typography>
         <IconButton
           size="small"
-          onClick={onToggleFavorite}
+          onClick={handleToggleFavorite}
           sx={{ color: article.is_favorite ? 'warning.main' : 'text.disabled' }}
         >
           {article.is_favorite ? <Star fontSize="small" /> : <StarBorder fontSize="small" />}
@@ -73,12 +121,10 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
 
       {/* Content */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 3, pb: 5 }}>
-        {/* Title */}
         <Typography variant="h6" fontWeight={700} lineHeight={1.35} mb={1.5}>
           {article.title}
         </Typography>
 
-        {/* Meta */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
           <Typography variant="caption" color="text.secondary">
             {formatDate(article.published_at)}
@@ -99,7 +145,6 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
           ))}
         </Box>
 
-        {/* Open link */}
         <Button
           variant="outlined"
           size="small"
@@ -115,12 +160,8 @@ const ArticleDetail = ({ article, onBack, onToggleFavorite, onUpdateNote, onSetS
 
         <Divider sx={{ mb: 3 }} />
 
-        {/* Summary section */}
         {article.summary ? (
-          <FicheView
-            article={article}
-            onUpdateNote={onUpdateNote}
-          />
+          <FicheView article={article} onUpdateNote={handleUpdateNote} />
         ) : (
           <Box sx={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',

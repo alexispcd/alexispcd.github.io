@@ -24,8 +24,9 @@ const MapClickHandler = ({ onMapClick, disabled, onMove }) => {
   return null
 }
 
-const Cotes = ({ dark }) => {
+const Cotes = () => {
   const theme = useTheme()
+  const dark = theme.palette.mode === 'dark'
   const mapRef = useRef(null)
   const [center, setCenter] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)

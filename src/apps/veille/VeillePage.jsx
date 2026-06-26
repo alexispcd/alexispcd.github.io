@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Box, IconButton, Typography, Chip, CircularProgress } from '@mui/material'
 import { Sync } from '@mui/icons-material'
 import ArticleCard from './ArticleCard'
-import ArticleDetail from './ArticleDetail'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
@@ -22,9 +22,9 @@ const THEMES = [
 ]
 
 const VeillePage = () => {
+  const navigate = useNavigate()
   const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
-  const [selectedId, setSelectedId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
 
@@ -57,15 +57,14 @@ const VeillePage = () => {
     ? articles
     : articles.filter(a => a.tags?.includes(filter))
 
-  const handleSelect = async (article) => {
-    setArticles(prev => prev.map(a => a.id === article.id ? { ...a, is_read: true } : a))
-    setSelectedId(article.id)
+  const handleSelect = (article) => {
     if (!article.is_read) {
-      await supabase
+      supabase
         .from('watch_items')
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('id', article.id)
     }
+    navigate(`/veille/article/${article.id}`, { state: { article: { ...article, is_read: true } } })
   }
 
   const handleToggleFavorite = async (id, e) => {
@@ -75,33 +74,6 @@ const VeillePage = () => {
     const newVal = !article.is_favorite
     setArticles(prev => prev.map(a => a.id === id ? { ...a, is_favorite: newVal } : a))
     await supabase.from('watch_items').update({ is_favorite: newVal }).eq('id', id)
-  }
-
-  const handleUpdateNote = async (id, note) => {
-    setArticles(prev => prev.map(a => a.id === id ? { ...a, note } : a))
-    await supabase.from('watch_items').update({ note }).eq('id', id)
-  }
-
-  const handleSetSummary = useCallback((id, { summary, key_points, tags }) => {
-    setArticles(prev => prev.map(a =>
-      a.id === id
-        ? { ...a, summary, key_points, tags: [...new Set([...(a.tags ?? []), ...tags])] }
-        : a
-    ))
-  }, [])
-
-  const selectedArticle = articles.find(a => a.id === selectedId)
-
-  if (selectedArticle) {
-    return (
-      <ArticleDetail
-        article={selectedArticle}
-        onBack={() => setSelectedId(null)}
-        onToggleFavorite={(e) => handleToggleFavorite(selectedArticle.id, e)}
-        onUpdateNote={(note) => handleUpdateNote(selectedArticle.id, note)}
-        onSetSummary={(data) => handleSetSummary(selectedArticle.id, data)}
-      />
-    )
   }
 
   const unreadCount = articles.filter(a => !a.is_read).length

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Box, Typography, Button, LinearProgress } from '@mui/material'
+import { useNavigate } from 'react-router-dom'
+import { Box, Typography, Button, LinearProgress, CircularProgress, Alert } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { getCorosFitness } from '../../../lib/training'
+import { getCorosFitness, generatePlan } from '../../../lib/training'
 import Step1Course from './Step1Course'
 import Step2Fitness from './Step2Fitness'
 import Step3Objectif from './Step3Objectif'
@@ -44,10 +45,13 @@ const INITIAL_CONTEXT = {
   notes: '',
 }
 
-const PlanWizard = ({ onGenerate, onBack }) => {
+const PlanWizard = () => {
+  const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [planContext, setPlanContext] = useState(INITIAL_CONTEXT)
   const [corosFitnessState, setCorosFitnessState] = useState({ status: 'loading', data: null, error: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const fetchingRef = useRef(false)
 
   const fetchCorosFitness = async () => {
@@ -77,8 +81,20 @@ const PlanWizard = ({ onGenerate, onBack }) => {
 
   const updateContext = (partial) => setPlanContext(prev => ({ ...prev, ...partial }))
 
+  const handleGenerate = async () => {
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const { planId } = await generatePlan(planContext)
+      navigate(`/training/plan/${planId}`, { replace: true })
+    } catch (err) {
+      setSubmitError(err.message)
+      setSubmitting(false)
+    }
+  }
+
   const handleNext = () => {
-    if (step === STEPS.length) onGenerate(planContext)
+    if (step === STEPS.length) handleGenerate()
     else setStep(s => s + 1)
   }
   const handleBack = () => setStep(s => s - 1)
@@ -120,7 +136,20 @@ const PlanWizard = ({ onGenerate, onBack }) => {
 
       {/* Navigation */}
       <Box sx={{ px: 2, pt: 1, pb: 3, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Button variant="contained" fullWidth disableElevation onClick={handleNext}>
+        {submitError && (
+          <Alert severity="error" onClose={() => setSubmitError(null)} sx={{ mb: 0.5 }}>
+            {submitError}
+          </Alert>
+        )}
+        <Button
+          variant="contained" fullWidth disableElevation
+          onClick={handleNext}
+          disabled={submitting}
+          startIcon={submitting && step === STEPS.length
+            ? <CircularProgress size={16} color="inherit" />
+            : undefined
+          }
+        >
           {step === STEPS.length ? 'Générer mon plan' : 'Continuer'}
         </Button>
         {skippable && (
@@ -129,12 +158,12 @@ const PlanWizard = ({ onGenerate, onBack }) => {
           </Button>
         )}
         {step > 1 && (
-          <Button fullWidth onClick={handleBack} sx={{ color: 'text.secondary' }}>
+          <Button fullWidth onClick={handleBack} disabled={submitting} sx={{ color: 'text.secondary' }}>
             Retour
           </Button>
         )}
-        {step === 1 && onBack && (
-          <Button fullWidth onClick={onBack} sx={{ color: 'text.secondary' }}>
+        {step === 1 && (
+          <Button fullWidth onClick={() => navigate('/training')} sx={{ color: 'text.secondary' }}>
             Annuler
           </Button>
         )}
