@@ -34,7 +34,7 @@ const AppLayout = ({ dark, setDark, user, children }) => {
         dark={dark}
         setDark={setDark}
         user={user}
-        sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1200 }}
+        sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1301 }}
       />
     </Box>
   )

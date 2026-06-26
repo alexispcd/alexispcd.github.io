@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Box, Typography, IconButton, Button, Chip,
   Dialog, DialogContent, DialogTitle, DialogActions, DialogContentText,
@@ -7,9 +7,10 @@ import {
 import {
   ArrowBack, AutoAwesome, CheckCircle, SkipNext,
   FitnessCenter, Timer, Speed, DirectionsRun, Bolt, Close, Replay, UndoOutlined,
+  Watch, LinkOff, AddLink, Insights, Remove,
 } from '@mui/icons-material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { markSessionDone, skipSession, adaptSessions, resetSession, unskipSession } from '../../../lib/training'
+import { markSessionDone, skipSession, adaptSessions, resetSession, unskipSession, findCorosMatches, linkCorosSession, unlinkCorosSession, analyzeSession } from '../../../lib/training'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 
 const DIALOG_PAPER = {
@@ -27,6 +28,18 @@ const ZONE_STYLE = {
 const BLOCK_LABEL   = { construction: 'Construction', intensification: 'Intensification', affutage: 'Affûtage' }
 const TYPE_LABEL    = { facile: 'Facile', 'fractionné': 'Fractionné', tempo: 'Tempo', sortie_longue: 'Sortie longue', renfo: 'Renfo' }
 const STATUS_CHIP   = { faite: { label: 'Faite', color: 'success' }, sautée: { label: 'Sautée', color: 'default' }, adaptée: { label: 'Adaptée', color: 'warning' } }
+
+const VERDICT_STYLE = {
+  réussie:        { color: '#1D9E75', bg: 'rgba(29,158,117,0.12)', label: 'Séance réussie' },
+  partiellement:  { color: '#f97316', bg: 'rgba(249,115,22,0.12)', label: 'Partiellement réussie' },
+  à_retravailler: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'À retravailler' },
+}
+
+const COMPARISON_ICON = {
+  ok:     <CheckCircle sx={{ fontSize: 13, color: '#1D9E75', flexShrink: 0 }} />,
+  proche: <Remove     sx={{ fontSize: 13, color: '#f97316', flexShrink: 0 }} />,
+  écart:  <Close      sx={{ fontSize: 13, color: '#ef4444', flexShrink: 0 }} />,
+}
 
 // ── sous-composants ────────────────────────────────────────────────────────
 const SectionTitle = ({ children }) => (
@@ -126,6 +139,9 @@ function PhysioTarget({ type, fitnessSnapshot }) {
   )
 }
 
+// Survit aux démontages du composant — évite de perdre la date Coros quand on revient sur la séance
+const _corosCache = new Map()
+
 // ── composant principal ────────────────────────────────────────────────────
 const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdaptationDone, readOnly = false }) => {
   const [confirmDone,  setConfirmDone]  = useState(false)
@@ -139,16 +155,108 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
   // adaptState: null | 'loading' | { count: N } | { error: string }
   const [adaptState,  setAdaptState]  = useState(null)
   const adaptDismissed = useRef(false)
+  // corosState: null | 'searching' | { matches: [] }
+  const [corosState,     setCorosState]     = useState(null)
+  const [linkLoading,    setLinkLoading]    = useState(false)
+  // corosLinkedInfo: null | { date: 'YYYY-MM-DD', startTime: 'HH:MM' }
+  const [corosLinkedInfo, setCorosLinkedInfo] = useState(null)
+  // analysisState: null | 'loading' | AnalysisResult | { error: string }
+  const [analysisState, setAnalysisState] = useState(null)
+
+  useEffect(() => {
+    setCorosState(null)
+    setLinkLoading(false)
+    setCorosLinkedInfo(_corosCache.get(session?.id) ?? null)
+    setAnalysisState(session?.coros_analysis ?? null)
+  }, [session?.id])
 
   if (!session) return null
 
   const zone       = ZONE_STYLE[session.zone] ?? ZONE_STYLE.A
   const isAdapted  = session.status === 'adaptée' && session.previous_details != null
   const statusChip = STATUS_CHIP[session.status]
+  const canAnalyze  = session.status === 'faite' && !!session.coros_label_id && session.type !== 'renfo'
   const canMarkDone = session.status !== 'faite' && session.status !== 'sautée'
   const canSkip     = session.status !== 'sautée' && session.status !== 'faite'
   const canReset    = session.status === 'faite'
   const canUnskip   = session.status === 'sautée'
+
+  // ── Analyse prévu vs réalisé ────────────────────────────────────────────
+  const handleAnalyze = async () => {
+    setAnalysisState('loading')
+    try {
+      const result = await analyzeSession(session.id)
+      setAnalysisState(result.analysis)
+    } catch (err) {
+      console.error('[Training] analyzeSession error:', err.message)
+      setAnalysisState({ error: err.message })
+    }
+  }
+
+  // ── Liaison Coros ──────────────────────────────────────────────────────
+  const triggerCorosMatch = async (date) => {
+    if (!date) return
+    setCorosState('searching')
+    try {
+      const matches = await findCorosMatches(date, session.type)
+      if (!matches || matches.length === 0) {
+        setCorosState(null)
+      } else if (matches.length === 1) {
+        const info = { date: matches[0].date, startTime: matches[0].startTime ?? null }
+        setCorosLinkedInfo(info)
+        _corosCache.set(session.id, info)
+        setLinkLoading(true)
+        try {
+          const updated = await linkCorosSession(session.id, matches[0].labelId)
+          onSessionUpdated?.(updated)
+        } catch (err) {
+          console.error('[Training] auto-link error:', err.message)
+          setCorosLinkedInfo(null)
+          _corosCache.delete(session.id)
+        } finally {
+          setLinkLoading(false)
+        }
+        setCorosState(null)
+      } else {
+        setCorosState({ matches })
+      }
+    } catch (err) {
+      console.error('[Training] findCorosMatches error:', err.message)
+      setCorosState(null)
+    }
+  }
+
+  const handleLinkMatch = async (match) => {
+    setCorosState(null)
+    const info = { date: match.date, startTime: match.startTime ?? null }
+    setCorosLinkedInfo(info)
+    _corosCache.set(session.id, info)
+    setLinkLoading(true)
+    try {
+      const updated = await linkCorosSession(session.id, match.labelId)
+      onSessionUpdated?.(updated)
+    } catch (err) {
+      console.error('[Training] linkCorosSession error:', err.message)
+      setCorosLinkedInfo(null)
+      _corosCache.delete(session.id)
+    } finally {
+      setLinkLoading(false)
+    }
+  }
+
+  const handleUnlink = async () => {
+    setLinkLoading(true)
+    try {
+      const updated = await unlinkCorosSession(session.id)
+      onSessionUpdated?.(updated)
+      setCorosLinkedInfo(null)
+      _corosCache.delete(session.id)
+    } catch (err) {
+      console.error('[Training] unlinkCorosSession error:', err.message)
+    } finally {
+      setLinkLoading(false)
+    }
+  }
 
   // ── Marquer comme faite ─────────────────────────────────────────────────
   const handleDoneConfirm = async () => {
@@ -157,6 +265,8 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
       const updated = await markSessionDone(session.id)
       onSessionUpdated?.(updated)
       setConfirmDone(false)
+      const date = session.scheduled_date ?? new Date().toISOString().slice(0, 10)
+      triggerCorosMatch(date)
     } catch (err) {
       console.error('[Training] markSessionDone error:', err.message)
     } finally {
@@ -307,6 +417,155 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
               </Box>
             )}
 
+            {/* Séance Coros */}
+            {session.status === 'faite' && (
+              <Box>
+                <SectionTitle>Séance Coros</SectionTitle>
+                {corosState === 'searching' ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5,
+                    borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <CircularProgress size={14} sx={{ flexShrink: 0 }} />
+                    <Typography variant="caption" color="text.secondary">
+                      Recherche de la séance Coros...
+                    </Typography>
+                  </Box>
+                ) : session.coros_label_id ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.25,
+                    borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <Watch sx={{ fontSize: 16, color: 'primary.main', flexShrink: 0 }} />
+                    <Typography variant="body2" fontWeight={500} sx={{ flex: 1 }}>
+                      {corosLinkedInfo
+                        ? (() => {
+                            const [y, m, d] = corosLinkedInfo.date.split('-')
+                            const time = corosLinkedInfo.startTime?.replace(':', 'h')
+                            return `Séance du ${d}-${m}-${y}${time ? ` à ${time}` : ''} liée`
+                          })()
+                        : 'Séance liée'}
+                    </Typography>
+                    <IconButton size="small" onClick={handleUnlink} disabled={linkLoading}
+                      sx={{ color: 'text.secondary' }}>
+                      {linkLoading
+                        ? <CircularProgress size={14} />
+                        : <LinkOff sx={{ fontSize: 16 }} />}
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Button size="small" startIcon={<AddLink />}
+                    onClick={() => {
+                      const date = session.scheduled_date
+                        ?? session.completed_at?.slice(0, 10)
+                        ?? new Date().toISOString().slice(0, 10)
+                      triggerCorosMatch(date)
+                    }}
+                    sx={{ color: 'text.secondary', fontSize: '0.78rem', pl: 1 }}>
+                    Lier une séance Coros
+                  </Button>
+                )}
+              </Box>
+            )}
+
+            {/* Analyse prévu vs réalisé */}
+            {canAnalyze && (
+              <Box>
+                <SectionTitle>Analyse prévu vs réalisé</SectionTitle>
+
+                {!analysisState && (
+                  <Button size="small" startIcon={<Insights sx={{ fontSize: 16 }} />}
+                    onClick={handleAnalyze}
+                    sx={{ color: 'text.secondary', fontSize: '0.78rem', pl: 1 }}>
+                    Analyser ma séance
+                  </Button>
+                )}
+
+                {analysisState === 'loading' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5,
+                    borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <CircularProgress size={14} sx={{ flexShrink: 0 }} />
+                    <Typography variant="caption" color="text.secondary">
+                      Analyse en cours, quelques secondes...
+                    </Typography>
+                  </Box>
+                )}
+
+                {analysisState?.error && (
+                  <Box sx={{ px: 2, py: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider',
+                    display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                      Analyse indisponible — {analysisState.error}
+                    </Typography>
+                    <Button size="small" onClick={handleAnalyze}
+                      sx={{ color: 'text.secondary', fontSize: '0.7rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      Réessayer
+                    </Button>
+                  </Box>
+                )}
+
+                {analysisState?.verdict && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {/* Verdict + bouton réanalyser */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Box sx={{ px: 1.5, py: 0.5, borderRadius: 1.5,
+                        bgcolor: (VERDICT_STYLE[analysisState.verdict] ?? VERDICT_STYLE.partiellement).bg,
+                        border: `1.5px solid ${(VERDICT_STYLE[analysisState.verdict] ?? VERDICT_STYLE.partiellement).color}` }}>
+                        <Typography sx={{ fontSize: '0.7rem', fontWeight: 700,
+                          color: (VERDICT_STYLE[analysisState.verdict] ?? VERDICT_STYLE.partiellement).color, lineHeight: 1 }}>
+                          {(VERDICT_STYLE[analysisState.verdict] ?? VERDICT_STYLE.partiellement).label}
+                        </Typography>
+                      </Box>
+                      <Button size="small" onClick={handleAnalyze}
+                        sx={{ color: 'text.disabled', fontSize: '0.7rem' }}>
+                        Réanalyser
+                      </Button>
+                    </Box>
+
+                    {/* Résumé */}
+                    {analysisState.summary && (
+                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.65 }}>
+                        {analysisState.summary}
+                      </Typography>
+                    )}
+
+                    {/* Tableau comparatif */}
+                    {analysisState.comparison?.length > 0 && (
+                      <Box sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <Box sx={{ px: 2 }}>
+                          {analysisState.comparison.map((row, i) => (
+                            <Box key={i}>
+                              {i > 0 && <Divider />}
+                              <Box sx={{ py: 0.875, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {COMPARISON_ICON[row.status] ?? COMPARISON_ICON.proche}
+                                <Typography variant="caption" color="text.secondary" sx={{ flex: 1 }}>
+                                  {row.label}
+                                </Typography>
+                                <Box sx={{ textAlign: 'right' }}>
+                                  <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled', display: 'block', lineHeight: 1.2 }}>
+                                    prévu {row.planned}
+                                  </Typography>
+                                  <Typography variant="caption" fontWeight={600}>
+                                    {row.actual}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+
+                    {/* Conseil */}
+                    {analysisState.advice && (
+                      <Box sx={{ px: 2, py: 1.25, borderRadius: 2,
+                        bgcolor: 'rgba(29,158,117,0.07)', border: '1px solid rgba(29,158,117,0.18)' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                          {analysisState.advice}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            )}
+
           </Box>
 
           {/* Actions */}
@@ -442,6 +701,41 @@ const SessionDetail = ({ session, plan, open, onClose, onSessionUpdated, onAdapt
           <Button fullWidth variant="outlined" onClick={handleResetConfirm} disabled={resetLoading}
             startIcon={resetLoading ? <CircularProgress size={14} color="inherit" /> : <Replay />}>
             {resetLoading ? 'Mise à jour...' : 'Confirmer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Popup : Sélection séance Coros ──────────────────────────────── */}
+      <Dialog
+        open={Boolean(corosState?.matches?.length > 0)}
+        onClose={() => setCorosState(null)}
+        PaperProps={DIALOG_PAPER}
+        BackdropProps={GLASS_BACKDROP}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 700, fontSize: '1rem', pr: 6 }}>
+          Choisir la séance Coros
+        </DialogTitle>
+        <IconButton onClick={() => setCorosState(null)} size="small"
+          sx={{ position: 'absolute', right: 12, top: 12, color: 'text.secondary' }}>
+          <Close fontSize="small" />
+        </IconButton>
+        <DialogContent sx={{ pt: 0, pb: 1 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
+            {(corosState?.matches ?? []).map((m) => (
+              <Box key={m.labelId} onClick={() => handleLinkMatch(m)}
+                sx={{ px: 2, py: 1.5, borderRadius: 2, border: '1px solid', borderColor: 'divider',
+                  cursor: 'pointer', '&:active': { bgcolor: 'action.selected' } }}>
+                <Typography variant="body2" fontWeight={600}>{m.date}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {[m.distance, m.duration, m.avgPace].filter(Boolean).join(' · ')}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, pb: 2.5 }}>
+          <Button fullWidth onClick={() => setCorosState(null)} sx={{ color: 'text.secondary' }}>
+            Passer
           </Button>
         </DialogActions>
       </Dialog>

@@ -207,6 +207,73 @@ export const getCorosFitness = async () => {
   return res.json()
 }
 
+export const findCorosMatches = async (date, type) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coros-match`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ date, type }),
+    }
+  )
+
+  if (!res.ok) return []
+  const data = await res.json().catch(() => ({ matches: [] }))
+  return data.matches ?? []
+}
+
+export const linkCorosSession = async (sessionId, corosLabelId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .update({ coros_label_id: corosLabelId })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const analyzeSession = async (sessionId) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-session`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ sessionId }),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? `Erreur analyse (${res.status})`)
+  }
+
+  return res.json() // { analysis }
+}
+
+export const unlinkCorosSession = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .update({ coros_label_id: null })
+    .eq('id', sessionId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export const subscribeToPlan = (planId, callback) => {
   // Polling toutes les 4s (fallback si Realtime non activé)
   const interval = setInterval(async () => {
