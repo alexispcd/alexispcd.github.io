@@ -6,7 +6,6 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSearch } from './useSearch'
 import { slopeColor } from './utils'
-import FilterDialog from './FilterDialog'
 import ResultCard from './ResultCard'
 import BottomBar from './BottomBar'
 
@@ -29,7 +28,6 @@ const Cotes = () => {
   const dark = theme.palette.mode === 'dark'
   const mapRef = useRef(null)
   const [center, setCenter] = useState(null)
-  const [filterOpen, setFilterOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(0)
   const [mapMoved, setMapMoved] = useState(false)
   const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset, toast, clearToast } = useSearch()
@@ -198,14 +196,7 @@ const Cotes = () => {
         onSearch={handleSearch}
         onCancel={cancel}
         onReset={handleReset}
-        onFilterOpen={() => setFilterOpen(true)}
         hasCustomParams={hasCustomParams}
-      />
-
-      {/* ── FILTER DIALOG ── */}
-      <FilterDialog
-        open={filterOpen}
-        onClose={() => setFilterOpen(false)}
         params={params}
         setParam={setParam}
       />

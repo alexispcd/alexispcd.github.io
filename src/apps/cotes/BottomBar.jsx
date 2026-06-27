@@ -1,11 +1,22 @@
-import { Box, Button } from '@mui/material'
+import { useState, useEffect } from 'react'
+import { Box, Button, Collapse, Slider, Typography } from '@mui/material'
 import TuneRounded from '@mui/icons-material/TuneRounded'
+import CloseRounded from '@mui/icons-material/CloseRounded'
 import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
+import { SLIDERS, DEFAULT_PARAMS } from './utils'
 
-const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustomParams, center }) => {
+const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
+  const [filterExpanded, setFilterExpanded] = useState(false)
+
+  const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
+  const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
+
+  useEffect(() => {
+    if (phase === 'searching' || phase === 'idle') setFilterExpanded(false)
+  }, [phase])
 
   const btnBase = {
     borderRadius: 99,
@@ -15,6 +26,33 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
     height: 48,
     border: `1px solid ${theme.palette.divider}`,
   }
+
+  const filterBtn = (
+    <Button
+      onClick={() => setFilterExpanded(v => !v)}
+      sx={{
+        ...btnBase,
+        minWidth: 'unset',
+        px: 1.75,
+        color: filterExpanded ? 'text.primary' : (hasCustomParams ? 'primary.main' : 'text.secondary'),
+        borderColor: filterExpanded ? theme.palette.divider : (hasCustomParams ? 'primary.main' : theme.palette.divider),
+        position: 'relative',
+      }}
+    >
+      {filterExpanded
+        ? <CloseRounded sx={{ fontSize: 20 }} />
+        : <TuneRounded sx={{ fontSize: 20 }} />
+      }
+      {!filterExpanded && hasCustomParams && (
+        <Box sx={{
+          position: 'absolute', top: 9, right: 9,
+          width: 6, height: 6,
+          bgcolor: 'primary.main',
+          borderRadius: '50%',
+        }} />
+      )}
+    </Button>
+  )
 
   return (
     <Box sx={{
@@ -35,102 +73,125 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
       boxShadow: dark
         ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
         : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
-      borderRadius: '28px',
-      px: 2,
-      py: 1.25,
+      borderRadius: '36px',
+      overflow: 'hidden',
     }}>
 
-      {/* État idle */}
-      {phase === 'idle' && (
-        <Box sx={{ textAlign: 'center', pb: 0.5 }}>
-          <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-            Appuie sur la carte pour choisir un point
+      {/* Panneau filtres — s'étend vers le haut */}
+      <Collapse in={filterExpanded}>
+        <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
+              Filtres
+            </Typography>
+            {!isDefault && (
+              <Button
+                size="small"
+                onClick={resetParams}
+                sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
+              >
+                Réinitialiser
+              </Button>
+            )}
           </Box>
-        </Box>
-      )}
 
-      {/* État placed */}
-      {phase === 'placed' && (
-        <Box sx={{ display: 'flex', gap: 1 }}>
+          {SLIDERS.map(s => (
+            <Box key={s.key} sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                  {s.label}
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+                  {s.range
+                    ? `${s.fmt(params[s.minKey])} — ${s.fmt(params[s.maxKey])}`
+                    : s.fmt(params[s.key])
+                  }
+                </Typography>
+              </Box>
+
+              {s.range ? (
+                <Slider
+                  value={[params[s.minKey], params[s.maxKey]]}
+                  onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
+                  min={s.min} max={s.max} step={s.step}
+                  disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                />
+              ) : (
+                <Slider
+                  value={params[s.key]}
+                  onChange={(_, v) => setParam(s.key, v)}
+                  min={s.min} max={s.max} step={s.step}
+                  size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                />
+              )}
+
+              {s.range && (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                  <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                    {s.fmt(s.min)}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                    {s.fmt(s.max)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+        <Box sx={{ height: '1px', bgcolor: 'divider', mx: 2 }} />
+      </Collapse>
+
+      {/* Barre d'actions */}
+      <Box sx={{ px: 2, py: 1.25 }}>
+
+        {phase === 'idle' && (
+          <Box sx={{ textAlign: 'center', py: 0.5 }}>
+            <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+              Appuie sur la carte pour choisir un point
+            </Box>
+          </Box>
+        )}
+
+        {phase === 'placed' && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={onSearch}
+              disabled={!center}
+              sx={{ ...btnBase, border: 'none' }}
+            >
+              Rechercher ici
+            </Button>
+            {filterBtn}
+          </Box>
+        )}
+
+        {phase === 'searching' && (
           <Button
             fullWidth
-            variant="contained"
-            onClick={onSearch}
-            disabled={!center}
-            sx={{ ...btnBase, border: 'none' }}
+            onClick={onCancel}
+            sx={{ ...btnBase, color: 'error.main', borderColor: 'error.light' }}
           >
-            Rechercher ici
+            Annuler
           </Button>
-          <Button
-            onClick={onFilterOpen}
-            sx={{
-              ...btnBase,
-              minWidth: 'unset',
-              px: 1.75,
-              color: hasCustomParams ? 'primary.main' : 'text.secondary',
-              borderColor: hasCustomParams ? 'primary.main' : theme.palette.divider,
-              position: 'relative',
-            }}
-          >
-            <TuneRounded sx={{ fontSize: 20 }} />
-            {hasCustomParams && (
-              <Box sx={{
-                position: 'absolute', top: 9, right: 9,
-                width: 6, height: 6,
-                bgcolor: 'primary.main',
-                borderRadius: '50%',
-              }} />
-            )}
-          </Button>
-        </Box>
-      )}
+        )}
 
-      {/* État searching */}
-      {phase === 'searching' && (
-        <Button
-          fullWidth
-          onClick={onCancel}
-          sx={{ ...btnBase, color: 'error.main', borderColor: 'error.light' }}
-        >
-          Annuler
-        </Button>
-      )}
+        {phase === 'results' && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              fullWidth
+              onClick={onReset}
+              startIcon={<MyLocationRounded sx={{ fontSize: 16 }} />}
+              sx={{ ...btnBase, color: 'text.secondary' }}
+            >
+              Nouvelle recherche
+            </Button>
+            {filterBtn}
+          </Box>
+        )}
 
-      {/* État results */}
-      {phase === 'results' && (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            fullWidth
-            onClick={onReset}
-            startIcon={<MyLocationRounded sx={{ fontSize: 16 }} />}
-            sx={{ ...btnBase, color: 'text.secondary' }}
-          >
-            Nouvelle recherche
-          </Button>
-          <Button
-            onClick={onFilterOpen}
-            sx={{
-              ...btnBase,
-              minWidth: 'unset',
-              px: 1.75,
-              color: hasCustomParams ? 'primary.main' : 'text.secondary',
-              borderColor: hasCustomParams ? 'primary.main' : theme.palette.divider,
-              position: 'relative',
-            }}
-          >
-            <TuneRounded sx={{ fontSize: 20 }} />
-            {hasCustomParams && (
-              <Box sx={{
-                position: 'absolute', top: 9, right: 9,
-                width: 6, height: 6,
-                bgcolor: 'primary.main',
-                borderRadius: '50%',
-              }} />
-            )}
-          </Button>
-        </Box>
-      )}
-
+      </Box>
     </Box>
   )
 }
