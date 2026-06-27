@@ -1,6 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { InfoOutlined } from '@mui/icons-material'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
 
 const PREVIOUS_EDITIONS = [
   { year: 2024, label: 'Auray-Vannes 2024', time: "1h47'32\"" },

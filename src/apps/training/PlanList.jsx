@@ -4,15 +4,19 @@ import {
   Button, Fab, Dialog, DialogTitle, DialogContentText, DialogActions,
   Alert, ListItemIcon,
 } from '@mui/material'
-import {
-  MoreVert, Add, EmojiEvents, Schedule, Archive, DeleteForever, DirectionsRun,
-} from '@mui/icons-material'
+import MoreVert from '@mui/icons-material/MoreVert'
+import Add from '@mui/icons-material/Add'
+import EmojiEvents from '@mui/icons-material/EmojiEvents'
+import Schedule from '@mui/icons-material/Schedule'
+import Archive from '@mui/icons-material/Archive'
+import DeleteForever from '@mui/icons-material/DeleteForever'
+import DirectionsRun from '@mui/icons-material/DirectionsRun'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { getAllPlans, archivePlan, deletePlan } from '../../lib/training'
 import { glassSx, GLASS_BACKDROP } from '../../styles/glass'
 
 const DIALOG_PAPER = {
-  sx: { ...glassSx, borderRadius: 3, mx: 2, maxWidth: 360, width: 'calc(100% - 32px)' },
+  sx: { ...glassSx, mx: 2, maxWidth: 360, width: 'calc(100% - 32px)' },
 }
 
 function formatDate(dateStr) {
@@ -33,7 +37,7 @@ const ActivePlanCard = ({ plan, onTap, onMenu }) => {
     <Box
       onClick={onTap}
       sx={{
-        p: 2.5, borderRadius: 3, cursor: 'pointer', position: 'relative',
+        p: 2.5, borderRadius: '20px', cursor: 'pointer', position: 'relative',
         border: '1.5px solid', borderColor: 'primary.main',
         bgcolor: (t) => t.palette.mode === 'dark' ? 'rgba(29,158,117,0.06)' : 'rgba(29,158,117,0.04)',
         transition: 'opacity 0.15s',

@@ -1,6 +1,6 @@
 import { Box, TextField, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { InfoOutlined } from '@mui/icons-material'
+import InfoOutlined from '@mui/icons-material/InfoOutlined'
 
 const PALIERS = [
   { value: 'realistic',      label: 'Réaliste',       time: "1h40'00\"", desc: 'Proche de ta prédiction actuelle' },

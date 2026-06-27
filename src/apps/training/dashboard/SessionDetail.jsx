@@ -4,17 +4,29 @@ import {
   Dialog, DialogContent, DialogTitle, DialogActions, DialogContentText,
   Divider, CircularProgress,
 } from '@mui/material'
-import {
-  ArrowBack, AutoAwesome, CheckCircle, SkipNext,
-  FitnessCenter, Timer, Speed, DirectionsRun, Bolt, Close, Replay, UndoOutlined,
-  Watch, LinkOff, AddLink, Insights, Remove,
-} from '@mui/icons-material'
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import AutoAwesome from '@mui/icons-material/AutoAwesome'
+import CheckCircle from '@mui/icons-material/CheckCircle'
+import SkipNext from '@mui/icons-material/SkipNext'
+import FitnessCenter from '@mui/icons-material/FitnessCenter'
+import Timer from '@mui/icons-material/Timer'
+import Speed from '@mui/icons-material/Speed'
+import DirectionsRun from '@mui/icons-material/DirectionsRun'
+import Bolt from '@mui/icons-material/Bolt'
+import Close from '@mui/icons-material/Close'
+import Replay from '@mui/icons-material/Replay'
+import UndoOutlined from '@mui/icons-material/UndoOutlined'
+import Watch from '@mui/icons-material/Watch'
+import LinkOff from '@mui/icons-material/LinkOff'
+import AddLink from '@mui/icons-material/AddLink'
+import Insights from '@mui/icons-material/Insights'
+import Remove from '@mui/icons-material/Remove'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { markSessionDone, skipSession, adaptSessions, resetSession, unskipSession, findCorosMatches, linkCorosSession, unlinkCorosSession, analyzeSession } from '../../../lib/training'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 
 const DIALOG_PAPER = {
-  sx: { ...glassSx, borderRadius: 3, mx: 2, maxWidth: 360, width: 'calc(100% - 32px)' },
+  sx: { ...glassSx, mx: 2, maxWidth: 360, width: 'calc(100% - 32px)' },
 }
 
 // ── constantes ─────────────────────────────────────────────────────────────

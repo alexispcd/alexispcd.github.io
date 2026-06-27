@@ -4,7 +4,10 @@ import {
   Box, Typography, IconButton, Chip, CircularProgress,
   Alert, Snackbar,
 } from '@mui/material'
-import { ChevronLeft, ChevronRight, EmojiEvents, Schedule } from '@mui/icons-material'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import ChevronRight from '@mui/icons-material/ChevronRight'
+import EmojiEvents from '@mui/icons-material/EmojiEvents'
+import Schedule from '@mui/icons-material/Schedule'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { getPlanById, getPlanSessions, regeneratePlan, subscribeToPlan } from '../../../lib/training'
 import SessionCard from './SessionCard'

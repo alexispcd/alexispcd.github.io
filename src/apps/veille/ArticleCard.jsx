@@ -1,5 +1,6 @@
 import { Card, CardContent, Box, Typography, Chip, IconButton } from '@mui/material'
-import { Star, StarBorder } from '@mui/icons-material'
+import Star from '@mui/icons-material/Star'
+import StarBorder from '@mui/icons-material/StarBorder'
 import { useTheme } from '@mui/material/styles'
 
 const formatDate = (iso) => {

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Box, Typography, IconButton } from '@mui/material'
-import { ChevronLeft, ChevronRight, ArrowUpward, SwapHoriz } from '@mui/icons-material'
+import ChevronLeft from '@mui/icons-material/ChevronLeft'
+import ChevronRight from '@mui/icons-material/ChevronRight'
+import ArrowUpward from '@mui/icons-material/ArrowUpward'
+import SwapHoriz from '@mui/icons-material/SwapHoriz'
 import { motion, AnimatePresence } from 'framer-motion'
 import { slopeColor } from './utils'
 

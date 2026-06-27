@@ -3,10 +3,11 @@ import {
   Box, IconButton, Typography, Menu, MenuItem,
   Divider, ListItemIcon, ListItemText, Avatar,
 } from '@mui/material'
-import {
-  ArrowBack, ExpandMore,
-  DarkMode, LightMode, Logout,
-} from '@mui/icons-material'
+import ArrowBack from '@mui/icons-material/ArrowBack'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import DarkMode from '@mui/icons-material/DarkMode'
+import LightMode from '@mui/icons-material/LightMode'
+import Logout from '@mui/icons-material/Logout'
 import supabase from '../lib/supabase'
 import { glassSx } from '../styles/glass'
 
@@ -80,7 +81,7 @@ const AppHeader = ({
               onClose={() => setActionsAnchor(null)}
               transformOrigin={{ horizontal: 'center', vertical: 'top' }}
               anchorOrigin={{ horizontal: 'center', vertical: 'bottom' }}
-              PaperProps={{ sx: { ...glassSx, borderRadius: 2, minWidth: 200 } }}
+              PaperProps={{ sx: { ...glassSx, minWidth: 200 } }}
             >
               {actions.map((action) => (
                 <MenuItem
@@ -121,7 +122,7 @@ const AppHeader = ({
           onClose={() => setAccountAnchor(null)}
           transformOrigin={{ horizontal: 'right', vertical: 'top' }}
           anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          PaperProps={{ sx: { ...glassSx, borderRadius: 2, minWidth: 230 } }}
+          PaperProps={{ sx: { ...glassSx, minWidth: 230 } }}
         >
           <Box sx={{ px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem', bgcolor: 'primary.main', color: 'primary.contrastText', flexShrink: 0 }}>

@@ -1,5 +1,7 @@
 import { Box, Typography } from '@mui/material'
-import { Done, AutoAwesome, Block } from '@mui/icons-material'
+import Done from '@mui/icons-material/Done'
+import AutoAwesome from '@mui/icons-material/AutoAwesome'
+import Block from '@mui/icons-material/Block'
 
 const ZONE_STYLE = {
   A:     { bg: 'rgba(29,158,117,0.12)', border: '#1D9E75', text: '#1D9E75', label: 'A' },

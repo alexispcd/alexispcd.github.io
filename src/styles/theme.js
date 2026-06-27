@@ -24,12 +24,33 @@ const theme = (dark) => createTheme({
     borderRadius: 12,
   },
   components: {
+    MuiButton: {
+      styleOverrides: {
+        root: { borderRadius: 12 },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: { borderRadius: 12 },
+      },
+    },
     MuiCard: {
       styleOverrides: {
         root: {
           border: `1px solid ${dark ? '#1e1e2a' : '#ebebeb'}`,
           boxShadow: 'none',
+          borderRadius: 20,
         },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: { borderRadius: 28 },
+      },
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: { borderRadius: 20 },
       },
     },
   },

@@ -1,5 +1,6 @@
 import { Box, Button } from '@mui/material'
-import { TuneRounded, MyLocationRounded } from '@mui/icons-material'
+import TuneRounded from '@mui/icons-material/TuneRounded'
+import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustomParams, center }) => {

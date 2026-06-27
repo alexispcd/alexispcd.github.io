@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Box, IconButton, Typography, Chip, CircularProgress } from '@mui/material'
-import { Sync } from '@mui/icons-material'
+import Sync from '@mui/icons-material/Sync'
 import ArticleCard from './ArticleCard'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
