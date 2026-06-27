@@ -18,23 +18,26 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, onFilterOpen, hasCustom
 
   return (
     <Box sx={{
-      position: 'absolute',
-      bottom: 0, left: 0, right: 0,
+      position: 'fixed',
+      bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      width: '92vw',
       zIndex: 1000,
       background: dark
         ? 'linear-gradient(180deg, rgba(52,52,68,0.28) 0%, rgba(18,18,28,0.36) 100%)'
         : 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(228,234,252,0.24) 100%)',
       backdropFilter: 'blur(28px) saturate(180%)',
       WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-      borderTop: dark
+      border: dark
         ? '1px solid rgba(255,255,255,0.07)'
         : '1px solid rgba(0,0,0,0.06)',
       boxShadow: dark
-        ? 'inset 0 1px 0 rgba(255,255,255,0.08)'
-        : 'inset 0 1px 0 rgba(255,255,255,0.80)',
+        ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
+        : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
+      borderRadius: '28px',
       px: 2,
-      pt: 1.25,
-      pb: 'max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))',
+      py: 1.25,
     }}>
 
       {/* État idle */}
