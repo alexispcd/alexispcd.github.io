@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+
 import { Box, Button, Collapse, Slider, Typography } from '@mui/material'
 import TuneRounded from '@mui/icons-material/TuneRounded'
 import CloseRounded from '@mui/icons-material/CloseRounded'
@@ -10,7 +11,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
   const [filterExpanded, setFilterExpanded] = useState(false)
-  const cardRef = useRef(null)
   const dragStartY = useRef(0)
   const isDragging = useRef(false)
 
@@ -24,26 +24,17 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const onHandleTouchStart = (e) => {
     isDragging.current = true
     dragStartY.current = e.touches[0].clientY
-    if (cardRef.current) cardRef.current.style.transition = 'none'
   }
 
   const onHandleTouchMove = (e) => {
     if (!isDragging.current) return
-    const delta = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    if (cardRef.current) {
-      cardRef.current.style.transform = `translateX(-50%) translateY(${delta}px)`
-    }
   }
 
   const onHandleTouchEnd = (e) => {
     if (!isDragging.current) return
     isDragging.current = false
     const delta = e.changedTouches[0].clientY - dragStartY.current
-    if (cardRef.current) {
-      cardRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)'
-      cardRef.current.style.transform = 'translateX(-50%)'
-    }
-    if (delta > 80) setFilterExpanded(false)
+    if (delta > 60) setFilterExpanded(false)
   }
 
   const btnBase = {
@@ -92,7 +83,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         />
       )}
 
-      <Box ref={cardRef} sx={{
+      <Box sx={{
         position: 'fixed',
         bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
         left: '50%',
@@ -218,7 +209,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
               <Button
                 fullWidth
                 variant="contained"
-                onClick={onSearch}
+                onClick={() => { setFilterExpanded(false); onSearch() }}
                 disabled={!center}
                 sx={{ ...btnBase, border: 'none' }}
               >
