@@ -14,12 +14,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const [filterMounted, setFilterMounted] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
 
-  const cardRef = useRef(null)
   const openRafRef = useRef(null)
-  const isDragging = useRef(false)
-  const isDragClosing = useRef(false)
-  const dragStartY = useRef(0)
-  const lastY = useRef(0)
 
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
@@ -33,12 +28,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
       }
       setFilterOpen(false)
       setFilterMounted(false)
-      isDragging.current = false
-      isDragClosing.current = false
-      if (cardRef.current) {
-        cardRef.current.style.transition = ''
-        cardRef.current.style.transform = ''
-      }
     }
   }, [phase])
 
@@ -65,67 +54,12 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
     // filterMounted remis à false par handleFilterTransitionEnd
   }
 
-  // Fin de transition CSS hauteur (ouverture ou fermeture normale)
+  // Démontage après la transition de fermeture
   const handleFilterTransitionEnd = (e) => {
     if (e.target !== e.currentTarget) return
     if (e.propertyName === 'grid-template-rows' && !filterOpen) {
       setFilterMounted(false)
     }
-  }
-
-  // Fin de transition transform sur la card (drag close ou snap back)
-  const handleCardTransitionEnd = (e) => {
-    if (e.target !== e.currentTarget) return
-    if (e.propertyName === 'transform') {
-      if (isDragClosing.current) {
-        isDragClosing.current = false
-        setFilterOpen(false)
-        setFilterMounted(false)
-      }
-      if (cardRef.current) {
-        cardRef.current.style.transition = ''
-        cardRef.current.style.transform = ''
-      }
-    }
-  }
-
-  // Drag — déclenché sur handle et ligne de titre (zones sans sliders)
-  const onDragStart = (e) => {
-    isDragging.current = true
-    dragStartY.current = e.touches[0].clientY
-    lastY.current = e.touches[0].clientY
-    if (cardRef.current) cardRef.current.style.transition = 'none'
-  }
-
-  const onDragMove = (e) => {
-    if (!isDragging.current) return
-    lastY.current = e.touches[0].clientY
-    const delta = Math.max(0, lastY.current - dragStartY.current)
-    if (cardRef.current) cardRef.current.style.transform = `translateY(${delta}px)`
-  }
-
-  const onDragEnd = () => {
-    if (!isDragging.current) return
-    isDragging.current = false
-    const delta = lastY.current - dragStartY.current
-    if (delta > 80) {
-      isDragClosing.current = true
-      if (cardRef.current) {
-        cardRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)'
-        cardRef.current.style.transform = 'translateY(100%)'
-      }
-    } else {
-      if (cardRef.current) {
-        cardRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32,0.72,0,1)'
-        cardRef.current.style.transform = 'translateY(0)'
-      }
-    }
-  }
-
-  const dragHandlers = {
-    onTouchStart: onDragStart,
-    onTouchMove: onDragMove,
-    onTouchEnd: onDragEnd,
   }
 
   const glass = {
@@ -191,10 +125,8 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         />
       )}
 
-      {/* Card unique — ne bouge jamais par elle-même, sauf pendant le drag */}
+      {/* Card unique */}
       <Box
-        ref={cardRef}
-        onTransitionEnd={handleCardTransitionEnd}
         sx={{
           position: 'fixed',
           left: '4vw',
@@ -218,29 +150,11 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           >
             <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
 
-              {/* Handle — indicateur visuel + zone de drag principale */}
-              <Box
-                {...dragHandlers}
-                sx={{
-                  display: 'flex', justifyContent: 'center',
-                  pt: 1.5, pb: 0.5,
-                  cursor: 'grab',
-                  touchAction: 'none',
-                }}
-              >
-                <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.4 }} />
-              </Box>
-
-              {/* Ligne de titre — aussi zone de drag safe */}
-              <Box
-                {...dragHandlers}
-                sx={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  px: 2.5, pt: 1, mb: 2,
-                  touchAction: 'none',
-                  cursor: 'grab',
-                }}
-              >
+              {/* Ligne de titre */}
+              <Box sx={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                px: 2.5, pt: 2, mb: 2,
+              }}>
                 <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
                   Filtres
                 </Typography>
@@ -248,7 +162,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
                   <Button
                     size="small"
                     onClick={resetParams}
-                    onTouchStart={e => e.stopPropagation()}
                     sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
                   >
                     Réinitialiser
@@ -306,7 +219,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           </Box>
         )}
 
-        {/* Barre d'actions — toujours rendue, ne bouge pas */}
+        {/* Barre d'actions — toujours rendue */}
         <Box sx={{ px: 2, py: 1.25 }}>
           {phase === 'idle' && (
             <Box sx={{ textAlign: 'center', py: 0.5 }}>
