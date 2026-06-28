@@ -6,9 +6,7 @@ import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
 import { SLIDERS, DEFAULT_PARAMS } from './utils'
 
-const SPRING_IN  = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-const SPRING_OUT = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'
-const SPRING_SNAP = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+const EASE = '0.3s ease-out'
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
@@ -16,7 +14,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   const [filterExpanded, setFilterExpanded] = useState(false)
 
-  const filterContentRef = useRef(null)
+  const filterRef = useRef(null)
   const isClosing = useRef(false)
   const isDragging = useRef(false)
   const dragStartY = useRef(0)
@@ -31,72 +29,101 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
       isClosing.current = false
       isDragging.current = false
       setFilterExpanded(false)
+      if (filterRef.current) {
+        filterRef.current.style.cssText = ''
+      }
     }
   }, [phase])
 
-  // Animation d'entrée : slide depuis le bas avec spring
+  // Animation d'ouverture : height 0 → naturel
   useEffect(() => {
-    if (!filterExpanded || !filterContentRef.current) return
-    const node = filterContentRef.current
+    if (!filterExpanded || !filterRef.current) return
+    const node = filterRef.current
+    let cancelled = false
     node.style.transition = 'none'
-    node.style.transform = 'translateY(100%)'
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (filterContentRef.current !== node) return
-        node.style.transition = SPRING_IN
-        node.style.transform = 'translateY(0)'
-      })
+    node.style.height = '0px'
+    node.style.overflow = 'hidden'
+    const raf = requestAnimationFrame(() => {
+      if (cancelled) return
+      node.style.transition = `height ${EASE}`
+      node.style.height = `${node.scrollHeight}px`
     })
+    return () => { cancelled = true; cancelAnimationFrame(raf) }
   }, [filterExpanded])
 
-  // Démarre la fermeture animée (bouton, backdrop, ou fin de drag)
+  // Démarre la fermeture animée (bouton, backdrop)
   const startClose = () => {
-    if (!filterContentRef.current) {
-      setFilterExpanded(false)
-      return
-    }
+    const node = filterRef.current
+    if (!node) { setFilterExpanded(false); return }
     isClosing.current = true
-    filterContentRef.current.style.transition = SPRING_OUT
-    filterContentRef.current.style.transform = 'translateY(110%)'
+    node.style.transition = 'none'
+    node.style.height = `${node.scrollHeight}px`
+    requestAnimationFrame(() => {
+      node.style.transition = `height ${EASE}`
+      node.style.height = '0px'
+    })
   }
 
   // onTransitionEnd sur le contenu filtres
-  const handleContentTransitionEnd = (e) => {
+  const handleTransitionEnd = (e) => {
     if (e.target !== e.currentTarget) return
-    if (e.propertyName === 'transform' && isClosing.current) {
-      isClosing.current = false
-      setFilterExpanded(false) // rétracte la card
+    const node = filterRef.current
+    if (!node) return
+    if (e.propertyName === 'height') {
+      if (isClosing.current) {
+        isClosing.current = false
+        setFilterExpanded(false) // rétracte la card
+      } else {
+        // Ouverture terminée — repasse en auto
+        node.style.transition = ''
+        node.style.height = 'auto'
+      }
+    } else if (e.propertyName === 'transform') {
+      // Snap-back terminé
+      node.style.transition = ''
+      node.style.transform = ''
     }
   }
 
-  // ── Drag sur le handle (et sur le contenu filtres) ──
+  // Drag — touches sur toute la surface filtres sauf les sliders
   const onDragStart = (e) => {
-    if (!filterExpanded || !filterContentRef.current) return
+    if (e.target.closest('.MuiSlider-root')) return
     isDragging.current = true
-    hasDragged.current = false
     dragStartY.current = e.touches[0].clientY
     lastY.current = e.touches[0].clientY
-    filterContentRef.current.style.transition = 'none'
+    if (filterRef.current) filterRef.current.style.transition = 'none'
   }
 
   const onDragMove = (e) => {
     if (!isDragging.current) return
     lastY.current = e.touches[0].clientY
     const delta = Math.max(0, lastY.current - dragStartY.current)
-    if (filterContentRef.current) filterContentRef.current.style.transform = `translateY(${delta}px)`
+    if (filterRef.current) filterRef.current.style.transform = `translateY(${delta}px)`
   }
 
   const onDragEnd = () => {
     if (!isDragging.current) return
     isDragging.current = false
+    const node = filterRef.current
+    if (!node) return
     const delta = lastY.current - dragStartY.current
     if (delta > 80) {
-      startClose()
+      // Reset translateY instant, puis ferme par height
+      node.style.transition = 'none'
+      node.style.transform = 'translateY(0)'
+      const h = node.scrollHeight
+      requestAnimationFrame(() => {
+        isClosing.current = true
+        node.style.transition = `height ${EASE}`
+        node.style.height = `${h}px`
+        requestAnimationFrame(() => {
+          node.style.height = '0px'
+        })
+      })
     } else {
-      if (filterContentRef.current) {
-        filterContentRef.current.style.transition = SPRING_SNAP
-        filterContentRef.current.style.transform = 'translateY(0)'
-      }
+      // Snap-back
+      node.style.transition = `transform ${EASE}`
+      node.style.transform = 'translateY(0)'
     }
   }
 
@@ -174,15 +201,14 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           ...glass,
         }}
       >
-        {/* Contenu filtres — monté uniquement quand filterExpanded */}
+        {/* Contenu filtres — height animée, translateY pendant le drag */}
         {filterExpanded && (
           <Box
-            ref={filterContentRef}
-            onTransitionEnd={handleContentTransitionEnd}
+            ref={filterRef}
+            onTransitionEnd={handleTransitionEnd}
             onTouchStart={onDragStart}
             onTouchMove={onDragMove}
             onTouchEnd={onDragEnd}
-            sx={{ touchAction: 'pan-x' }}
           >
             {/* Handle */}
             <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
@@ -192,7 +218,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
             {/* Titre */}
             <Box sx={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              px: 2.5, pt: 2, mb: 2,
+              px: 2.5, pt: 1, mb: 2,
             }}>
               <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
                 Filtres
