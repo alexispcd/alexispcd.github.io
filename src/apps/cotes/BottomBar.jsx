@@ -10,21 +10,30 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
 
-  // filterMounted = DOM node exists ; filterOpen = CSS expanded state
   const [filterMounted, setFilterMounted] = useState(false)
   const [filterOpen, setFilterOpen] = useState(false)
 
   const openRafRef = useRef(null)
+  const filterWrapperRef = useRef(null)
+  const isDragging = useRef(false)
+  const isDragClosing = useRef(false)
+  const dragStartY = useRef(0)
+  const lastY = useRef(0)
 
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
 
-  // Fermeture immédiate quand la phase change (recherche lancée ou reset)
   useEffect(() => {
     if (phase === 'searching' || phase === 'idle') {
       if (openRafRef.current) {
         cancelAnimationFrame(openRafRef.current)
         openRafRef.current = null
+      }
+      isDragging.current = false
+      isDragClosing.current = false
+      if (filterWrapperRef.current) {
+        filterWrapperRef.current.style.transition = ''
+        filterWrapperRef.current.style.transform = ''
       }
       setFilterOpen(false)
       setFilterMounted(false)
@@ -33,7 +42,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   const openFilter = () => {
     setFilterMounted(true)
-    // Double rAF : attend le mount DOM avant de déclencher la transition CSS
     openRafRef.current = requestAnimationFrame(() => {
       openRafRef.current = requestAnimationFrame(() => {
         setFilterOpen(true)
@@ -51,14 +59,60 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
       return
     }
     setFilterOpen(false)
-    // filterMounted remis à false par handleFilterTransitionEnd
+    // filterMounted remis à false par handleGridTransitionEnd
   }
 
-  // Démontage après la transition de fermeture
-  const handleFilterTransitionEnd = (e) => {
+  // Fin de transition hauteur (fermeture normale via bouton/backdrop)
+  const handleGridTransitionEnd = (e) => {
     if (e.target !== e.currentTarget) return
     if (e.propertyName === 'grid-template-rows' && !filterOpen) {
       setFilterMounted(false)
+    }
+  }
+
+  // Fin de transition transform (fermeture par drag)
+  const handleDragTransitionEnd = (e) => {
+    if (e.target !== e.currentTarget) return
+    if (e.propertyName === 'transform' && isDragClosing.current) {
+      isDragClosing.current = false
+      setFilterOpen(false)
+      setFilterMounted(false)
+      if (filterWrapperRef.current) {
+        filterWrapperRef.current.style.transition = ''
+        filterWrapperRef.current.style.transform = ''
+      }
+    }
+  }
+
+  const onDragStart = (e) => {
+    isDragging.current = true
+    dragStartY.current = e.touches[0].clientY
+    lastY.current = e.touches[0].clientY
+    if (filterWrapperRef.current) filterWrapperRef.current.style.transition = 'none'
+  }
+
+  const onDragMove = (e) => {
+    if (!isDragging.current) return
+    lastY.current = e.touches[0].clientY
+    const delta = Math.max(0, lastY.current - dragStartY.current)
+    if (filterWrapperRef.current) filterWrapperRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  const onDragEnd = () => {
+    if (!isDragging.current) return
+    isDragging.current = false
+    const delta = lastY.current - dragStartY.current
+    if (delta > 80) {
+      isDragClosing.current = true
+      if (filterWrapperRef.current) {
+        filterWrapperRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)'
+        filterWrapperRef.current.style.transform = 'translateY(120%)'
+      }
+    } else {
+      if (filterWrapperRef.current) {
+        filterWrapperRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32,0.72,0,1)'
+        filterWrapperRef.current.style.transform = 'translateY(0)'
+      }
     }
   }
 
@@ -114,7 +168,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   return (
     <>
-      {/* Backdrop — ferme au tap en dehors */}
+      {/* Backdrop */}
       {filterMounted && (
         <Box
           onClick={closeFilter}
@@ -125,7 +179,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         />
       )}
 
-      {/* Card unique */}
+      {/* Card — ne bouge jamais */}
       <Box
         sx={{
           position: 'fixed',
@@ -138,7 +192,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           ...glass,
         }}
       >
-        {/* Section filtres — animation CSS hauteur via grid trick */}
+        {/* Enveloppe hauteur — animation grid trick */}
         {filterMounted && (
           <Box
             sx={{
@@ -146,80 +200,96 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
               gridTemplateRows: filterOpen ? '1fr' : '0fr',
               transition: 'grid-template-rows 0.35s cubic-bezier(0.32,0.72,0,1)',
             }}
-            onTransitionEnd={handleFilterTransitionEnd}
+            onTransitionEnd={handleGridTransitionEnd}
           >
             <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
 
-              {/* Ligne de titre */}
-              <Box sx={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                px: 2.5, pt: 2, mb: 2,
-              }}>
-                <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
-                  Filtres
-                </Typography>
-                {!isDefault && (
-                  <Button
-                    size="small"
-                    onClick={resetParams}
-                    sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
-                  >
-                    Réinitialiser
-                  </Button>
-                )}
-              </Box>
+              {/* Wrapper interne — reçoit le drag, translateY ici uniquement */}
+              <Box
+                ref={filterWrapperRef}
+                onTransitionEnd={handleDragTransitionEnd}
+                onTouchStart={onDragStart}
+                onTouchMove={onDragMove}
+                onTouchEnd={onDragEnd}
+                sx={{ touchAction: 'pan-x' }}
+              >
+                {/* Handle */}
+                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
+                  <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.4 }} />
+                </Box>
 
-              {/* Sliders */}
-              <Box sx={{ px: 2.5, pb: 2 }}>
-                {SLIDERS.map(s => (
-                  <Box key={s.key} sx={{ mb: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
-                        {s.label}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
-                        {s.range
-                          ? `${s.fmt(params[s.minKey])} — ${s.fmt(params[s.maxKey])}`
-                          : s.fmt(params[s.key])
-                        }
-                      </Typography>
-                    </Box>
+                {/* Titre */}
+                <Box sx={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  px: 2.5, pt: 1, mb: 2,
+                }}>
+                  <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
+                    Filtres
+                  </Typography>
+                  {!isDefault && (
+                    <Button
+                      size="small"
+                      onClick={resetParams}
+                      onTouchStart={e => e.stopPropagation()}
+                      sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
+                    >
+                      Réinitialiser
+                    </Button>
+                  )}
+                </Box>
 
-                    {s.range ? (
-                      <Slider
-                        value={[params[s.minKey], params[s.maxKey]]}
-                        onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
-                        min={s.min} max={s.max} step={s.step}
-                        disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
-                      />
-                    ) : (
-                      <Slider
-                        value={params[s.key]}
-                        onChange={(_, v) => setParam(s.key, v)}
-                        min={s.min} max={s.max} step={s.step}
-                        size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
-                      />
-                    )}
-
-                    {s.range && (
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
-                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
-                          {s.fmt(s.min)}
+                {/* Sliders */}
+                <Box sx={{ px: 2.5, pb: 2 }}>
+                  {SLIDERS.map(s => (
+                    <Box key={s.key} sx={{ mb: 3 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                          {s.label}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
-                          {s.fmt(s.max)}
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+                          {s.range
+                            ? `${s.fmt(params[s.minKey])} — ${s.fmt(params[s.maxKey])}`
+                            : s.fmt(params[s.key])
+                          }
                         </Typography>
                       </Box>
-                    )}
-                  </Box>
-                ))}
+
+                      {s.range ? (
+                        <Slider
+                          value={[params[s.minKey], params[s.maxKey]]}
+                          onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
+                          min={s.min} max={s.max} step={s.step}
+                          disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                        />
+                      ) : (
+                        <Slider
+                          value={params[s.key]}
+                          onChange={(_, v) => setParam(s.key, v)}
+                          min={s.min} max={s.max} step={s.step}
+                          size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                        />
+                      )}
+
+                      {s.range && (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                            {s.fmt(s.min)}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                            {s.fmt(s.max)}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
               </Box>
 
             </Box>
           </Box>
         )}
 
-        {/* Barre d'actions — toujours rendue */}
+        {/* Barre d'actions — toujours rendue, ne bouge jamais */}
         <Box sx={{ px: 2, py: 1.25 }}>
           {phase === 'idle' && (
             <Box sx={{ textAlign: 'center', py: 0.5 }}>
