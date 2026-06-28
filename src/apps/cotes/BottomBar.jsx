@@ -19,7 +19,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const filterContentRef = useRef(null)
   const isClosing = useRef(false)
   const isDragging = useRef(false)
-  const hasDragged = useRef(false)
   const dragStartY = useRef(0)
   const lastY = useRef(0)
 
@@ -84,14 +83,12 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
     if (!isDragging.current) return
     lastY.current = e.touches[0].clientY
     const delta = Math.max(0, lastY.current - dragStartY.current)
-    if (Math.abs(lastY.current - dragStartY.current) > 5) hasDragged.current = true
     if (filterContentRef.current) filterContentRef.current.style.transform = `translateY(${delta}px)`
   }
 
   const onDragEnd = () => {
     if (!isDragging.current) return
     isDragging.current = false
-    if (!hasDragged.current) return // simple tap → laisse onClick gérer
     const delta = lastY.current - dragStartY.current
     if (delta > 80) {
       startClose()
@@ -101,12 +98,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         filterContentRef.current.style.transform = 'translateY(0)'
       }
     }
-  }
-
-  const handleToggle = () => {
-    if (hasDragged.current) return // c'était un drag, pas un tap
-    if (filterExpanded) startClose()
-    else setFilterExpanded(true)
   }
 
   const glass = {
@@ -193,6 +184,11 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
             onTouchEnd={onDragEnd}
             sx={{ touchAction: 'pan-x' }}
           >
+            {/* Handle */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
+              <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.35 }} />
+            </Box>
+
             {/* Titre */}
             <Box sx={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -260,22 +256,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
             </Box>
           </Box>
         )}
-
-        {/* Handle — toujours visible, toggle + drag */}
-        <Box
-          onClick={handleToggle}
-          onTouchStart={onDragStart}
-          onTouchMove={onDragMove}
-          onTouchEnd={onDragEnd}
-          sx={{
-            display: 'flex', justifyContent: 'center',
-            pt: 1.25, pb: 0.75,
-            cursor: 'pointer',
-            touchAction: 'pan-x',
-          }}
-        >
-          <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.35 }} />
-        </Box>
 
         {/* Barre d'actions — toujours rendue */}
         <Box sx={{ px: 2, pb: 1.25 }}>
