@@ -6,96 +6,135 @@ import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
 import { SLIDERS, DEFAULT_PARAMS } from './utils'
 
-// Chevauchement entre le panel et la barre : la barre couvre cette zone pour masquer le seam
-const OVERLAP = 8
-
 const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
-  const [filterExpanded, setFilterExpanded] = useState(false)
-  const [filterBottom, setFilterBottom] = useState(0)
 
-  const filterPanelRef = useRef(null)
-  const actionBarRef = useRef(null)
-  const closingRef = useRef(false)
+  // filterMounted = DOM node exists ; filterOpen = CSS expanded state
+  const [filterMounted, setFilterMounted] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
+
+  const cardRef = useRef(null)
+  const openRafRef = useRef(null)
+  const isDragging = useRef(false)
+  const isDragClosing = useRef(false)
   const dragStartY = useRef(0)
   const lastY = useRef(0)
-  const isDragging = useRef(false)
 
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
 
-  // Ferme le panel (sans animation) quand la phase change
+  // Fermeture immédiate quand la phase change (recherche lancée ou reset)
   useEffect(() => {
-    if (phase === 'searching' || phase === 'idle') setFilterExpanded(false)
+    if (phase === 'searching' || phase === 'idle') {
+      if (openRafRef.current) {
+        cancelAnimationFrame(openRafRef.current)
+        openRafRef.current = null
+      }
+      setFilterOpen(false)
+      setFilterMounted(false)
+      isDragging.current = false
+      isDragClosing.current = false
+      if (cardRef.current) {
+        cardRef.current.style.transition = ''
+        cardRef.current.style.transform = ''
+      }
+    }
   }, [phase])
 
-  // Mesure la position de la barre pour ancrer le panel juste au-dessus
-  useEffect(() => {
-    if (filterExpanded && actionBarRef.current) {
-      const rect = actionBarRef.current.getBoundingClientRect()
-      setFilterBottom(window.innerHeight - rect.top + OVERLAP)
-    }
-  }, [filterExpanded, phase])
-
-  // Fermeture animée (glisse vers le bas et disparaît derrière la barre)
-  const closeWithAnimation = () => {
-    if (closingRef.current) return
-    closingRef.current = true
-    if (filterPanelRef.current) {
-      filterPanelRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)'
-      filterPanelRef.current.style.transform = 'translateX(-50%) translateY(300px)'
-    }
-    setTimeout(() => {
-      setFilterExpanded(false)
-      closingRef.current = false
-    }, 300)
+  const openFilter = () => {
+    setFilterMounted(true)
+    // Double rAF : attend le mount DOM avant de déclencher la transition CSS
+    openRafRef.current = requestAnimationFrame(() => {
+      openRafRef.current = requestAnimationFrame(() => {
+        setFilterOpen(true)
+        openRafRef.current = null
+      })
+    })
   }
 
-  // Drag handle — suit le doigt, déclenche closeWithAnimation si delta > 80px
-  const onHandleTouchStart = (e) => {
-    isDragging.current = true
-    dragStartY.current = e.touches[0].clientY
-    lastY.current = e.touches[0].clientY
-    if (filterPanelRef.current) filterPanelRef.current.style.transition = 'none'
+  const closeFilter = () => {
+    if (openRafRef.current) {
+      cancelAnimationFrame(openRafRef.current)
+      openRafRef.current = null
+      setFilterOpen(false)
+      setFilterMounted(false)
+      return
+    }
+    setFilterOpen(false)
+    // filterMounted remis à false par handleFilterTransitionEnd
   }
 
-  const onHandleTouchMove = (e) => {
-    if (!isDragging.current) return
-    lastY.current = e.touches[0].clientY
-    const delta = Math.max(0, lastY.current - dragStartY.current)
-    if (filterPanelRef.current) {
-      filterPanelRef.current.style.transform = `translateX(-50%) translateY(${delta}px)`
+  // Fin de transition CSS hauteur (ouverture ou fermeture normale)
+  const handleFilterTransitionEnd = (e) => {
+    if (e.target !== e.currentTarget) return
+    if (e.propertyName === 'grid-template-rows' && !filterOpen) {
+      setFilterMounted(false)
     }
   }
 
-  const onHandleTouchEnd = () => {
-    if (!isDragging.current) return
-    isDragging.current = false
-    const delta = lastY.current - dragStartY.current
-    if (delta > 80) {
-      closeWithAnimation()
-    } else {
-      if (filterPanelRef.current) {
-        filterPanelRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32,0.72,0,1)'
-        filterPanelRef.current.style.transform = 'translateX(-50%)'
+  // Fin de transition transform sur la card (drag close ou snap back)
+  const handleCardTransitionEnd = (e) => {
+    if (e.target !== e.currentTarget) return
+    if (e.propertyName === 'transform') {
+      if (isDragClosing.current) {
+        isDragClosing.current = false
+        setFilterOpen(false)
+        setFilterMounted(false)
+      }
+      if (cardRef.current) {
+        cardRef.current.style.transition = ''
+        cardRef.current.style.transform = ''
       }
     }
   }
 
-  const glassBase = {
-    position: 'fixed',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '92vw',
+  // Drag — déclenché sur handle et ligne de titre (zones sans sliders)
+  const onDragStart = (e) => {
+    isDragging.current = true
+    dragStartY.current = e.touches[0].clientY
+    lastY.current = e.touches[0].clientY
+    if (cardRef.current) cardRef.current.style.transition = 'none'
+  }
+
+  const onDragMove = (e) => {
+    if (!isDragging.current) return
+    lastY.current = e.touches[0].clientY
+    const delta = Math.max(0, lastY.current - dragStartY.current)
+    if (cardRef.current) cardRef.current.style.transform = `translateY(${delta}px)`
+  }
+
+  const onDragEnd = () => {
+    if (!isDragging.current) return
+    isDragging.current = false
+    const delta = lastY.current - dragStartY.current
+    if (delta > 80) {
+      isDragClosing.current = true
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)'
+        cardRef.current.style.transform = 'translateY(100%)'
+      }
+    } else {
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'transform 0.35s cubic-bezier(0.32,0.72,0,1)'
+        cardRef.current.style.transform = 'translateY(0)'
+      }
+    }
+  }
+
+  const dragHandlers = {
+    onTouchStart: onDragStart,
+    onTouchMove: onDragMove,
+    onTouchEnd: onDragEnd,
+  }
+
+  const glass = {
     background: dark
       ? 'linear-gradient(180deg, rgba(52,52,68,0.28) 0%, rgba(18,18,28,0.36) 100%)'
       : 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(228,234,252,0.24) 100%)',
     backdropFilter: 'blur(28px) saturate(180%)',
     WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-    border: dark
-      ? '1px solid rgba(255,255,255,0.07)'
-      : '1px solid rgba(0,0,0,0.06)',
+    border: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)',
     boxShadow: dark
       ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
       : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
@@ -110,23 +149,25 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
     border: `1px solid ${theme.palette.divider}`,
   }
 
+  const filterIsActive = filterMounted
+
   const filterBtn = (
     <Button
-      onClick={() => filterExpanded ? closeWithAnimation() : setFilterExpanded(true)}
+      onClick={() => filterIsActive ? closeFilter() : openFilter()}
       sx={{
         ...btnBase,
         minWidth: 'unset',
         px: 1.75,
-        color: filterExpanded ? 'text.primary' : (hasCustomParams ? 'primary.main' : 'text.secondary'),
-        borderColor: filterExpanded ? theme.palette.divider : (hasCustomParams ? 'primary.main' : theme.palette.divider),
+        color: filterIsActive ? 'text.primary' : (hasCustomParams ? 'primary.main' : 'text.secondary'),
+        borderColor: filterIsActive ? theme.palette.divider : (hasCustomParams ? 'primary.main' : theme.palette.divider),
         position: 'relative',
       }}
     >
-      {filterExpanded
+      {filterIsActive
         ? <CloseRounded sx={{ fontSize: 20 }} />
         : <TuneRounded sx={{ fontSize: 20 }} />
       }
-      {!filterExpanded && hasCustomParams && (
+      {!filterIsActive && hasCustomParams && (
         <Box sx={{
           position: 'absolute', top: 9, right: 9,
           width: 6, height: 6,
@@ -140,165 +181,180 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   return (
     <>
       {/* Backdrop — ferme au tap en dehors */}
-      {filterExpanded && (
+      {filterMounted && (
         <Box
-          onClick={closeWithAnimation}
-          sx={{ position: 'fixed', inset: 0, zIndex: 999 }}
+          onClick={closeFilter}
+          sx={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            bgcolor: dark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)',
+          }}
         />
       )}
 
-      {/* Panel filtres — suit le doigt, ancré juste au-dessus de la barre */}
-      {filterExpanded && (
-        <Box
-          ref={filterPanelRef}
-          sx={{
-            ...glassBase,
-            bottom: filterBottom,
-            zIndex: 1000,
-            borderRadius: '36px 36px 12px 12px',
-            borderBottom: 'none',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Drag handle */}
-          <Box
-            onTouchStart={onHandleTouchStart}
-            onTouchMove={onHandleTouchMove}
-            onTouchEnd={onHandleTouchEnd}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              pt: 1.5,
-              pb: 0.5,
-              cursor: 'grab',
-              touchAction: 'none',
-            }}
-          >
-            <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.4 }} />
-          </Box>
-
-          <Box sx={{ px: 2.5, pt: 1, pb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
-                Filtres
-              </Typography>
-              {!isDefault && (
-                <Button
-                  size="small"
-                  onClick={resetParams}
-                  sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
-                >
-                  Réinitialiser
-                </Button>
-              )}
-            </Box>
-
-            {SLIDERS.map(s => (
-              <Box key={s.key} sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
-                    {s.label}
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
-                    {s.range
-                      ? `${s.fmt(params[s.minKey])} — ${s.fmt(params[s.maxKey])}`
-                      : s.fmt(params[s.key])
-                    }
-                  </Typography>
-                </Box>
-
-                {s.range ? (
-                  <Slider
-                    value={[params[s.minKey], params[s.maxKey]]}
-                    onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
-                    min={s.min} max={s.max} step={s.step}
-                    disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
-                  />
-                ) : (
-                  <Slider
-                    value={params[s.key]}
-                    onChange={(_, v) => setParam(s.key, v)}
-                    min={s.min} max={s.max} step={s.step}
-                    size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
-                  />
-                )}
-
-                {s.range && (
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
-                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
-                      {s.fmt(s.min)}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
-                      {s.fmt(s.max)}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      )}
-
-      {/* Barre d'actions — ne bouge jamais */}
+      {/* Card unique — ne bouge jamais par elle-même, sauf pendant le drag */}
       <Box
-        ref={actionBarRef}
+        ref={cardRef}
+        onTransitionEnd={handleCardTransitionEnd}
         sx={{
-          ...glassBase,
+          position: 'fixed',
+          left: '4vw',
+          right: '4vw',
           bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
           zIndex: 1001,
-          borderRadius: filterExpanded ? '12px 12px 36px 36px' : '36px',
-          borderTop: filterExpanded ? 'none' : undefined,
-          px: 2,
-          py: 1.25,
+          borderRadius: '28px',
+          overflow: 'hidden',
+          ...glass,
         }}
       >
-        {phase === 'idle' && (
-          <Box sx={{ textAlign: 'center', py: 0.5 }}>
-            <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-              Appuie sur la carte pour choisir un point
+        {/* Section filtres — animation CSS hauteur via grid trick */}
+        {filterMounted && (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateRows: filterOpen ? '1fr' : '0fr',
+              transition: 'grid-template-rows 0.35s cubic-bezier(0.32,0.72,0,1)',
+            }}
+            onTransitionEnd={handleFilterTransitionEnd}
+          >
+            <Box sx={{ overflow: 'hidden', minHeight: 0 }}>
+
+              {/* Handle — indicateur visuel + zone de drag principale */}
+              <Box
+                {...dragHandlers}
+                sx={{
+                  display: 'flex', justifyContent: 'center',
+                  pt: 1.5, pb: 0.5,
+                  cursor: 'grab',
+                  touchAction: 'none',
+                }}
+              >
+                <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.4 }} />
+              </Box>
+
+              {/* Ligne de titre — aussi zone de drag safe */}
+              <Box
+                {...dragHandlers}
+                sx={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  px: 2.5, pt: 1, mb: 2,
+                  touchAction: 'none',
+                  cursor: 'grab',
+                }}
+              >
+                <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
+                  Filtres
+                </Typography>
+                {!isDefault && (
+                  <Button
+                    size="small"
+                    onClick={resetParams}
+                    onTouchStart={e => e.stopPropagation()}
+                    sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
+                  >
+                    Réinitialiser
+                  </Button>
+                )}
+              </Box>
+
+              {/* Sliders */}
+              <Box sx={{ px: 2.5, pb: 2 }}>
+                {SLIDERS.map(s => (
+                  <Box key={s.key} sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'text.primary' }}>
+                        {s.label}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+                        {s.range
+                          ? `${s.fmt(params[s.minKey])} — ${s.fmt(params[s.maxKey])}`
+                          : s.fmt(params[s.key])
+                        }
+                      </Typography>
+                    </Box>
+
+                    {s.range ? (
+                      <Slider
+                        value={[params[s.minKey], params[s.maxKey]]}
+                        onChange={(_, v) => { setParam(s.minKey, v[0]); setParam(s.maxKey, v[1]) }}
+                        min={s.min} max={s.max} step={s.step}
+                        disableSwap size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                      />
+                    ) : (
+                      <Slider
+                        value={params[s.key]}
+                        onChange={(_, v) => setParam(s.key, v)}
+                        min={s.min} max={s.max} step={s.step}
+                        size="small" sx={{ mx: 1, width: 'calc(100% - 16px)' }}
+                      />
+                    )}
+
+                    {s.range && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
+                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                          {s.fmt(s.min)}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                          {s.fmt(s.max)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+
             </Box>
           </Box>
         )}
 
-        {phase === 'placed' && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+        {/* Barre d'actions — toujours rendue, ne bouge pas */}
+        <Box sx={{ px: 2, py: 1.25 }}>
+          {phase === 'idle' && (
+            <Box sx={{ textAlign: 'center', py: 0.5 }}>
+              <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                Appuie sur la carte pour choisir un point
+              </Box>
+            </Box>
+          )}
+
+          {phase === 'placed' && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={() => { closeFilter(); onSearch() }}
+                disabled={!center}
+                sx={{ ...btnBase, border: 'none' }}
+              >
+                Rechercher ici
+              </Button>
+              {filterBtn}
+            </Box>
+          )}
+
+          {phase === 'searching' && (
             <Button
               fullWidth
-              variant="contained"
-              onClick={() => { setFilterExpanded(false); onSearch() }}
-              disabled={!center}
-              sx={{ ...btnBase, border: 'none' }}
+              onClick={onCancel}
+              sx={{ ...btnBase, color: 'error.main', borderColor: 'error.light' }}
             >
-              Rechercher ici
+              Annuler
             </Button>
-            {filterBtn}
-          </Box>
-        )}
+          )}
 
-        {phase === 'searching' && (
-          <Button
-            fullWidth
-            onClick={onCancel}
-            sx={{ ...btnBase, color: 'error.main', borderColor: 'error.light' }}
-          >
-            Annuler
-          </Button>
-        )}
-
-        {phase === 'results' && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              fullWidth
-              onClick={onReset}
-              startIcon={<MyLocationRounded sx={{ fontSize: 16 }} />}
-              sx={{ ...btnBase, color: 'text.secondary' }}
-            >
-              Nouvelle recherche
-            </Button>
-            {filterBtn}
-          </Box>
-        )}
+          {phase === 'results' && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                fullWidth
+                onClick={onReset}
+                startIcon={<MyLocationRounded sx={{ fontSize: 16 }} />}
+                sx={{ ...btnBase, color: 'text.secondary' }}
+              >
+                Nouvelle recherche
+              </Button>
+              {filterBtn}
+            </Box>
+          )}
+        </Box>
       </Box>
     </>
   )
