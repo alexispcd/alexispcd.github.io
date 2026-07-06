@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Box, Button, Slider, Typography } from '@mui/material'
+import { Box, Button, Slider, Typography, LinearProgress } from '@mui/material'
 import TuneRounded from '@mui/icons-material/TuneRounded'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
@@ -7,6 +7,11 @@ import { useTheme } from '@mui/material/styles'
 import { SLIDERS, DEFAULT_PARAMS } from './utils'
 
 const EASE = '0.3s ease-out'
+
+// Coins concentriques : radius externe (card) = radius interne (boutons) + inset (padding)
+const CARD_RADIUS = 28
+const INSET = 10
+const BTN_RADIUS = CARD_RADIUS - INSET
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
@@ -89,7 +94,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   }
 
   const btnBase = {
-    borderRadius: 99,
+    borderRadius: `${BTN_RADIUS}px`,
     textTransform: 'none',
     fontWeight: 500,
     fontSize: '0.875rem',
@@ -126,14 +131,11 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop invisible — capte le clic extérieur pour fermer, sans assombrir */}
       {filterExpanded && (
         <Box
           onClick={startClose}
-          sx={{
-            position: 'fixed', inset: 0, zIndex: 999,
-            bgcolor: dark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.15)',
-          }}
+          sx={{ position: 'fixed', inset: 0, zIndex: 999 }}
         />
       )}
 
@@ -145,11 +147,22 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           right: '4vw',
           bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
           zIndex: 1001,
-          borderRadius: '28px',
+          borderRadius: `${CARD_RADIUS}px`,
           overflow: 'hidden',
           ...glass,
         }}
       >
+        {/* Loader recherche — barre fine le long du bord haut */}
+        {phase === 'searching' && (
+          <LinearProgress
+            sx={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              height: 3,
+              bgcolor: 'transparent',
+            }}
+          />
+        )}
+
         {/* Contenu filtres — height animée */}
         {filterExpanded && (
           <Box
@@ -223,8 +236,8 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           </Box>
         )}
 
-        {/* Barre d'actions — toujours rendue */}
-        <Box sx={{ px: 2, pt: filterExpanded ? 0 : 1.25, pb: 1.25 }}>
+        {/* Barre d'actions — toujours rendue. Inset = INSET pour coins concentriques */}
+        <Box sx={{ px: `${INSET}px`, pt: filterExpanded ? 0 : `${INSET}px`, pb: `${INSET}px` }}>
           {phase === 'idle' && (
             <Box sx={{ textAlign: 'center', py: 0.5 }}>
               <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
