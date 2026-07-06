@@ -16,9 +16,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   const filterRef = useRef(null)
   const isClosing = useRef(false)
-  const isDragging = useRef(false)
-  const dragStartY = useRef(0)
-  const lastY = useRef(0)
 
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
@@ -27,7 +24,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   useEffect(() => {
     if (phase === 'searching' || phase === 'idle') {
       isClosing.current = false
-      isDragging.current = false
       setFilterExpanded(false)
       if (filterRef.current) {
         filterRef.current.style.cssText = ''
@@ -72,58 +68,11 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
     if (e.propertyName === 'height') {
       if (isClosing.current) {
         isClosing.current = false
-        setFilterExpanded(false) // rétracte la card
+        setFilterExpanded(false)
       } else {
-        // Ouverture terminée — repasse en auto
         node.style.transition = ''
         node.style.height = 'auto'
       }
-    } else if (e.propertyName === 'transform') {
-      // Snap-back terminé
-      node.style.transition = ''
-      node.style.transform = ''
-    }
-  }
-
-  // Drag — touches sur toute la surface filtres sauf les sliders
-  const onDragStart = (e) => {
-    if (e.target.closest('.MuiSlider-root')) return
-    isDragging.current = true
-    dragStartY.current = e.touches[0].clientY
-    lastY.current = e.touches[0].clientY
-    if (filterRef.current) filterRef.current.style.transition = 'none'
-  }
-
-  const onDragMove = (e) => {
-    if (!isDragging.current) return
-    lastY.current = e.touches[0].clientY
-    const delta = Math.max(0, lastY.current - dragStartY.current)
-    if (filterRef.current) filterRef.current.style.transform = `translateY(${delta}px)`
-  }
-
-  const onDragEnd = () => {
-    if (!isDragging.current) return
-    isDragging.current = false
-    const node = filterRef.current
-    if (!node) return
-    const delta = lastY.current - dragStartY.current
-    if (delta > 80) {
-      // Reset translateY instant, puis ferme par height
-      node.style.transition = 'none'
-      node.style.transform = 'translateY(0)'
-      const h = node.scrollHeight
-      requestAnimationFrame(() => {
-        isClosing.current = true
-        node.style.transition = `height ${EASE}`
-        node.style.height = `${h}px`
-        requestAnimationFrame(() => {
-          node.style.height = '0px'
-        })
-      })
-    } else {
-      // Snap-back
-      node.style.transition = `transform ${EASE}`
-      node.style.transform = 'translateY(0)'
     }
   }
 
@@ -201,20 +150,12 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           ...glass,
         }}
       >
-        {/* Contenu filtres — height animée, translateY pendant le drag */}
+        {/* Contenu filtres — height animée */}
         {filterExpanded && (
           <Box
             ref={filterRef}
             onTransitionEnd={handleTransitionEnd}
-            onTouchStart={onDragStart}
-            onTouchMove={onDragMove}
-            onTouchEnd={onDragEnd}
           >
-            {/* Handle */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5, pb: 0.5 }}>
-              <Box sx={{ width: 36, height: 4, borderRadius: 99, bgcolor: 'text.disabled', opacity: 0.35 }} />
-            </Box>
-
             {/* Titre */}
             <Box sx={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -227,7 +168,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
                 <Button
                   size="small"
                   onClick={resetParams}
-                  onTouchStart={e => e.stopPropagation()}
                   sx={{ textTransform: 'none', fontSize: '0.75rem', color: 'text.secondary' }}
                 >
                   Réinitialiser
