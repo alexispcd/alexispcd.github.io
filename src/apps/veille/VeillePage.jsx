@@ -1,11 +1,14 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, IconButton, Typography, Chip, CircularProgress } from '@mui/material'
+import { Box, Chip, CircularProgress } from '@mui/material'
 import Sync from '@mui/icons-material/Sync'
+import GridView from '@mui/icons-material/GridView'
+import ViewList from '@mui/icons-material/ViewList'
 import ArticleCard from './ArticleCard'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
+import { useAppCtx } from '../../lib/context'
 
 const THEMES = [
   'Tous',
@@ -21,12 +24,17 @@ const THEMES = [
   'Optimisation du SI',
 ]
 
+const PREF_KEY = 'veille_display_mode'
+
 const VeillePage = () => {
   const navigate = useNavigate()
+  const { setHeaderButtons, user } = useAppCtx()
+
   const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [displayMode, setDisplayMode] = useState('list')
 
   const reload = useCallback(async () => {
     const data = await loadArticles()
@@ -48,10 +56,65 @@ const VeillePage = () => {
     setSyncing(false)
   }, [reload])
 
+  const toggleDisplayMode = useCallback(async () => {
+    const next = displayMode === 'list' ? 'mosaic' : 'list'
+    setDisplayMode(next)
+    if (user?.id) {
+      try {
+        await supabase.from('user_preferences').upsert({
+          user_id: user.id,
+          key: PREF_KEY,
+          value: next,
+        })
+      } catch (err) {
+        console.error('user_preferences upsert error:', err)
+      }
+    }
+  }, [displayMode, user?.id])
+
+  // Fetch saved display mode on mount
+  useEffect(() => {
+    if (!user?.id) return
+    supabase
+      .from('user_preferences')
+      .select('value')
+      .eq('user_id', user.id)
+      .eq('key', PREF_KEY)
+      .single()
+      .then(({ data }) => {
+        if (data?.value === 'list' || data?.value === 'mosaic') {
+          setDisplayMode(data.value)
+        }
+      })
+  }, [user?.id])
+
   useEffect(() => {
     setLoading(true)
     reload().finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Register header buttons — re-runs when syncing, loading, or displayMode changes
+  useEffect(() => {
+    setHeaderButtons([
+      {
+        key: 'sync',
+        icon: syncing
+          ? <CircularProgress size={18} color="inherit" />
+          : <Sync fontSize="small" />,
+        onClick: sync,
+        disabled: syncing || loading,
+      },
+      {
+        key: 'toggle-display',
+        icon: displayMode === 'mosaic'
+          ? <ViewList fontSize="small" />
+          : <GridView fontSize="small" />,
+        onClick: toggleDisplayMode,
+        disabled: false,
+      },
+    ])
+    return () => setHeaderButtons([])
+  }, [syncing, loading, displayMode, sync, toggleDisplayMode, setHeaderButtons])
 
   const filtered = filter === 'Tous'
     ? articles
@@ -76,47 +139,8 @@ const VeillePage = () => {
     await supabase.from('watch_items').update({ is_favorite: newVal }).eq('id', id)
   }
 
-  const unreadCount = articles.filter(a => !a.is_read).length
-
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', pt: `${HEADER_HEIGHT}px` }}>
-
-      {/* Barre d'action (refresh + compteur) */}
-      <Box sx={{
-        display: 'flex', alignItems: 'center',
-        px: 2, py: 0.75,
-        borderBottom: '1px solid', borderColor: 'divider',
-        flexShrink: 0,
-      }}>
-        <Box sx={{ flex: 1 }}>
-          {!loading && unreadCount > 0 && (
-            <Typography variant="caption" color="primary.main" fontWeight={600}>
-              {unreadCount} non lu{unreadCount > 1 ? 's' : ''}
-            </Typography>
-          )}
-          {syncing && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={11} thickness={5} />
-              <Typography variant="caption" color="text.secondary">
-                Synchronisation en cours...
-              </Typography>
-            </Box>
-          )}
-        </Box>
-        <IconButton size="small" onClick={sync} disabled={syncing || loading} sx={{ p: 0.75 }}>
-          <Sync
-            fontSize="small"
-            sx={{
-              transition: 'none',
-              animation: syncing ? 'veilleSync 1s linear infinite' : 'none',
-              '@keyframes veilleSync': {
-                '0%': { transform: 'rotate(0deg)' },
-                '100%': { transform: 'rotate(360deg)' },
-              },
-            }}
-          />
-        </IconButton>
-      </Box>
 
       {/* Filtres thème */}
       <Box sx={{
@@ -138,18 +162,21 @@ const VeillePage = () => {
         ))}
       </Box>
 
-      {/* Liste articles */}
+      {/* Liste / mosaïque articles */}
       <Box sx={{
         flex: 1, overflowY: 'auto',
         px: 2, pb: 4,
-        display: 'flex', flexDirection: 'column', gap: 1.5,
+        display: 'grid',
+        gridTemplateColumns: displayMode === 'mosaic' ? '1fr 1fr' : '1fr',
+        gap: 1.5,
+        alignContent: 'start',
       }}>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8, gridColumn: '1 / -1' }}>
             <CircularProgress size={28} />
           </Box>
         ) : filtered.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center', gridColumn: '1 / -1' }}>
             Aucun article pour ce thème
           </Typography>
         ) : (

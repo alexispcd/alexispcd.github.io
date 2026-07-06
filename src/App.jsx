@@ -16,7 +16,7 @@ import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 
 const AppLayout = () => {
-  const { dark, setDark, user } = useAppCtx()
+  const { dark, setDark, user, headerButtons } = useAppCtx()
   const matches = useMatches()
   const handle = matches.at(-1)?.handle ?? {}
   const navigate = useNavigate()
@@ -38,6 +38,7 @@ const AppLayout = () => {
         dark={dark}
         setDark={setDark}
         user={user}
+        headerButtons={headerButtons}
         sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
       />
     </Box>
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
 const App = () => {
   const [dark, setDark] = useDarkMode()
   const [user, setUser] = useState(null)
+  const [headerButtons, setHeaderButtons] = useState([])
   const theme = useMemo(() => createTheme(dark), [dark])
 
   useEffect(() => {
@@ -75,7 +77,7 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user }}>
+      <AppCtx.Provider value={{ dark, setDark, user, headerButtons, setHeaderButtons }}>
         <AuthGate>
           <RouterProvider router={router} />
         </AuthGate>

@@ -22,6 +22,7 @@ const AppHeader = ({
   dark,
   setDark,
   user,
+  headerButtons = [],
   sx = {},
 }) => {
   const [accountAnchor, setAccountAnchor] = useState(null)
@@ -105,8 +106,18 @@ const AppHeader = ({
         )}
       </Box>
 
-      {/* Droite — menu compte */}
-      <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center' }}>
+      {/* Droite — boutons contextuels + menu compte */}
+      <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        {headerButtons.map((btn) => (
+          <IconButton
+            key={btn.key}
+            onClick={btn.onClick}
+            disabled={btn.disabled}
+            sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            {btn.icon}
+          </IconButton>
+        ))}
         <IconButton
           onClick={(e) => setAccountAnchor(e.currentTarget)}
           sx={{ ...glassSx, borderRadius: '50%', width: 36, height: 36, p: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
