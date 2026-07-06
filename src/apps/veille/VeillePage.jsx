@@ -162,31 +162,31 @@ const VeillePage = () => {
       </Box>
 
       {/* Liste / mosaïque articles */}
-      <Box sx={{
-        flex: 1, overflowY: 'auto',
-        px: 2, pb: 4,
-        display: 'grid',
-        gridTemplateColumns: displayMode === 'mosaic' ? '1fr 1fr' : '1fr',
-        gap: 1.5,
-        alignContent: 'start',
-      }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 4, display: 'flex', flexDirection: 'column' }}>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8, gridColumn: '1 / -1' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
             <CircularProgress size={28} />
           </Box>
         ) : filtered.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center', gridColumn: '1 / -1' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center' }}>
             Aucun article pour ce thème
           </Typography>
         ) : (
-          filtered.map(article => (
-            <ArticleCard
-              key={article.id}
-              article={article}
-              onClick={() => handleSelect(article)}
-              onToggleFavorite={(e) => handleToggleFavorite(article.id, e)}
-            />
-          ))
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: displayMode === 'mosaic' ? '1fr 1fr' : '1fr',
+            gap: 1.5,
+            pb: 4,
+          }}>
+            {filtered.map(article => (
+              <ArticleCard
+                key={article.id}
+                article={article}
+                onClick={() => handleSelect(article)}
+                onToggleFavorite={(e) => handleToggleFavorite(article.id, e)}
+              />
+            ))}
+          </Box>
         )}
       </Box>
     </Box>
