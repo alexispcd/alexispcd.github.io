@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Box, Button, Slider, Typography, LinearProgress } from '@mui/material'
+import { Box, Button, Slider, Typography } from '@mui/material'
 import TuneRounded from '@mui/icons-material/TuneRounded'
 import CloseRounded from '@mui/icons-material/CloseRounded'
 import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
@@ -9,9 +9,9 @@ import { SLIDERS, DEFAULT_PARAMS } from './utils'
 const EASE = '0.3s ease-out'
 
 // Coins concentriques : radius externe (card) = radius interne (boutons) + inset (padding)
-const CARD_RADIUS = 28
 const INSET = 10
-const BTN_RADIUS = CARD_RADIUS - INSET
+const BTN_RADIUS = 24 // boutons full pill (hauteur 48 → radius = moitié)
+const CARD_RADIUS = BTN_RADIUS + INSET // 34
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
@@ -152,17 +152,6 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
           ...glass,
         }}
       >
-        {/* Loader recherche — barre fine le long du bord haut */}
-        {phase === 'searching' && (
-          <LinearProgress
-            sx={{
-              position: 'absolute', top: 0, left: 0, right: 0,
-              height: 3,
-              bgcolor: 'transparent',
-            }}
-          />
-        )}
-
         {/* Contenu filtres — height animée */}
         {filterExpanded && (
           <Box

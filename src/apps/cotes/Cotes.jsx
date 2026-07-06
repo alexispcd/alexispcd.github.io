@@ -169,12 +169,21 @@ const Cotes = () => {
           position: 'absolute', inset: 0, zIndex: 1002,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          bgcolor: 'rgba(0,0,0,0.35)',
+          bgcolor: 'transparent',
           pointerEvents: 'none',
           gap: 2,
         }}>
-          <CircularProgress sx={{ color: '#fff' }} size={44} />
-          <Typography variant="body2" sx={{ color: '#fff', fontWeight: 500 }}>
+          <CircularProgress sx={{ color: 'primary.main' }} size={44} />
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.primary',
+              fontWeight: 600,
+              textShadow: dark
+                ? '0 1px 4px rgba(0,0,0,0.9)'
+                : '0 1px 4px rgba(255,255,255,0.9)',
+            }}
+          >
             {status}
           </Typography>
         </Box>
