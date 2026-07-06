@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Box, Typography, IconButton } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 import ChevronLeft from '@mui/icons-material/ChevronLeft'
 import ChevronRight from '@mui/icons-material/ChevronRight'
 import ArrowUpward from '@mui/icons-material/ArrowUpward'
@@ -8,9 +9,23 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { slopeColor } from './utils'
 
 const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
+  const theme = useTheme()
+  const dark = theme.palette.mode === 'dark'
   const r = results[activeIdx]
   const total = results.length
   const [direction, setDirection] = useState(0)
+
+  const glass = {
+    background: dark
+      ? 'linear-gradient(180deg, rgba(52,52,68,0.28) 0%, rgba(18,18,28,0.36) 100%)'
+      : 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(228,234,252,0.24) 100%)',
+    backdropFilter: 'blur(28px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+    border: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)',
+    boxShadow: dark
+      ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
+      : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
+  }
 
   const prev = () => {
     if (activeIdx === 0) return
@@ -71,8 +86,9 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
           >
 
             <Box sx={{
-              bgcolor: 'background.paper',
-              borderRadius: 1.5,
+              ...glass,
+              borderRadius: 3, // 24px, rond comme les boutons
+              overflow: 'hidden',
               px: 1.5, py: 1.25,
             }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
