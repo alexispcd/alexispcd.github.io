@@ -224,7 +224,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         )}
 
         {/* Barre d'actions — toujours rendue */}
-        <Box sx={{ px: 2, pb: 1.25 }}>
+        <Box sx={{ px: 2, pt: filterExpanded ? 0 : 1.25, pb: 1.25 }}>
           {phase === 'idle' && (
             <Box sx={{ textAlign: 'center', py: 0.5 }}>
               <Box component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
