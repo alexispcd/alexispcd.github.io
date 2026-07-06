@@ -28,7 +28,7 @@ const PREF_KEY = 'veille_display_mode'
 
 const VeillePage = () => {
   const navigate = useNavigate()
-  const { setHeaderButtons, user } = useAppCtx()
+  const { setHeaderActions, user } = useAppCtx()
 
   const [articles, setArticles] = useState([])
   const [filter, setFilter] = useState('Tous')
@@ -93,28 +93,27 @@ const VeillePage = () => {
     reload().finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Register header buttons — re-runs when syncing, loading, or displayMode changes
+  // Enregistre les actions du pill centre — re-runs quand syncing, loading ou displayMode change
   useEffect(() => {
-    setHeaderButtons([
+    setHeaderActions([
       {
-        key: 'sync',
+        label: 'Synchroniser',
         icon: syncing
-          ? <CircularProgress size={18} color="inherit" />
+          ? <CircularProgress size={16} color="inherit" />
           : <Sync fontSize="small" />,
         onClick: sync,
         disabled: syncing || loading,
       },
       {
-        key: 'toggle-display',
+        label: displayMode === 'mosaic' ? 'Vue liste' : 'Vue mosaïque',
         icon: displayMode === 'mosaic'
           ? <ViewList fontSize="small" />
           : <GridView fontSize="small" />,
         onClick: toggleDisplayMode,
-        disabled: false,
       },
     ])
-    return () => setHeaderButtons([])
-  }, [syncing, loading, displayMode, sync, toggleDisplayMode, setHeaderButtons])
+    return () => setHeaderActions([])
+  }, [syncing, loading, displayMode, sync, toggleDisplayMode, setHeaderActions])
 
   const filtered = filter === 'Tous'
     ? articles

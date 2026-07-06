@@ -16,7 +16,7 @@ import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 
 const AppLayout = () => {
-  const { dark, setDark, user, headerButtons } = useAppCtx()
+  const { dark, setDark, user, headerActions } = useAppCtx()
   const matches = useMatches()
   const handle = matches.at(-1)?.handle ?? {}
   const navigate = useNavigate()
@@ -33,12 +33,12 @@ const AppLayout = () => {
       </Box>
       <AppHeader
         toolName={handle.title ?? null}
+        actions={headerActions}
         showBack={showBack}
         onBack={handleBack}
         dark={dark}
         setDark={setDark}
         user={user}
-        headerButtons={headerButtons}
         sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
       />
     </Box>
@@ -63,7 +63,7 @@ const router = createBrowserRouter([
 const App = () => {
   const [dark, setDark] = useDarkMode()
   const [user, setUser] = useState(null)
-  const [headerButtons, setHeaderButtons] = useState([])
+  const [headerActions, setHeaderActions] = useState([])
   const theme = useMemo(() => createTheme(dark), [dark])
 
   useEffect(() => {
@@ -77,7 +77,7 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user, headerButtons, setHeaderButtons }}>
+      <AppCtx.Provider value={{ dark, setDark, user, headerActions, setHeaderActions }}>
         <AuthGate>
           <RouterProvider router={router} />
         </AuthGate>
