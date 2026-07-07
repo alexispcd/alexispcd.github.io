@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Box, Chip, CircularProgress, Typography } from '@mui/material'
 import Sync from '@mui/icons-material/Sync'
@@ -25,16 +25,23 @@ const THEMES = [
 ]
 
 const PREF_KEY = 'veille_display_mode'
+const SCROLL_KEY = 'veille:scrollTop'
+const FILTER_KEY = 'veille:filter'
 
 const VeillePage = () => {
   const navigate = useNavigate()
   const { setHeaderActions, user } = useAppCtx()
 
   const [articles, setArticles] = useState([])
-  const [filter, setFilter] = useState('Tous')
+  // Restaure le filtre AVANT le premier rendu pour éviter le flash "Tous"
+  const [filter, setFilter] = useState(() => sessionStorage.getItem(FILTER_KEY) || 'Tous')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [displayMode, setDisplayMode] = useState('list')
+
+  const scrollRef = useRef(null)
+  const scrollSaveTimer = useRef(null)
+  const didRestoreScroll = useRef(false)
 
   const reload = useCallback(async () => {
     const data = await loadArticles()
@@ -115,6 +122,34 @@ const VeillePage = () => {
     return () => setHeaderActions([])
   }, [syncing, loading, displayMode, sync, toggleDisplayMode, setHeaderActions])
 
+  // Sauvegarde throttlée du scroll pour le restaurer au retour depuis un article
+  const handleScroll = useCallback(() => {
+    if (scrollSaveTimer.current) return
+    scrollSaveTimer.current = setTimeout(() => {
+      scrollSaveTimer.current = null
+      if (scrollRef.current) {
+        sessionStorage.setItem(SCROLL_KEY, String(scrollRef.current.scrollTop))
+      }
+    }, 150)
+  }, [])
+
+  // Une fois les articles chargés et rendus, restaure le scroll sauvegardé (une seule fois)
+  useEffect(() => {
+    if (loading || didRestoreScroll.current || !scrollRef.current) return
+    const saved = sessionStorage.getItem(SCROLL_KEY)
+    if (saved) scrollRef.current.scrollTop = parseInt(saved, 10) || 0
+    didRestoreScroll.current = true
+  }, [loading])
+
+  // Changement de filtre par l'utilisateur : persiste + remonte en haut immédiatement.
+  // La restauration au montage passe par l'état initial de useState, donc ne déclenche pas ce reset.
+  const handleFilterChange = (theme) => {
+    setFilter(theme)
+    sessionStorage.setItem(FILTER_KEY, theme)
+    if (scrollRef.current) scrollRef.current.scrollTop = 0
+    sessionStorage.setItem(SCROLL_KEY, '0')
+  }
+
   const filtered = filter === 'Tous'
     ? articles
     : articles.filter(a => a.tags?.includes(filter))
@@ -155,14 +190,18 @@ const VeillePage = () => {
             size="small"
             variant={filter === theme ? 'filled' : 'outlined'}
             color={filter === theme ? 'primary' : 'default'}
-            onClick={() => setFilter(theme)}
+            onClick={() => handleFilterChange(theme)}
             sx={{ flexShrink: 0, fontSize: '0.7rem' }}
           />
         ))}
       </Box>
 
       {/* Liste / mosaïque articles */}
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 4, display: 'flex', flexDirection: 'column' }}>
+      <Box
+        ref={scrollRef}
+        onScroll={handleScroll}
+        sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 4, display: 'flex', flexDirection: 'column' }}
+      >
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
             <CircularProgress size={28} />
