@@ -13,7 +13,7 @@ const theme = (dark) => createTheme({
     },
     text: {
       primary: dark ? '#e2e8f0' : '#111111',
-      secondary: dark ? '#444444' : '#aaaaaa',
+      secondary: dark ? '#94a3b8' : '#6b7280',
     },
     divider: dark ? '#1e1e2a' : '#ebebeb',
   },

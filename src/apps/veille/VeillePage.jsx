@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Chip, CircularProgress } from '@mui/material'
+import { Box, Chip, CircularProgress, Typography } from '@mui/material'
 import Sync from '@mui/icons-material/Sync'
 import GridView from '@mui/icons-material/GridView'
 import ViewList from '@mui/icons-material/ViewList'
