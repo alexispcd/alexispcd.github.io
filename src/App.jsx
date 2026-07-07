@@ -61,8 +61,8 @@ const router = createBrowserRouter([
 ])
 
 const App = () => {
-  const [dark, setDark] = useDarkMode()
   const [user, setUser] = useState(null)
+  const [dark, setDark] = useDarkMode(user)
   const [headerActions, setHeaderActions] = useState([])
   const theme = useMemo(() => createTheme(dark), [dark])
 
