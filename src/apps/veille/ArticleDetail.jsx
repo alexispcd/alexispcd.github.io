@@ -183,7 +183,7 @@ const ArticleDetail = () => {
                 Générer une fiche
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block">
-                Résumé, points clés et thèmes suggérés par Claude
+                Résumé, points clés et thèmes suggérés par Mistral
               </Typography>
             </Box>
             {summarizeError && (
@@ -202,7 +202,7 @@ const ArticleDetail = () => {
               }
               sx={{ textTransform: 'none', borderRadius: 2 }}
             >
-              {summarizing ? 'Analyse en cours…' : 'Résumer avec Claude'}
+              {summarizing ? 'Analyse en cours…' : 'Résumer avec Mistral'}
             </Button>
           </Box>
         )}

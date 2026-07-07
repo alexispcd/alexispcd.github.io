@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
         {
           role: "system",
           content:
-            "Tu es un expert en veille technologique. Réponds uniquement en JSON valide avec les clés summary, keyPoints et suggestedTags.",
+            "Tu es un expert en veille technologique. Réponds uniquement en JSON valide avec les clés summary, keyPoints et suggestedTags. Sois précis et concret : privilégie les faits (chiffres, noms propres, dates, versions, montants, décisions) plutôt que des formulations génériques ou vagues.",
         },
         {
           role: "user",
@@ -69,15 +69,10 @@ Deno.serve(async (req) => {
 
 ${userMessage}
 
-Réponds avec ce JSON exact :
-{
-  "summary": "résumé en 5 lignes maximum",
-  "keyPoints": ["point 1", "point 2", "point 3"],
-  "suggestedTags": ["tag1", "tag2"]
-}
-
-Les suggestedTags doivent être choisis parmi ces thèmes uniquement :
-${THEMES.join(", ")}`,
+Réponds avec un objet JSON contenant exactement ces clés :
+- "summary" : un résumé en 5 lignes maximum, factuel et concret.
+- "keyPoints" : un tableau de points clés. Le nombre de points doit refléter la richesse réelle de l'article, sans compte imposé : peu de points si l'article est pauvre (2 suffisent), davantage s'il est dense (7 ou plus). Chaque point doit porter une information précise (chiffre, nom, date, décision, chiffre-clé) plutôt qu'une généralité.
+- "suggestedTags" : un tableau de tags choisis UNIQUEMENT parmi ces thèmes : ${THEMES.join(", ")}`,
         },
       ],
       response_format: { type: "json_object" },
