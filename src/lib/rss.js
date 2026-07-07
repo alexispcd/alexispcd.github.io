@@ -49,11 +49,24 @@ export const fetchRssFeeds = async () => {
   return totalInserted
 }
 
-export const loadArticles = async () => {
-  const { data, error } = await supabase
+export const PAGE_SIZE = 20
+
+// Charge une page d'articles, filtres appliqués au niveau requête (thème text[] + non-lus).
+// Retourne { articles, hasMore }. On demande limit+1 pour savoir s'il reste une page.
+export const loadArticles = async ({ theme = 'Tous', unreadOnly = false, offset = 0, limit = PAGE_SIZE } = {}) => {
+  let query = supabase
     .from('watch_items')
     .select('*')
     .order('published_at', { ascending: false })
+    .range(offset, offset + limit) // limit+1 lignes pour détecter hasMore
+
+  if (theme !== 'Tous') query = query.contains('tags', [theme])
+  if (unreadOnly) query = query.eq('is_read', false)
+
+  const { data, error } = await query
   if (error) throw error
-  return data ?? []
+
+  const rows = data ?? []
+  const hasMore = rows.length > limit
+  return { articles: hasMore ? rows.slice(0, limit) : rows, hasMore }
 }
