@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   Box, IconButton, Typography, Menu, MenuItem,
   Divider, ListItemIcon, ListItemText, Avatar,
@@ -26,6 +27,13 @@ const AppHeader = ({
 }) => {
   const [accountAnchor, setAccountAnchor] = useState(null)
   const [actionsAnchor, setActionsAnchor] = useState(null)
+
+  // Ferme les menus au changement de route (AppHeader n'est jamais démonté)
+  const { pathname } = useLocation()
+  useEffect(() => {
+    setAccountAnchor(null)
+    setActionsAnchor(null)
+  }, [pathname])
 
   const hasActions = actions.length > 0
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
