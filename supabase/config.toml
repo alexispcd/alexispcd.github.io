@@ -412,17 +412,6 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.coros-data]
-enabled = true
-verify_jwt = false
-import_map = "./functions/coros-data/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/coros-data/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/coros-data/*.html" ]
-
 [functions.generate-plan]
 enabled = true
 verify_jwt = false
@@ -433,3 +422,27 @@ entrypoint = "./functions/generate-plan/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/generate-plan/*.html" ]
+
+[functions.coros-match]
+enabled = true
+verify_jwt = false
+import_map = "./functions/coros-match/deno.json"
+entrypoint = "./functions/coros-match/index.ts"
+
+[functions.complete-session]
+enabled = true
+verify_jwt = false
+import_map = "./functions/complete-session/deno.json"
+entrypoint = "./functions/complete-session/index.ts"
+
+[functions.regenerate-plan]
+enabled = true
+verify_jwt = false
+import_map = "./functions/regenerate-plan/deno.json"
+entrypoint = "./functions/regenerate-plan/index.ts"
+
+[functions.adapt-sessions]
+enabled = true
+verify_jwt = false
+import_map = "./functions/adapt-sessions/deno.json"
+entrypoint = "./functions/adapt-sessions/index.ts"

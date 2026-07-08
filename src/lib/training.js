@@ -1,5 +1,36 @@
 import supabase from './supabase'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Edge Functions — helper commun (auth + fetch + gestion d'erreur)
+// ─────────────────────────────────────────────────────────────────────────────
+const callFunction = async (name, body) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Non authentifié')
+
+  const res = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }
+  )
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
+  }
+  return res.json()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LECTURES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Plan actif de l'utilisateur (ou null). */
 export const getActivePlan = async () => {
   const { data, error } = await supabase
     .from('training_plans')
@@ -10,190 +41,87 @@ export const getActivePlan = async () => {
   return data
 }
 
-export const getPlanSessions = async (planId) => {
-  const { data, error } = await supabase
-    .from('training_sessions')
-    .select('*')
-    .eq('plan_id', planId)
-    .order('week_number', { ascending: true })
-    .order('zone', { ascending: true })
-  if (error) throw error
-  return data ?? []
-}
-
-export const getPlanHistory = async () => {
+/** Historique : plans terminés / archivés + nombre de semaines. */
+export const getPlans = async () => {
   const { data, error } = await supabase
     .from('training_plans')
-    .select('*')
+    .select('*, training_weeks(count)')
     .in('status', ['completed', 'archived'])
-    .order('created_at', { ascending: false })
+    .order('race_date', { ascending: false })
   if (error) throw error
-  return data ?? []
+  return (data ?? []).map(({ training_weeks, ...plan }) => ({
+    ...plan,
+    week_count: training_weeks?.[0]?.count ?? 0,
+  }))
 }
 
-export const generatePlan = async (context) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-plan`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ context }),
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error ?? `Erreur serveur (${res.status})`)
-  }
-
-  return res.json() // { planId, status }
-}
-
-export const markSessionDone = async (sessionId) => {
-  const { data, error } = await supabase
-    .from('training_sessions')
-    .update({ status: 'faite', completed_at: new Date().toISOString() })
-    .eq('id', sessionId)
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export const resetSession = async (sessionId) => {
-  const { data, error } = await supabase
-    .from('training_sessions')
-    .update({ status: 'à_venir', completed_at: null, coros_label_id: null })
-    .eq('id', sessionId)
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export const skipSession = async (sessionId) => {
-  const { data, error } = await supabase
-    .from('training_sessions')
-    .update({ status: 'sautée' })
-    .eq('id', sessionId)
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-export const unskipSession = async (sessionId) => {
-  // 1. Remettre la séance sautée à venir
-  const { data: restored, error: unskipErr } = await supabase
-    .from('training_sessions')
-    .update({ status: 'à_venir' })
-    .eq('id', sessionId)
-    .select()
-    .single()
-  if (unskipErr) throw unskipErr
-
-  // 2. Trouver toutes les séances adaptées à cause de ce saut
-  const { data: adapted, error: findErr } = await supabase
-    .from('training_sessions')
-    .select('id, previous_details')
-    .eq('adapted_by_session_id', sessionId)
-  if (findErr) throw findErr
-
-  // 3. Restaurer chaque séance adaptée depuis previous_details
-  if (adapted?.length) {
-    await Promise.all(adapted.map(s =>
-      supabase
-        .from('training_sessions')
-        .update({
-          details: s.previous_details,
-          previous_details: null,
-          status: 'à_venir',
-          adapted_at: null,
-          adapted_by_session_id: null,
-        })
-        .eq('id', s.id)
-    ))
-  }
-
-  return restored
-}
-
-export const regeneratePlan = async (planId) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/regenerate-plan`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ planId }),
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error ?? `Erreur serveur (${res.status})`)
-  }
-
-  return res.json() // { planId, status }
-}
-
-export const adaptSessions = async (planId, skippedSessionId) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/adapt-sessions`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ planId, skippedSessionId }),
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error ?? `Erreur adaptation (${res.status})`)
-  }
-
-  return res.json() // { adaptedCount: N }
-}
-
-export const getAllPlans = async () => {
-  const { data, error } = await supabase
-    .from('training_plans')
-    .select('*')
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  const plans = data ?? []
-  return [
-    ...plans.filter(p => p.status === 'active'),
-    ...plans.filter(p => p.status !== 'active'),
-  ]
-}
-
-export const getPlanById = async (planId) => {
-  const { data, error } = await supabase
+/** Plan + ses semaines ordonnées. */
+export const getPlan = async (planId) => {
+  const { data: plan, error } = await supabase
     .from('training_plans')
     .select('*')
     .eq('id', planId)
     .single()
   if (error) throw error
-  return data
+
+  const { data: weeks, error: weeksErr } = await supabase
+    .from('training_weeks')
+    .select('*')
+    .eq('plan_id', planId)
+    .order('week_number', { ascending: true })
+  if (weeksErr) throw weeksErr
+
+  return { ...plan, weeks: weeks ?? [] }
 }
+
+/**
+ * Séances d'une semaine (sans steps détaillés), avec un agrégat distance/durée
+ * calculé depuis session_steps pour le sous-titre "volume".
+ */
+export const getWeekSessions = async (weekId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .select('*, session_steps(distance_m, duration_sec)')
+    .eq('week_id', weekId)
+    .order('scheduled_date', { ascending: true })
+  if (error) throw error
+
+  return (data ?? []).map(({ session_steps, ...s }) => {
+    const steps = session_steps ?? []
+    const distance = steps.reduce((a, st) => a + (st.distance_m ?? 0), 0)
+    const duration = steps.reduce((a, st) => a + (st.duration_sec ?? 0), 0)
+    return {
+      ...s,
+      agg_distance_m: distance || null,
+      agg_duration_sec: duration || null,
+    }
+  })
+}
+
+/** Séance + steps ordonnés + numéro/bloc de la semaine parente. */
+export const getSession = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('training_sessions')
+    .select('*, session_steps(*), week:training_weeks(week_number, block)')
+    .eq('id', sessionId)
+    .single()
+  if (error) throw error
+
+  const { session_steps, week, ...session } = data
+  const steps = (session_steps ?? [])
+    .slice()
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+  return {
+    ...session,
+    steps,
+    week_number: week?.week_number ?? null,
+    block: week?.block ?? null,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉCRITURES (plans)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const archivePlan = async (planId) => {
   const { error } = await supabase
@@ -211,51 +139,14 @@ export const deletePlan = async (planId) => {
   if (error) throw error
 }
 
-export const getCorosFitness = async () => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉCRITURES (séances)
+// ─────────────────────────────────────────────────────────────────────────────
 
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coros-fitness`,
-    {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}` },
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
-  }
-
-  return res.json()
-}
-
-export const findCorosMatches = async (date, type) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coros-match`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ date, type }),
-    }
-  )
-
-  if (!res.ok) return []
-  const data = await res.json().catch(() => ({ matches: [] }))
-  return data.matches ?? []
-}
-
-export const linkCorosSession = async (sessionId, corosLabelId) => {
+export const skipSession = async (sessionId) => {
   const { data, error } = await supabase
     .from('training_sessions')
-    .update({ coros_label_id: corosLabelId })
+    .update({ status: 'skipped' })
     .eq('id', sessionId)
     .select()
     .single()
@@ -263,34 +154,75 @@ export const linkCorosSession = async (sessionId, corosLabelId) => {
   return data
 }
 
-export const analyzeSession = async (sessionId) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
+/**
+ * Annule un saut / une adaptation.
+ * - status 'adapted' + previous_version → restaure le contenu original.
+ * - sinon → simple retour à 'planned'.
+ */
+export const unskipSession = async (sessionId) => {
+  const { data: s, error } = await supabase
+    .from('training_sessions')
+    .select('status, previous_version')
+    .eq('id', sessionId)
+    .single()
+  if (error) throw error
 
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-session`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ sessionId }),
+  if (s.status === 'adapted' && s.previous_version) {
+    const pv = s.previous_version
+    const { error: updErr } = await supabase
+      .from('training_sessions')
+      .update({
+        title: pv.title,
+        rationale: pv.rationale ?? null,
+        notes: pv.notes ?? null,
+        strength_content: pv.strength_content ?? null,
+        status: 'planned',
+        adapted_at: null,
+        adapted_by_session_id: null,
+        previous_version: null,
+      })
+      .eq('id', sessionId)
+    if (updErr) throw updErr
+
+    // Restaure les steps de course depuis le snapshot.
+    if (Array.isArray(pv.steps)) {
+      const { data: { user } } = await supabase.auth.getUser()
+      await supabase.from('session_steps').delete().eq('session_id', sessionId)
+      const rows = pv.steps.map((st) => ({
+        session_id: sessionId,
+        user_id: user?.id,
+        order_index: st.order_index,
+        step_type: st.step_type,
+        repeat_group: st.repeat_group ?? null,
+        repeat_index: st.repeat_index ?? null,
+        target_pace_sec: st.target_pace_sec ?? null,
+        pace_tolerance_sec: st.pace_tolerance_sec ?? 5,
+        distance_m: st.distance_m ?? null,
+        duration_sec: st.duration_sec ?? null,
+      }))
+      if (rows.length) await supabase.from('session_steps').insert(rows)
     }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(err.error ?? `Erreur analyse (${res.status})`)
+    return
   }
 
-  return res.json() // { analysis }
+  const { error: updErr } = await supabase
+    .from('training_sessions')
+    .update({ status: 'planned' })
+    .eq('id', sessionId)
+  if (updErr) throw updErr
 }
 
-export const unlinkCorosSession = async (sessionId) => {
+/** Réinitialise une séance complétée à l'état "planned". */
+export const resetSession = async (sessionId) => {
   const { data, error } = await supabase
     .from('training_sessions')
-    .update({ coros_label_id: null })
+    .update({
+      status: 'planned',
+      completed_at: null,
+      coros_activity_id: null,
+      actual_laps: null,
+      analysis: null,
+    })
     .eq('id', sessionId)
     .select()
     .single()
@@ -298,8 +230,39 @@ export const unlinkCorosSession = async (sessionId) => {
   return data
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EDGE FUNCTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Lance la génération d'un plan. payload = GenerateInput. → { plan_id } */
+export const generatePlan = (payload) => callFunction('generate-plan', payload)
+
+/** Régénère les semaines restantes. → { plan_id } */
+export const regeneratePlan = (planId) => callFunction('regenerate-plan', { plan_id: planId })
+
+/** Adapte les séances suivant une séance sautée. → { sessions } */
+export const adaptSessions = (sessionId) => callFunction('adapt-sessions', { session_id: sessionId })
+
+/** Cherche les activités Coros candidates pour une séance. → { candidates } */
+export const corosMatch = (sessionId) => callFunction('coros-match', { session_id: sessionId })
+
+/** Complète une séance (avec ou sans activité Coros). → { session } */
+export const completeSession = (sessionId, corosActivityId = null) =>
+  callFunction('complete-session', { session_id: sessionId, coros_activity_id: corosActivityId })
+
+/** Bilan de forme Coros pour le wizard. */
+export const getCorosFitness = () => callFunction('coros-fitness', undefined)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REALTIME / POLLING — suivi du statut de génération
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Notifie quand generation_status passe à 'ready' ou 'error'.
+ * Polling 4s (fallback) + Realtime (prend le relais si activé).
+ * Retourne une fonction de désabonnement.
+ */
 export const subscribeToPlan = (planId, callback) => {
-  // Polling toutes les 4s (fallback si Realtime non activé)
   const interval = setInterval(async () => {
     const { data } = await supabase
       .from('training_plans')
@@ -312,7 +275,6 @@ export const subscribeToPlan = (planId, callback) => {
     }
   }, 4000)
 
-  // Realtime subscription (prend le relais si activé)
   const channel = supabase
     .channel(`plan-${planId}`)
     .on(

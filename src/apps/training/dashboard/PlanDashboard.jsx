@@ -1,186 +1,210 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Box, Typography, IconButton, Chip, CircularProgress,
-  Alert, Snackbar,
+  Box, Typography, Chip, Button, CircularProgress, Alert, Snackbar,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
-import ChevronLeft from '@mui/icons-material/ChevronLeft'
-import ChevronRight from '@mui/icons-material/ChevronRight'
 import EmojiEvents from '@mui/icons-material/EmojiEvents'
-import Schedule from '@mui/icons-material/Schedule'
+import Autorenew from '@mui/icons-material/Autorenew'
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
+import History from '@mui/icons-material/History'
+import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
+import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { getPlanById, getPlanSessions, regeneratePlan, subscribeToPlan } from '../../../lib/training'
-import SessionCard from './SessionCard'
-import SessionDetail from './SessionDetail'
-
-const ZONE_ORDER = ['A', 'B', 'C', 'renfo']
-
-function getCurrentWeekNumber(startDate) {
-  const start = new Date(startDate)
-  const today = new Date()
-  if (today < start) return 1
-  return Math.floor((today - start) / (7 * 24 * 3600 * 1000)) + 1
-}
-
-function weekDateRange(startDate, weekNumber) {
-  const start = new Date(startDate)
-  const weekStart = new Date(start.getTime() + (weekNumber - 1) * 7 * 24 * 3600 * 1000)
-  const weekEnd   = new Date(weekStart.getTime() + 6 * 24 * 3600 * 1000)
-  return { weekStart, weekEnd }
-}
-
-function formatRange(start, end) {
-  const opts = { day: 'numeric', month: 'short' }
-  return `${start.toLocaleDateString('fr-FR', opts)} – ${end.toLocaleDateString('fr-FR', opts)}`
-}
+import { useAppCtx } from '../../../lib/context'
+import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import {
+  getPlan, getWeekSessions, subscribeToPlan,
+  skipSession, unskipSession, adaptSessions,
+  regeneratePlan, archivePlan, deletePlan, generatePlan,
+} from '../../../lib/training'
+import {
+  BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
+  formatGoalTime, daysUntil, currentWeekNumber,
+} from '../constants'
+import SessionRow from './SessionRow'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
-  const unsubscribeRef = useRef(null)
+  const navigate = useNavigate()
+  const { setHeaderActions } = useAppCtx()
 
-  // Plan loading
-  const [plan,        setPlan]        = useState(null)
-  const [planLoading, setPlanLoading] = useState(true)
-  const [planError,   setPlanError]   = useState(null)
+  const [plan, setPlan] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
 
-  // Generating state (initial generation OR regen)
-  const [generating,     setGenerating]     = useState(false)
-  const [generatingMode, setGeneratingMode] = useState('plan') // 'plan' | 'regen'
-  const [generateError,  setGenerateError]  = useState(null)
-  const [flashError,     setFlashError]     = useState(null)
+  const [regenBusy, setRegenBusy] = useState(false)
 
-  // Sessions
-  const [sessions,      setSessions]      = useState(null)
-  const [maxWeek,       setMaxWeek]       = useState(1)
-  const [selectedWeek,  setSelectedWeek]  = useState(1)
-  const [detailSession, setDetailSession] = useState(null)
+  // Semaine sélectionnée : null tant que l'utilisateur n'a pas choisi → on retombe
+  // sur la semaine courante (état dérivé plutôt que miroir dans un effet).
+  const [selectedWeek, setSelectedWeek] = useState(null)
+  const [sessions, setSessions] = useState(null)
 
-  // ── Load plan on mount ──────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
-    setPlanLoading(true)
-    setPlanError(null)
+  const [skipDialog, setSkipDialog] = useState(null)
+  const [adapting, setAdapting] = useState(false)
+  const [confirmRegen, setConfirmRegen] = useState(false)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+  const [retrying, setRetrying] = useState(false)
+  const [snack, setSnack] = useState(null)
 
-    getPlanById(planId).then(data => {
-      if (cancelled) return
-      setPlan(data)
-      setPlanLoading(false)
+  const selectedWeekRef = useRef(null)
+  const scrolledRef = useRef(false)
 
-      if (data.generation_status === 'generating') {
-        setGenerating(true)
-        unsubscribeRef.current = subscribeToPlan(planId, async (status, errMsg) => {
-          unsubscribeRef.current = null
-          if (cancelled) return
-          if (status === 'ready') {
-            try {
-              const updated = await getPlanById(planId)
-              if (!cancelled) { setPlan(updated); setGenerating(false) }
-            } catch {
-              if (!cancelled) setGenerating(false)
-            }
-          } else {
-            if (!cancelled) {
-              setGenerateError(errMsg ?? 'Erreur lors de la génération du plan.')
-              setGenerating(false)
-            }
-          }
-        })
-      }
-    }).catch(err => {
-      if (!cancelled) { setPlanError(err.message); setPlanLoading(false) }
-    })
+  const flash = (message, severity = 'error') => setSnack({ message, severity })
 
-    return () => {
-      cancelled = true
-      unsubscribeRef.current?.()
-      unsubscribeRef.current = null
-    }
+  const readyWeeks = plan?.generation_status === 'ready' ? (plan.weeks ?? []) : []
+  const effectiveWeek = selectedWeek ?? (readyWeeks.length ? currentWeekNumber(readyWeeks) : null)
+
+  const reloadPlan = useCallback(async () => {
+    const p = await getPlan(planId)
+    setPlan(p)
+    return p
   }, [planId])
 
-  // ── Load sessions ───────────────────────────────────────────────────────────
-  const reloadSessions = useCallback(async () => {
-    if (!plan) return
-    try {
-      const data = await getPlanSessions(plan.id)
-      setSessions(data)
-      setMaxWeek(data.reduce((m, s) => Math.max(m, s.week_number ?? 1), 1))
-    } catch (err) {
-      console.error('[PlanDashboard] reloadSessions error:', err.message)
-    }
-  }, [plan])
-
+  // ── Chargement initial ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!plan || generating) return
-    setSessions(null)
-    getPlanSessions(plan.id).then(data => {
-      const max = data.reduce((m, s) => Math.max(m, s.week_number ?? 1), 1)
-      const current = Math.min(Math.max(1, getCurrentWeekNumber(plan.start_date)), max || 1)
-      setSessions(data)
-      setMaxWeek(max)
-      setSelectedWeek(current)
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    scrolledRef.current = false
+    getPlan(planId)
+      .then((p) => { if (!cancelled) { setPlan(p); setLoading(false) } })
+      .catch((e) => { if (!cancelled) { setLoadError(e.message); setLoading(false) } })
+    return () => { cancelled = true }
+  }, [planId])
+
+  // ── Suivi de génération tant que le plan génère ──────────────────────────────
+  useEffect(() => {
+    if (!plan || plan.generation_status !== 'generating') return
+    const unsub = subscribeToPlan(planId, async () => {
+      setRegenBusy(false)
+      await reloadPlan()
     })
-  }, [plan, generating])
+    return unsub
+  }, [plan?.generation_status, planId, reloadPlan]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Chargement des séances de la semaine sélectionnée ─────────────────────────
+  const reloadSessions = useCallback(async () => {
+    const week = plan?.weeks?.find((w) => w.week_number === effectiveWeek)
+    if (!week) return
+    const data = await getWeekSessions(week.id)
+    setSessions(data)
+  }, [plan, effectiveWeek])
 
   useEffect(() => {
-    const handleVisible = () => {
-      if (document.visibilityState === 'visible') reloadSessions()
+    if (effectiveWeek == null || !plan?.weeks?.length) return
+    setSessions(null)
+    reloadSessions().catch((e) => console.error('[PlanDashboard]', e.message))
+  }, [effectiveWeek, plan, reloadSessions])
+
+  // ── Scroll auto vers la semaine courante (une fois) ───────────────────────────
+  useEffect(() => {
+    if (scrolledRef.current || !selectedWeekRef.current) return
+    selectedWeekRef.current.scrollIntoView({ inline: 'center', block: 'nearest' })
+    scrolledRef.current = true
+  }, [effectiveWeek])
+
+  // ── Actions du header ─────────────────────────────────────────────────────────
+  const readOnly = plan?.status !== 'active'
+  useEffect(() => {
+    if (!plan || plan.generation_status !== 'ready') { setHeaderActions([]); return }
+    const actions = []
+    if (!readOnly) {
+      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true) })
+      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
     }
-    document.addEventListener('visibilitychange', handleVisible)
-    return () => document.removeEventListener('visibilitychange', handleVisible)
-  }, [reloadSessions])
+    actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history') })
+    setHeaderActions(actions)
+    return () => setHeaderActions([])
+  }, [plan, readOnly, navigate, setHeaderActions])
 
-  // ── Régénération plan ───────────────────────────────────────────────────────
-  const handleRegeneratePlan = useCallback(async (id) => {
-    setGeneratingMode('regen')
-    setGenerating(true)
-    setFlashError(null)
-
+  // ── Handlers séance ───────────────────────────────────────────────────────────
+  const handleSkip = async (session) => {
+    setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: 'skipped' } : s))
     try {
-      await regeneratePlan(id)
-    } catch (err) {
-      setGeneratingMode('plan')
-      setGenerating(false)
-      setFlashError(err.message)
+      await skipSession(session.id)
+    } catch (e) {
+      setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: 'planned' } : s))
+      flash(e.message)
       return
     }
+    setSkipDialog(session)
+  }
 
-    unsubscribeRef.current = subscribeToPlan(id, async (status, errMsg) => {
-      unsubscribeRef.current = null
-      setGeneratingMode('plan')
-      if (status === 'ready') {
-        try {
-          const updated = await getPlanById(id)
-          setPlan(updated)
-          setGenerating(false)
-        } catch {
-          setGenerating(false)
-        }
-      } else {
-        setFlashError(errMsg ?? 'Erreur lors de la régénération du plan.')
-        setGenerating(false)
+  const handleCancelSkip = async () => {
+    const s = skipDialog
+    setSkipDialog(null)
+    setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: 'planned' } : x))
+    try { await unskipSession(s.id) } catch (e) { flash(e.message) }
+  }
+
+  const handleAdapt = async () => {
+    const s = skipDialog
+    setAdapting(true)
+    try {
+      const { sessions: adapted } = await adaptSessions(s.id)
+      await reloadSessions()
+      const n = adapted?.length ?? 0
+      flash(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter', 'success')
+    } catch (e) {
+      flash(e.message)
+    } finally {
+      setAdapting(false)
+      setSkipDialog(null)
+    }
+  }
+
+  const handleOpen = (session) =>
+    navigate(`/training/plan/${planId}/session/${session.id}`)
+
+  // ── Handlers plan ─────────────────────────────────────────────────────────────
+  const doRegen = async () => {
+    setConfirmRegen(false)
+    setRegenBusy(true)
+    try {
+      await regeneratePlan(planId)
+      await reloadPlan()
+    } catch (e) {
+      setRegenBusy(false)
+      flash(e.message)
+    }
+  }
+
+  const doArchive = async () => {
+    setConfirmArchive(false)
+    try { await archivePlan(planId); navigate('/training') } catch (e) { flash(e.message) }
+  }
+
+  const doRetry = async () => {
+    setRetrying(true)
+    try {
+      const payload = {
+        race: {
+          name: plan.race_name,
+          date: plan.race_date,
+          distance_m: plan.race_distance_m,
+          elevation_m: plan.race_elevation_m ?? undefined,
+        },
+        fitness_snapshot: plan.fitness_snapshot,
+        goal_time_sec: plan.goal_time_sec ?? undefined,
+        previous_races: plan.previous_races ?? undefined,
+        notes: plan.notes ?? undefined,
       }
-    })
-  }, [])
+      await deletePlan(planId)
+      const { plan_id } = await generatePlan(payload)
+      navigate(`/training/plan/${plan_id}`, { replace: true })
+    } catch (e) {
+      setRetrying(false)
+      flash(e.message)
+    }
+  }
 
-  // ── Dérivés ─────────────────────────────────────────────────────────────────
-  const readOnly = plan?.status !== 'active'
+  const doDeleteErrored = async () => {
+    try { await deletePlan(planId); navigate('/training') } catch (e) { flash(e.message) }
+  }
 
-  const currentWeekNum = plan ? getCurrentWeekNumber(plan.start_date) : 1
-
-  const weeksToRace = plan?.race_date
-    ? Math.ceil((new Date(plan.race_date) - new Date()) / (7 * 24 * 3600 * 1000))
-    : null
-
-  const weekSessions = (sessions ?? [])
-    .filter(s => s.week_number === selectedWeek)
-    .sort((a, b) => ZONE_ORDER.indexOf(a.zone) - ZONE_ORDER.indexOf(b.zone))
-
-  const { weekStart, weekEnd } = plan
-    ? weekDateRange(plan.start_date, selectedWeek)
-    : { weekStart: new Date(), weekEnd: new Date() }
-
-  // ── Render states ────────────────────────────────────────────────────────────
-  if (planLoading) {
+  // ── États de rendu ────────────────────────────────────────────────────────────
+  if (loading) {
     return (
       <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
         <CircularProgress size={28} />
@@ -188,16 +212,17 @@ const PlanDashboard = () => {
     )
   }
 
-  if (planError) {
+  if (loadError) {
     return (
       <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">{planError}</Alert>
+        <Alert severity="error">{loadError}</Alert>
       </Box>
     )
   }
 
+  const generating = regenBusy || plan.generation_status === 'generating'
   if (generating) {
-    const isRegen = generatingMode === 'regen'
+    const isRegen = regenBusy
     return (
       <Box sx={{
         height: '100%', display: 'flex', flexDirection: 'column',
@@ -207,184 +232,267 @@ const PlanDashboard = () => {
         <CircularProgress size={40} thickness={3} />
         <Box>
           <Typography variant="body1" fontWeight={600} gutterBottom>
-            {isRegen ? 'Régénération du plan en cours...' : 'Génération de ton plan en cours...'}
+            {isRegen ? 'Régénération du plan en cours…' : 'Génération de ton plan en cours…'}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
             {isRegen
-              ? 'Claude recalibre les séances restantes selon ta situation actuelle. Tu peux fermer et revenir, ça continue en arrière-plan.'
-              : 'Claude analyse tes données Coros et construit ton plan. Tu peux fermer et revenir, ça continue en arrière-plan.'
-            }
+              ? 'Les séances restantes sont recalibrées selon ta situation actuelle. Tu peux fermer et revenir, ça continue en arrière-plan.'
+              : 'Ton plan est construit à partir de tes données Coros. Tu peux fermer et revenir, ça continue en arrière-plan.'}
           </Typography>
         </Box>
-        {generateError && (
-          <Alert severity="error" sx={{ width: '100%', textAlign: 'left' }}>{generateError}</Alert>
-        )}
       </Box>
     )
   }
 
-  // ── Dashboard principal ──────────────────────────────────────────────────────
-  return (
-    <>
+  if (plan.generation_status === 'error') {
+    return (
       <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
+        <Box sx={{ maxWidth: 520, mx: 'auto', px: 2, pt: 3, textAlign: 'center' }}>
+          <ErrorOutlined sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
+          <Typography variant="h6" fontWeight={700} gutterBottom>Génération échouée</Typography>
+          <Alert severity="error" sx={{ textAlign: 'left', mb: 3 }}>
+            {plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.'}
+          </Alert>
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying}>
+              Supprimer
+            </Button>
+            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying}>
+              {retrying ? <CircularProgress size={18} color="inherit" /> : 'Réessayer'}
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    )
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────────
+  const weeks = plan.weeks
+  const totalWeeks = weeks.length
+  const currentWeek = currentWeekNumber(weeks)
+  const curWeekObj = weeks.find((w) => w.week_number === currentWeek)
+  const selWeekObj = weeks.find((w) => w.week_number === effectiveWeek)
+  const maxKm = weeks.reduce((m, w) => Math.max(m, w.target_km ?? 0), 0)
+  const days = daysUntil(plan.race_date)
+
+  return (
+    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
+      <Box sx={{ maxWidth: 640, mx: 'auto', pb: 6 }}>
 
         {/* En-tête plan */}
-        <Box sx={{ px: 2, pt: 2.5, pb: 2 }}>
-          {!readOnly && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
-              <EmojiEvents sx={{ fontSize: 14, color: 'primary.main' }} />
-              <Typography variant="overline" color="primary"
-                sx={{ fontSize: '0.6rem', letterSpacing: '0.12em', lineHeight: 1 }}>
-                Plan actif
-              </Typography>
-            </Box>
-          )}
-
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.25 }}>
-            <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
-              {plan.race_name ?? 'Plan en cours'}
+        <Box sx={{ ...glassSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {readOnly ? (
+              <Chip
+                label={PLAN_STATUS_LABEL[plan.status]?.toUpperCase() ?? plan.status}
+                size="small"
+                sx={{ height: 22, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em' }}
+              />
+            ) : (
+              <Chip
+                icon={<EmojiEvents sx={{ fontSize: '13px !important' }} />}
+                label="PLAN ACTIF"
+                size="small"
+                sx={{
+                  height: 22, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em',
+                  color: 'primary.main', bgcolor: ZONE_STYLE.A.bg,
+                  border: '1px solid', borderColor: 'primary.main',
+                  '& .MuiChip-icon': { color: 'primary.main' },
+                }}
+              />
+            )}
+            <Typography variant="caption" color="text.disabled">
+              Semaine {currentWeek} / {totalWeeks}
             </Typography>
-            {readOnly && (
-              <Chip
-                label={plan.status === 'completed' ? 'Terminé' : 'Archivé'}
-                size="small"
-                sx={{ height: 20, fontSize: '0.62rem', '& .MuiChip-label': { px: 0.75 }, mt: 0.25, flexShrink: 0 }}
-              />
-            )}
           </Box>
 
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            {plan.race_distance && (
-              <Chip label={plan.race_distance} size="small" variant="outlined" sx={{ height: 22, fontSize: '0.72rem' }} />
+          <Typography variant="h6" fontWeight={750} sx={{ mt: 1.25, letterSpacing: '-0.02em' }}>
+            {plan.race_name}
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
+            {days != null && days >= 0 && (
+              <Metric value={`J−${days}`} label="avant course" />
             )}
-            {plan.race_date && (
-              <Chip
-                label={new Date(plan.race_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                size="small"
-                variant="outlined"
-                sx={{ height: 22, fontSize: '0.72rem' }}
-              />
+            {plan.goal_time_sec != null && (
+              <Metric value={formatGoalTime(plan.goal_time_sec)} label="objectif" />
             )}
-            {weeksToRace != null && weeksToRace > 0 && (
-              <Chip
-                icon={<Schedule sx={{ fontSize: '12px !important' }} />}
-                label={`${weeksToRace} sem. restante${weeksToRace > 1 ? 's' : ''}`}
-                size="small"
-                color="primary"
-                variant="outlined"
-                sx={{ height: 22, fontSize: '0.72rem' }}
-              />
-            )}
-            {plan.target_time && (
-              <Chip
-                label={`Objectif ${plan.target_time}`}
-                size="small"
-                color="primary"
-                sx={{ height: 22, fontSize: '0.72rem' }}
-              />
+            {curWeekObj?.target_km != null && (
+              <Metric value={`${Math.round(curWeekObj.target_km)} km`} label="cette semaine" />
             )}
           </Box>
         </Box>
 
-        {/* Sélecteur de semaine */}
-        <Box sx={{ px: 2, mb: 2 }}>
-          <Box sx={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            px: 1, py: 1.25,
-            borderRadius: 2,
-            bgcolor: 'background.paper',
-            border: '1px solid', borderColor: 'divider',
-          }}>
-            <IconButton
-              size="small"
-              onClick={() => setSelectedWeek(w => Math.max(1, w - 1))}
-              disabled={selectedWeek <= 1}
-              sx={{ color: 'text.secondary' }}
-            >
-              <ChevronLeft fontSize="small" />
-            </IconButton>
-
-            <Box sx={{ textAlign: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, justifyContent: 'center', mb: 0.25 }}>
-                <Typography variant="body2" fontWeight={700}>
-                  Semaine {selectedWeek} / {maxWeek}
+        {/* Bande de semaines */}
+        <SectionLabel>Semaines</SectionLabel>
+        <Box sx={{
+          display: 'flex', gap: 1, overflowX: 'auto', px: 2, pb: 1,
+          scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+        }}>
+          {weeks.map((w) => {
+            const sel = w.week_number === effectiveWeek
+            const blk = BLOCK_STYLE[w.block] ?? BLOCK_STYLE.construction
+            const h = maxKm ? Math.round((w.target_km ?? 0) / maxKm * 100) : 0
+            return (
+              <Box
+                key={w.id}
+                ref={sel ? selectedWeekRef : null}
+                onClick={() => setSelectedWeek(w.week_number)}
+                sx={{
+                  flex: '0 0 58px', borderRadius: '14px', px: 1, py: 1,
+                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: 0.75, transition: 'all .15s',
+                  bgcolor: sel ? 'background.paper' : 'transparent',
+                  border: '1px solid', borderColor: sel ? 'primary.main' : 'divider',
+                  transform: sel ? 'translateY(-2px)' : 'none',
+                }}
+              >
+                <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: sel ? 'text.primary' : 'text.secondary' }}>
+                  S{w.week_number}
                 </Typography>
-                {selectedWeek === currentWeekNum && (
-                  <Chip
-                    label="En cours"
-                    size="small"
-                    color="primary"
-                    sx={{ height: 16, fontSize: '0.58rem', '& .MuiChip-label': { px: 0.75 } }}
-                  />
-                )}
+                <Box sx={{ width: '100%', height: 34, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+                  <Box sx={{ width: 16, height: `${Math.max(h, 6)}%`, borderRadius: '5px 5px 2px 2px', bgcolor: blk.main, opacity: 0.85 }} />
+                </Box>
+                <Typography sx={{ fontSize: '0.56rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
+                  {w.target_km ? Math.round(w.target_km) : '—'} km
+                </Typography>
               </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>
-                {formatRange(weekStart, weekEnd)}
-              </Typography>
-            </Box>
-
-            <IconButton
-              size="small"
-              onClick={() => setSelectedWeek(w => Math.min(maxWeek, w + 1))}
-              disabled={selectedWeek >= maxWeek}
-              sx={{ color: 'text.secondary' }}
-            >
-              <ChevronRight fontSize="small" />
-            </IconButton>
-          </Box>
+            )
+          })}
         </Box>
 
-        {/* Séances */}
-        <Box sx={{ px: 2, display: 'flex', flexDirection: 'column', gap: 1.25, pb: 4 }}>
+        {/* Légende des blocs */}
+        <Box sx={{ display: 'flex', gap: 2, px: 2.5, mt: 0.5 }}>
+          {Object.entries(BLOCK_LABEL).map(([key, label]) => (
+            <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '3px', bgcolor: BLOCK_STYLE[key].main }} />
+              <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>{label}</Typography>
+            </Box>
+          ))}
+        </Box>
+
+        {/* Séances de la semaine */}
+        <SectionLabel>
+          {selWeekObj ? `Semaine ${effectiveWeek} — ${BLOCK_LABEL[selWeekObj.block] ?? ''}` : 'Séances'}
+        </SectionLabel>
+        <Box sx={{ px: 2, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
           {sessions === null && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-              <CircularProgress size={24} />
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
+              <CircularProgress size={22} />
             </Box>
           )}
-
-          {sessions !== null && weekSessions.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 5 }}>
+          {sessions !== null && sessions.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
               Aucune séance pour cette semaine.
             </Typography>
           )}
-
-          {weekSessions.map(session => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              onClick={() => setDetailSession(session)}
+          {(sessions ?? []).map((s) => (
+            <SessionRow
+              key={s.id}
+              session={s}
+              canSkip={!readOnly && s.status !== 'done'}
+              onSkip={handleSkip}
+              onOpen={handleOpen}
             />
           ))}
         </Box>
 
-        <SessionDetail
-          session={detailSession}
-          plan={plan}
-          open={detailSession !== null}
-          onClose={() => setDetailSession(null)}
-          onSessionUpdated={(updated) => {
-            setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
-            setDetailSession(updated)
-          }}
-          onAdaptationDone={reloadSessions}
-          onRegeneratePlan={handleRegeneratePlan}
-          readOnly={readOnly}
-        />
-
+        {!readOnly && (sessions?.length ?? 0) > 0 && (
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1.5, px: 2 }}>
+            Glisse une séance : à droite pour sauter, à gauche pour l'ouvrir
+          </Typography>
+        )}
       </Box>
 
+      {/* Dialog adaptation */}
+      <Dialog
+        open={Boolean(skipDialog)}
+        onClose={() => !adapting && handleCancelSkip()}
+        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {adapting
+              ? 'Adaptation en cours… tu peux patienter ici.'
+              : `« ${skipDialog?.title} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
+          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
+            {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog régénération */}
+      <ConfirmDialog
+        open={confirmRegen}
+        onClose={() => setConfirmRegen(false)}
+        onConfirm={doRegen}
+        title="Régénérer les semaines restantes ?"
+        text="Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées."
+        confirmLabel="Régénérer"
+      />
+
+      {/* Dialog archivage */}
+      <ConfirmDialog
+        open={confirmArchive}
+        onClose={() => setConfirmArchive(false)}
+        onConfirm={doArchive}
+        title="Archiver ce plan ?"
+        text="Le plan passera en lecture seule et ne sera plus modifiable. Tu pourras toujours le consulter dans tes anciens plans."
+        confirmLabel="Archiver"
+      />
+
       <Snackbar
-        open={Boolean(flashError)}
-        autoHideDuration={6000}
-        onClose={() => setFlashError(null)}
+        open={Boolean(snack)}
+        autoHideDuration={5000}
+        onClose={() => setSnack(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="error" onClose={() => setFlashError(null)} sx={{ width: '100%' }}>
-          {flashError}
+        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
+          {snack?.message}
         </Alert>
       </Snackbar>
-    </>
+    </Box>
   )
 }
+
+const Metric = ({ value, label }) => (
+  <Box>
+    <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+      {value}
+    </Typography>
+    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{label}</Typography>
+  </Box>
+)
+
+const SectionLabel = ({ children }) => (
+  <Typography
+    variant="overline"
+    sx={{ display: 'block', color: 'text.disabled', letterSpacing: '0.12em', fontSize: '0.62rem', fontWeight: 600, mt: 2.5, mb: 1, px: 2.5 }}
+  >
+    {children}
+  </Typography>
+)
+
+const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel }) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+  >
+    <DialogTitle sx={{ fontWeight: 700 }}>{title}</DialogTitle>
+    <DialogContent>
+      <DialogContentText>{text}</DialogContentText>
+    </DialogContent>
+    <DialogActions sx={{ px: 3, pb: 2 }}>
+      <Button onClick={onClose} color="inherit">Annuler</Button>
+      <Button onClick={onConfirm} variant="contained">{confirmLabel}</Button>
+    </DialogActions>
+  </Dialog>
+)
 
 export default PlanDashboard
