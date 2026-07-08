@@ -10,7 +10,7 @@ import ArticleDetail from './apps/veille/ArticleDetail'
 import TrainingHome from './apps/training/TrainingHome'
 import PlanDashboard from './apps/training/dashboard/PlanDashboard'
 import SessionPage from './apps/training/session/SessionPage'
-import TrainingPlaceholder from './apps/training/TrainingPlaceholder'
+import PlanWizard from './apps/training/wizard/PlanWizard'
 import AuthGate from './components/AuthGate'
 import AppHeader from './components/AppHeader'
 import supabase from './lib/supabase'
@@ -61,7 +61,7 @@ const router = createBrowserRouter([
       { path: '/veille', element: <VeillePage />, handle: { title: 'Veille', backTo: '/' } },
       { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
       { path: '/training', element: <TrainingHome />, handle: { title: 'Training', backTo: '/' } },
-      { path: '/training/wizard', element: <TrainingPlaceholder label="Nouveau plan" />, handle: { title: 'Nouveau plan', backTo: '/training' } },
+      { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
       { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/training' } },
       { path: '/training/plan/:planId/session/:sessionId', element: <SessionPage />, handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
     ],

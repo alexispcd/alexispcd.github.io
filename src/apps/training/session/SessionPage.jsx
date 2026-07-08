@@ -18,7 +18,7 @@ import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getSession, skipSession, unskipSession, adaptSessions,
-  completeSession, resetSession,
+  completeSession, resetSession, updateStrengthContent,
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL,
@@ -27,6 +27,7 @@ import {
 import {
   groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
 } from './sessionMath'
+import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 
@@ -123,6 +124,14 @@ const SessionPage = () => {
       await completeSession(sessionId)
       await reload()
     } catch (e) { flash(e.message) } finally { setBusy(false) }
+  }
+
+  const handleRenfoDuration = async (duration) => {
+    const updated = applyDuration(session.strength_content ?? {}, duration)
+    setSession((s) => ({ ...s, strength_content: updated }))
+    try {
+      await updateStrengthContent(sessionId, updated)
+    } catch (e) { flash(e.message) }
   }
 
   const doReset = async () => {
@@ -245,7 +254,11 @@ const SessionPage = () => {
 
         {/* ── Corps ───────────────────────────────────────────────── */}
         {isRenfo ? (
-          <RenfoBody content={session.strength_content} />
+          <RenfoBody
+            content={session.strength_content}
+            editable={canComplete}
+            onChangeDuration={handleRenfoDuration}
+          />
         ) : (
           <>
             {/* Graphique */}
@@ -541,7 +554,7 @@ const exoDetail = (ex) => {
   return `${sets}${load}${rest}`.trim()
 }
 
-const RenfoBody = ({ content }) => {
+const RenfoBody = ({ content, editable, onChangeDuration }) => {
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   if (!blocks.length) {
     return (
@@ -550,8 +563,36 @@ const RenfoBody = ({ content }) => {
       </Box>
     )
   }
+  const duration = content.target_duration_min
   return (
     <>
+      {editable && (
+        <>
+          <SectionLabel>Durée</SectionLabel>
+          <Box sx={{ display: 'flex', gap: 1, px: 0.5 }}>
+            {RENFO_DURATIONS.map((d) => {
+              const on = d === duration
+              return (
+                <Box
+                  key={d}
+                  onClick={() => !on && onChangeDuration(d)}
+                  sx={{
+                    flex: 1, textAlign: 'center', py: 1.25, borderRadius: '12px', cursor: 'pointer',
+                    fontSize: '0.8rem', fontWeight: 600, userSelect: 'none',
+                    border: '1px solid',
+                    borderColor: on ? ZONE_STYLE.renfo.main : 'divider',
+                    bgcolor: on ? ZONE_STYLE.renfo.bg : 'transparent',
+                    color: on ? ZONE_STYLE.renfo.main : 'text.secondary',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {d} min
+                </Box>
+              )
+            })}
+          </Box>
+        </>
+      )}
       <SectionLabel>Programme</SectionLabel>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
         {blocks.map((b, i) => {

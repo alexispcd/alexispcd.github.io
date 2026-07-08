@@ -90,6 +90,30 @@ export const formatDuration = (sec) => {
   return formatPace(sec)
 }
 
+// ── Parsers (inverse des formatters, tolérants pour la saisie utilisateur) ─────
+
+/** "4:20" / "4.20" / "4 20" → secondes (allure m:ss). null si invalide. */
+export const parsePaceInput = (str) => {
+  if (str == null) return null
+  const parts = String(str).trim().split(/[:.\s]+/).filter(Boolean)
+  if (parts.length !== 2) return null
+  const [m, s] = parts.map(Number)
+  if (Number.isNaN(m) || Number.isNaN(s) || s >= 60) return null
+  return m * 60 + s
+}
+
+/** "1:29:00" (h:mm:ss) ou "42:30" (m:ss) → secondes. null si invalide. */
+export const parseTimeInput = (str) => {
+  if (str == null) return null
+  const parts = String(str).trim().split(/[:.\s]+/).filter(Boolean)
+  if (parts.length < 2 || parts.length > 3) return null
+  const nums = parts.map(Number)
+  if (nums.some(Number.isNaN)) return null
+  const [h, m, s] = parts.length === 3 ? nums : [0, ...nums]
+  if (m >= 60 || s >= 60) return null
+  return h * 3600 + m * 60 + s
+}
+
 /** Mètres → label course : "10 km", "Semi", "Marathon", sinon "X km". */
 export const raceDistanceLabel = (m) => {
   if (!m) return ''

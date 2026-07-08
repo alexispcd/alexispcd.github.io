@@ -21,7 +21,10 @@ const callFunction = async (name, body) => {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
+    const error = new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
+    error.status = res.status
+    error.body = err
+    throw error
   }
   return res.json()
 }
@@ -210,6 +213,15 @@ export const unskipSession = async (sessionId) => {
     .update({ status: 'planned' })
     .eq('id', sessionId)
   if (updErr) throw updErr
+}
+
+/** Persiste le contenu renfo recomposé (durée + blocs). */
+export const updateStrengthContent = async (sessionId, strengthContent) => {
+  const { error } = await supabase
+    .from('training_sessions')
+    .update({ strength_content: strengthContent })
+    .eq('id', sessionId)
+  if (error) throw error
 }
 
 /** Réinitialise une séance complétée à l'état "planned". */
