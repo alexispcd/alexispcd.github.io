@@ -7,7 +7,7 @@ import { dayTs, validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
 import type { GeneratedPlan } from "../_shared/training/types.ts"
-import { buildRegenUserPrompt, formatHistory, type RegenWeekMeta } from "./prompt.ts"
+import { buildRegenChunkPrompt, formatHistory, type RegenWeekMeta } from "./prompt.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,15 +15,21 @@ const CORS = {
 }
 
 const MODEL = "claude-sonnet-4-6"
-// Régénération = seulement les semaines restantes → 10000 suffit largement
-// (format compact, cf. generate-plan).
-const MAX_TOKENS = 10000
-const TASK_TIMEOUT_MS = 5 * 60_000
+const CHUNK_WEEKS = 4
+const MAX_TOKENS = 8000
+const TASK_TIMEOUT_MS = 120_000
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
 const todayISO = () => new Date().toISOString().split("T")[0]
 
-/** Chronomètre une phase et logue sa durée en ms. */
+/** yyyy-MM-dd décalé de `days` jours. */
+function addDaysISO(iso: string, days: number): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return iso
+  const ts = Date.UTC(+m[1], +m[2] - 1, +m[3]) + days * 86_400_000
+  return new Date(ts).toISOString().slice(0, 10)
+}
+
 async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()
   try {
@@ -33,21 +39,13 @@ async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Pr
   }
 }
 
-/** Rejette après `ms` avec un message explicite (garde-fou anti-blocage). */
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
   let timer: number | undefined
-  const guard = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms)
-  })
+  const guard = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms) })
   return Promise.race([p, guard]).finally(() => clearTimeout(timer))
 }
 
-interface WeekRow {
-  week_number: number
-  start_date: string | null
-  block: string | null
-  focus: string | null
-}
+interface WeekRow { week_number: number; start_date: string | null; block: string | null; focus: string | null }
 
 async function generateAndParse(system: string, messages: Array<{ role: "user" | "assistant"; content: string }>) {
   const text = await anthropicSimple({ model: MODEL, max_tokens: MAX_TOKENS, system, messages })
@@ -58,92 +56,193 @@ async function generateAndParse(system: string, messages: Array<{ role: "user" |
   }
 }
 
-async function regenerateInBackground(
-  supabaseAdmin: SupabaseClient,
+/** Historique des semaines passées (< currentWeek) formaté pour le prompt. */
+async function buildHistoryText(admin: SupabaseClient, planId: string, currentWeek: number): Promise<string> {
+  const { data: weeks } = await admin
+    .from("training_weeks")
+    .select("week_number, block, start_date")
+    .eq("plan_id", planId)
+    .lt("week_number", currentWeek)
+    .order("week_number", { ascending: true })
+  const pastWeeks = (weeks ?? []) as Array<{ week_number: number; block: string | null; start_date: string | null }>
+  if (!pastWeeks.length) return "  (aucune semaine écoulée)"
+
+  const { data: pastSessions } = await admin
+    .from("training_sessions")
+    .select("zone, type, title, status, analysis, training_weeks!inner(week_number)")
+    .eq("plan_id", planId)
+    .lt("training_weeks.week_number", currentWeek)
+    .order("scheduled_date", { ascending: true })
+
+  const byWeek = new Map<number, Array<{ zone: string; type: string; title: string; status: string; verdict: string | null }>>()
+  for (const s of (pastSessions ?? []) as Array<Record<string, unknown>>) {
+    const wn = (s.training_weeks as { week_number: number }).week_number
+    const analysis = s.analysis as { verdict?: string } | null
+    const arr = byWeek.get(wn) ?? []
+    arr.push({ zone: s.zone as string, type: s.type as string, title: s.title as string, status: s.status as string, verdict: analysis?.verdict ?? null })
+    byWeek.set(wn, arr)
+  }
+  return formatHistory(pastWeeks, byWeek)
+}
+
+/** Résumé compact des semaines déjà régénérées ce run (continuité inter-chunks). */
+async function buildRegeneratedText(admin: SupabaseClient, planId: string, from: number, to: number): Promise<string> {
+  if (to <= from) return ""
+  const { data } = await admin
+    .from("training_weeks")
+    .select("week_number, block, target_km, focus, training_sessions(zone, type)")
+    .eq("plan_id", planId)
+    .gte("week_number", from)
+    .lt("week_number", to)
+    .order("week_number", { ascending: true })
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .map((w) => {
+      const sess = ((w.training_sessions ?? []) as Array<Record<string, unknown>>).map((s) => `${s.zone}/${s.type}`).join(", ")
+      return `  S${w.week_number} [${w.block ?? "?"}] ${w.target_km ?? "?"} km — ${w.focus ?? ""} · ${sess}`
+    })
+    .join("\n")
+}
+
+async function selfInvokeContinue(payload: Record<string, unknown>): Promise<void> {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/regenerate-plan`
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Génère/persiste UN chunk des semaines régénérées [currentWeek..lastWeek], puis
+ * chaîne le suivant. L'avancement = nb de semaines déjà (re)persistées ≥ currentWeek.
+ */
+async function runRegenChunk(
+  admin: SupabaseClient,
   planId: string,
   userId: string,
-  plan: Record<string, unknown>,
   currentWeek: number,
   lastWeek: number,
-  regenWeeks: RegenWeekMeta[],
-  historyText: string,
+  anchorStartDate: string,
 ): Promise<void> {
   const setError = (message: string) =>
-    supabaseAdmin.from("training_plans")
-      .update({ generation_status: "error", generation_error: message })
-      .eq("id", planId)
+    admin.from("training_plans").update({ generation_status: "error", generation_error: message }).eq("id", planId)
 
   const t0 = Date.now()
   try {
     await withTimeout((async () => {
+      const { data: plan } = await admin
+        .from("training_plans")
+        .select("race_name, race_date, race_distance_m, race_elevation_m, goal_time_sec, fitness_snapshot, notes")
+        .eq("id", planId)
+        .single()
+      if (!plan) { await setError("Plan introuvable en cours de régénération"); return }
+
       const todayStr = todayISO()
       const raceDateStr = plan.race_date as string
 
-      // Borne basse de validation : la semaine courante a pu démarrer avant aujourd'hui.
-      const firstStart = regenWeeks[0]?.start_date
-      const lowerBoundStr = firstStart && dayTs(firstStart) < dayTs(todayStr) ? firstStart : todayStr
+      const { count } = await admin
+        .from("training_weeks")
+        .select("*", { count: "exact", head: true })
+        .eq("plan_id", planId)
+        .gte("week_number", currentWeek)
+      const done = count ?? 0
+
+      const chunkStart = currentWeek + done
+      const chunkEnd = Math.min(chunkStart + CHUNK_WEEKS - 1, lastWeek)
+      if (chunkStart > lastWeek) {
+        await admin.from("training_plans").update({ generation_status: "ready" }).eq("id", planId)
+        return
+      }
+
+      const chunkWeeks: RegenWeekMeta[] = []
+      for (let w = chunkStart; w <= chunkEnd; w++) {
+        chunkWeeks.push({ week_number: w, start_date: addDaysISO(anchorStartDate, 7 * (w - currentWeek)) })
+      }
+      const chunkStartDate = chunkWeeks[0].start_date!
+      const lowerBoundStr = dayTs(chunkStartDate) < dayTs(todayStr) ? chunkStartDate : todayStr
+
+      const historyText = await buildHistoryText(admin, planId, currentWeek)
+      const regeneratedText = await buildRegeneratedText(admin, planId, currentWeek, chunkStart)
 
       const system = buildPlanSystemPrompt()
-      const userPrompt = buildRegenUserPrompt(
-        plan as never,
-        currentWeek,
-        lastWeek,
-        regenWeeks,
-        historyText,
-        todayStr,
+      const userPrompt = buildRegenChunkPrompt(
+        plan as never, currentWeek, lastWeek, chunkStart, chunkEnd, chunkWeeks, historyText, regeneratedText, todayStr,
       )
 
-      let regen = await timed(planId, "sonnet initial + parse", () =>
+      let regen = await timed(planId, `sonnet chunk ${chunkStart}-${chunkEnd} + parse`, () =>
         generateAndParse(system, [{ role: "user", content: userPrompt }]))
-      let errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
+      regen.weeks = (regen.weeks ?? []).filter((w) => w.week_number >= chunkStart && w.week_number <= chunkEnd)
 
+      let errors = validatePlan(regen, lowerBoundStr, raceDateStr, chunkStart)
       if (errors.length) {
-        console.warn(`[regenerate-plan] plan ${planId} invalide (essai 1) :`, errors.slice(0, 10))
-        regen = await timed(planId, "sonnet retry + parse", () =>
+        console.warn(`[regenerate-plan] ${planId} chunk ${chunkStart}-${chunkEnd} invalide (essai 1) :`, errors.slice(0, 8))
+        regen = await timed(planId, `sonnet chunk ${chunkStart}-${chunkEnd} retry`, () =>
           generateAndParse(system, [
             { role: "user", content: userPrompt },
             { role: "assistant", content: JSON.stringify(regen) },
             { role: "user", content: buildRetryPrompt(errors) },
           ]))
-        errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
+        regen.weeks = (regen.weeks ?? []).filter((w) => w.week_number >= chunkStart && w.week_number <= chunkEnd)
+        errors = validatePlan(regen, lowerBoundStr, raceDateStr, chunkStart)
       }
-
       if (errors.length) {
-        console.error(`[regenerate-plan] plan ${planId} invalide après retry :`, errors.slice(0, 10))
-        await setError(`Régénération invalide après retry : ${errors.slice(0, 8).join(" | ")}`)
+        console.error(`[regenerate-plan] ${planId} chunk ${chunkStart}-${chunkEnd} invalide après retry :`, errors.slice(0, 8))
+        await setError(`Régénération chunk ${chunkStart}-${chunkEnd} invalide : ${errors.slice(0, 6).join(" | ")}`)
         return
       }
 
-      // Delete AVANT insert (index unique plan_id, week_number). Cascade sur séances + steps.
-      const { error: delErr } = await supabaseAdmin
-        .from("training_weeks")
-        .delete()
-        .eq("plan_id", planId)
-        .gte("week_number", currentWeek)
-      if (delErr) throw new Error(`Suppression semaines régénérées : ${delErr.message}`)
+      await timed(planId, `persist chunk ${chunkStart}-${chunkEnd}`, () =>
+        persistPlan(admin, planId, userId, expandPlan(regen)))
 
-      // Dépliage du format compact avant persistance.
-      const expanded = expandPlan(regen)
-      await timed(planId, "persistance", () => persistPlan(supabaseAdmin, planId, userId, expanded))
-
-      await supabaseAdmin.from("training_plans")
-        .update({ generation_status: "ready" })
-        .eq("id", planId)
-
-      console.log(`[regenerate-plan] plan ${planId} régénéré (semaines ${currentWeek}–${lastWeek}) en ${Date.now() - t0} ms`)
+      if (chunkEnd >= lastWeek) {
+        await admin.from("training_plans").update({ generation_status: "ready" }).eq("id", planId)
+        console.log(`[regenerate-plan] ${planId} régénéré (semaines ${currentWeek}–${lastWeek}) — dernier chunk ${chunkStart}-${chunkEnd}`)
+      } else {
+        console.log(`[regenerate-plan] ${planId} chunk ${chunkStart}-${chunkEnd}/${lastWeek} ok en ${Date.now() - t0} ms → chaînage`)
+        await selfInvokeContinue({ continue_regen: { plan_id: planId, current: currentWeek, last: lastWeek, anchor: anchorStartDate } })
+      }
     })(), TASK_TIMEOUT_MS, "Régénération trop longue, réessayez")
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`[regenerate-plan] plan ${planId} erreur (${Date.now() - t0} ms) :`, message)
+    console.error(`[regenerate-plan] ${planId} erreur (${Date.now() - t0} ms) :`, message)
     await setError(message)
   }
 }
 
 async function handleRequest(req: Request): Promise<Response> {
-  // 1. Auth
   const authHeader = req.headers.get("Authorization")
   if (!authHeader) return json(401, { error: "Missing authorization" })
 
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  )
+
+  let body: Record<string, unknown>
+  try {
+    body = await req.json()
+  } catch (err) {
+    return json(400, { error: "Corps invalide", detail: String(err) })
+  }
+
+  // ── Auto-invocation interne : chunk suivant ─────────────────────────────────
+  if (body?.continue_regen) {
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    if (authHeader !== `Bearer ${serviceKey}`) return json(401, { error: "Unauthorized (continuation)" })
+    const c = body.continue_regen as { plan_id: string; current: number; last: number; anchor: string }
+    const { data: row } = await supabaseAdmin
+      .from("training_plans")
+      .select("user_id, generation_status")
+      .eq("id", c.plan_id)
+      .single()
+    if (!row) return json(404, { error: "Plan introuvable" })
+    if (row.generation_status !== "generating") return json(200, { ok: true, skipped: true })
+    EdgeRuntime.waitUntil(runRegenChunk(supabaseAdmin, c.plan_id, row.user_id as string, c.current, c.last, c.anchor))
+    return json(200, { ok: true })
+  }
+
+  // ── Requête utilisateur ─────────────────────────────────────────────────────
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -152,25 +251,12 @@ async function handleRequest(req: Request): Promise<Response> {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return json(401, { error: "Unauthorized" })
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  )
+  const planId = body.plan_id as string
+  if (!planId) return json(400, { error: "plan_id requis" })
 
-  // 2. Corps
-  let planId: string
-  try {
-    const body = await req.json()
-    planId = body.plan_id
-    if (!planId) throw new Error("plan_id requis")
-  } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
-  }
-
-  // 3. Plan
   const { data: plan, error: planErr } = await supabaseAdmin
     .from("training_plans")
-    .select("id, status, generation_status, race_name, race_date, race_distance_m, race_elevation_m, goal_time_sec, fitness_snapshot, notes")
+    .select("id, status, generation_status, race_date")
     .eq("id", planId)
     .eq("user_id", user.id)
     .single()
@@ -183,7 +269,6 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(400, { error: "La course est déjà passée" })
   }
 
-  // 4. Semaines du plan
   const { data: weeksData, error: weeksErr } = await supabaseAdmin
     .from("training_weeks")
     .select("week_number, start_date, block, focus")
@@ -193,67 +278,32 @@ async function handleRequest(req: Request): Promise<Response> {
   const weeks = (weeksData ?? []) as WeekRow[]
   if (weeks.length === 0) return json(400, { error: "Le plan n'a aucune semaine à régénérer" })
 
-  // 5. Semaine courante : dernière semaine dont le start_date est <= aujourd'hui
+  // Semaine courante : dernière dont le start_date est <= aujourd'hui.
   const todayNum = dayTs(todayStr)
   let currentWeek = weeks[0].week_number
   for (const w of weeks) {
     if (w.start_date && dayTs(w.start_date) <= todayNum) currentWeek = w.week_number
   }
   const lastWeek = weeks[weeks.length - 1].week_number
+  const anchor = weeks.find((w) => w.week_number === currentWeek)?.start_date
+    ?? addDaysISO(todayStr, 0)
+  if (currentWeek > lastWeek) return json(400, { error: "Aucune semaine à venir à régénérer" })
 
-  const regenWeeks: RegenWeekMeta[] = weeks
-    .filter((w) => w.week_number >= currentWeek)
-    .map((w) => ({ week_number: w.week_number, start_date: w.start_date }))
-  if (regenWeeks.length === 0) return json(400, { error: "Aucune semaine à venir à régénérer" })
-
-  // 6. Historique réel des semaines passées (contexte IA)
-  const pastWeeks = weeks.filter((w) => w.week_number < currentWeek)
-  let historyText = "  (aucune semaine écoulée)"
-  if (pastWeeks.length) {
-    const { data: pastSessions } = await supabaseAdmin
-      .from("training_sessions")
-      .select("zone, type, title, status, analysis, training_weeks!inner(week_number)")
-      .eq("plan_id", planId)
-      .lt("training_weeks.week_number", currentWeek)
-      .order("scheduled_date", { ascending: true })
-
-    const byWeek = new Map<number, Array<{ zone: string; type: string; title: string; status: string; verdict: string | null }>>()
-    for (const s of (pastSessions ?? []) as Array<Record<string, unknown>>) {
-      const wn = (s.training_weeks as { week_number: number }).week_number
-      const analysis = s.analysis as { verdict?: string } | null
-      const arr = byWeek.get(wn) ?? []
-      arr.push({
-        zone: s.zone as string,
-        type: s.type as string,
-        title: s.title as string,
-        status: s.status as string,
-        verdict: analysis?.verdict ?? null,
-      })
-      byWeek.set(wn, arr)
-    }
-    historyText = formatHistory(pastWeeks, byWeek)
-  }
-
-  // 7. Passer en génération et répondre immédiatement
+  // Passer en génération, supprimer les semaines à régénérer (cascade), puis chaîner.
   const { error: statusErr } = await supabaseAdmin
     .from("training_plans")
     .update({ generation_status: "generating", generation_error: null })
     .eq("id", planId)
   if (statusErr) return json(500, { error: "Mise à jour du statut impossible", detail: statusErr.message })
 
-  EdgeRuntime.waitUntil(
-    regenerateInBackground(
-      supabaseAdmin,
-      planId,
-      user.id,
-      plan as Record<string, unknown>,
-      currentWeek,
-      lastWeek,
-      regenWeeks,
-      historyText,
-    ),
-  )
+  const { error: delErr } = await supabaseAdmin
+    .from("training_weeks")
+    .delete()
+    .eq("plan_id", planId)
+    .gte("week_number", currentWeek)
+  if (delErr) return json(500, { error: "Suppression des semaines impossible", detail: delErr.message })
 
+  EdgeRuntime.waitUntil(runRegenChunk(supabaseAdmin, planId, user.id, currentWeek, lastWeek, anchor))
   return json(200, { plan_id: planId })
 }
 
