@@ -5,6 +5,7 @@ import { extractJson } from "../_shared/extract-json.ts"
 import { buildPlanSystemPrompt, buildRetryPrompt } from "../_shared/training/methodology.ts"
 import { dayTs, validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
+import { expandPlan } from "../_shared/training/expand.ts"
 import type { GeneratedPlan } from "../_shared/training/types.ts"
 import { buildRegenUserPrompt, formatHistory, type RegenWeekMeta } from "./prompt.ts"
 
@@ -14,10 +15,32 @@ const CORS = {
 }
 
 const MODEL = "claude-sonnet-4-6"
-const MAX_TOKENS = 24000
+// Régénération = seulement les semaines restantes → 10000 suffit largement
+// (format compact, cf. generate-plan).
+const MAX_TOKENS = 10000
+const TASK_TIMEOUT_MS = 5 * 60_000
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
 const todayISO = () => new Date().toISOString().split("T")[0]
+
+/** Chronomètre une phase et logue sa durée en ms. */
+async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Promise<T> {
+  const t0 = Date.now()
+  try {
+    return await fn()
+  } finally {
+    console.log(`[regenerate-plan] ${planId} · ${phase} : ${Date.now() - t0} ms`)
+  }
+}
+
+/** Rejette après `ms` avec un message explicite (garde-fou anti-blocage). */
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: number | undefined
+  const guard = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms)
+  })
+  return Promise.race([p, guard]).finally(() => clearTimeout(timer))
+}
 
 interface WeekRow {
   week_number: number
@@ -50,61 +73,68 @@ async function regenerateInBackground(
       .update({ generation_status: "error", generation_error: message })
       .eq("id", planId)
 
+  const t0 = Date.now()
   try {
-    const todayStr = todayISO()
-    const raceDateStr = plan.race_date as string
+    await withTimeout((async () => {
+      const todayStr = todayISO()
+      const raceDateStr = plan.race_date as string
 
-    // Borne basse de validation : la semaine courante a pu démarrer avant aujourd'hui.
-    const firstStart = regenWeeks[0]?.start_date
-    const lowerBoundStr = firstStart && dayTs(firstStart) < dayTs(todayStr) ? firstStart : todayStr
+      // Borne basse de validation : la semaine courante a pu démarrer avant aujourd'hui.
+      const firstStart = regenWeeks[0]?.start_date
+      const lowerBoundStr = firstStart && dayTs(firstStart) < dayTs(todayStr) ? firstStart : todayStr
 
-    const system = buildPlanSystemPrompt()
-    const userPrompt = buildRegenUserPrompt(
-      plan as never,
-      currentWeek,
-      lastWeek,
-      regenWeeks,
-      historyText,
-      todayStr,
-    )
+      const system = buildPlanSystemPrompt()
+      const userPrompt = buildRegenUserPrompt(
+        plan as never,
+        currentWeek,
+        lastWeek,
+        regenWeeks,
+        historyText,
+        todayStr,
+      )
 
-    let regen = await generateAndParse(system, [{ role: "user", content: userPrompt }])
-    let errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
+      let regen = await timed(planId, "sonnet initial + parse", () =>
+        generateAndParse(system, [{ role: "user", content: userPrompt }]))
+      let errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
 
-    if (errors.length) {
-      console.warn(`[regenerate-plan] plan ${planId} invalide (essai 1) :`, errors.slice(0, 10))
-      regen = await generateAndParse(system, [
-        { role: "user", content: userPrompt },
-        { role: "assistant", content: JSON.stringify(regen) },
-        { role: "user", content: buildRetryPrompt(errors) },
-      ])
-      errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
-    }
+      if (errors.length) {
+        console.warn(`[regenerate-plan] plan ${planId} invalide (essai 1) :`, errors.slice(0, 10))
+        regen = await timed(planId, "sonnet retry + parse", () =>
+          generateAndParse(system, [
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: JSON.stringify(regen) },
+            { role: "user", content: buildRetryPrompt(errors) },
+          ]))
+        errors = validatePlan(regen, lowerBoundStr, raceDateStr, currentWeek)
+      }
 
-    if (errors.length) {
-      console.error(`[regenerate-plan] plan ${planId} invalide après retry :`, errors.slice(0, 10))
-      await setError(`Régénération invalide après retry : ${errors.slice(0, 8).join(" | ")}`)
-      return
-    }
+      if (errors.length) {
+        console.error(`[regenerate-plan] plan ${planId} invalide après retry :`, errors.slice(0, 10))
+        await setError(`Régénération invalide après retry : ${errors.slice(0, 8).join(" | ")}`)
+        return
+      }
 
-    // Delete AVANT insert (index unique plan_id, week_number). Cascade sur séances + steps.
-    const { error: delErr } = await supabaseAdmin
-      .from("training_weeks")
-      .delete()
-      .eq("plan_id", planId)
-      .gte("week_number", currentWeek)
-    if (delErr) throw new Error(`Suppression semaines régénérées : ${delErr.message}`)
+      // Delete AVANT insert (index unique plan_id, week_number). Cascade sur séances + steps.
+      const { error: delErr } = await supabaseAdmin
+        .from("training_weeks")
+        .delete()
+        .eq("plan_id", planId)
+        .gte("week_number", currentWeek)
+      if (delErr) throw new Error(`Suppression semaines régénérées : ${delErr.message}`)
 
-    await persistPlan(supabaseAdmin, planId, userId, regen)
+      // Dépliage du format compact avant persistance.
+      const expanded = expandPlan(regen)
+      await timed(planId, "persistance", () => persistPlan(supabaseAdmin, planId, userId, expanded))
 
-    await supabaseAdmin.from("training_plans")
-      .update({ generation_status: "ready" })
-      .eq("id", planId)
+      await supabaseAdmin.from("training_plans")
+        .update({ generation_status: "ready" })
+        .eq("id", planId)
 
-    console.log(`[regenerate-plan] plan ${planId} régénéré (semaines ${currentWeek}–${lastWeek})`)
+      console.log(`[regenerate-plan] plan ${planId} régénéré (semaines ${currentWeek}–${lastWeek}) en ${Date.now() - t0} ms`)
+    })(), TASK_TIMEOUT_MS, "Régénération trop longue, réessayez")
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`[regenerate-plan] plan ${planId} erreur :`, message)
+    console.error(`[regenerate-plan] plan ${planId} erreur (${Date.now() - t0} ms) :`, message)
     await setError(message)
   }
 }

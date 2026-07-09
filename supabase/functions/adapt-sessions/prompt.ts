@@ -1,4 +1,6 @@
 import { TRAINING_RULES } from "../_shared/training/methodology.ts"
+import { foldSteps } from "../_shared/training/expand.ts"
+import type { PlanStep } from "../_shared/training/types.ts"
 
 export interface SessionContent {
   id: string
@@ -34,9 +36,10 @@ SORTIE :
 
 function describeSession(s: SessionContent): string {
   const base = `id="${s.id}" — ${s.scheduled_date} — Zone ${s.zone} / ${s.type} — "${s.title}"`
+  // Steps présentés au format COMPACT (comme la sortie attendue).
   const content = s.type === "renfo" || s.zone === "renfo"
     ? `strength_content: ${JSON.stringify(s.strength_content)}`
-    : `steps: ${JSON.stringify(s.steps)}`
+    : `steps: ${JSON.stringify(foldSteps(s.steps as PlanStep[]))}`
   return `  · ${base}\n    ${content}`
 }
 

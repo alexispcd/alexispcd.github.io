@@ -4,7 +4,8 @@ import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
 import { buildStepRows } from "../_shared/training/persist.ts"
-import type { PlanSession, PlanStep } from "../_shared/training/types.ts"
+import { expandSteps } from "../_shared/training/expand.ts"
+import type { CompactStep, PlanSession, PlanStep } from "../_shared/training/types.ts"
 import { buildAdaptSystemPrompt, buildAdaptUserPrompt, type SessionContent } from "./prompt.ts"
 
 const CORS = {
@@ -23,7 +24,7 @@ interface AdaptedOut {
   id: string
   title?: string
   rationale?: string
-  steps?: PlanStep[]
+  steps?: CompactStep[]   // format compact (sortie modèle), déplié avant persistance
   strength_content?: unknown
 }
 
@@ -220,10 +221,10 @@ async function handleRequest(req: Request): Promise<Response> {
       continue
     }
 
-    // Remplacement des steps (séances de course uniquement)
+    // Remplacement des steps (séances de course uniquement) — dépliage du compact.
     if (!isRenfo && Array.isArray(a.steps)) {
       await supabaseAdmin.from("session_steps").delete().eq("session_id", a.id)
-      const rows = buildStepRows(a.id, user.id, a.steps)
+      const rows = buildStepRows(a.id, user.id, expandSteps(a.steps))
       if (rows.length) {
         const { error: stepsErr } = await supabaseAdmin.from("session_steps").insert(rows)
         if (stepsErr) console.error("[adapt-sessions] insert steps échec", a.id, stepsErr.message)

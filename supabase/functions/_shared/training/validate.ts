@@ -1,4 +1,5 @@
-import type { GeneratedPlan, PlanSession, PlanStep } from "./types.ts"
+import type { CompactStep, GeneratedPlan, PlanSession } from "./types.ts"
+import { isRepeatBlock } from "./expand.ts"
 
 const BLOCKS = ["construction", "intensification", "affutage"]
 const ZONES = ["A", "B", "C", "renfo"]
@@ -41,44 +42,48 @@ export function validateSessionContent(s: PlanSession, tag: string, errors: stri
   }
 }
 
+/** Valide le format COMPACT des steps (avant dépliage par expand.ts). */
 function validateSteps(s: PlanSession, tag: string, errors: string[]): void {
-  const steps = s.steps as PlanStep[]
-  const seenOrder = new Set<number>()
+  const steps = s.steps as CompactStep[]
+  let repeatBlocks = 0
 
-  steps.forEach((st, idx) => {
+  steps.forEach((el, idx) => {
     const stag = `${tag} step ${idx + 1}`
-    if (!STEP_TYPES.includes(st.step_type)) errors.push(`${stag} : step_type invalide "${st.step_type}"`)
 
-    if (st.order_index == null || typeof st.order_index !== "number") {
-      errors.push(`${stag} : order_index manquant`)
-    } else if (seenOrder.has(st.order_index)) {
-      errors.push(`${stag} : order_index dupliqué ${st.order_index}`)
+    if (isRepeatBlock(el)) {
+      repeatBlocks++
+      if (!Number.isInteger(el.repeat) || el.repeat < 2) {
+        errors.push(`${stag} : repeat doit être un entier ≥ 2`)
+      }
+      const iv = el.interval
+      if (!iv || typeof iv !== "object") {
+        errors.push(`${stag} : interval manquant`)
+      } else {
+        if (iv.distance_m == null && iv.duration_sec == null) {
+          errors.push(`${stag} interval : distance_m ou duration_sec requis`)
+        }
+        if (iv.target_pace_sec == null) errors.push(`${stag} interval : target_pace_sec requis`)
+      }
+      if (el.recovery != null) {
+        const rc = el.recovery
+        if (rc.distance_m == null && rc.duration_sec == null) {
+          errors.push(`${stag} recovery : distance_m ou duration_sec requis`)
+        }
+        // target_pace_sec optionnel sur recovery (récup en allure libre).
+      }
     } else {
-      seenOrder.add(st.order_index)
-    }
-
-    const hasDist = st.distance_m != null
-    const hasDur = st.duration_sec != null
-    if (!hasDist && !hasDur) errors.push(`${stag} : distance_m ou duration_sec requis`)
-
-    if (st.step_type !== "recovery" && st.target_pace_sec == null) {
-      errors.push(`${stag} : target_pace_sec requis (sauf recovery)`)
+      if (!STEP_TYPES.includes(el.step_type)) errors.push(`${stag} : step_type invalide "${el.step_type}"`)
+      if (el.distance_m == null && el.duration_sec == null) {
+        errors.push(`${stag} : distance_m ou duration_sec requis`)
+      }
+      if (el.step_type !== "recovery" && el.target_pace_sec == null) {
+        errors.push(`${stag} : target_pace_sec requis (sauf recovery)`)
+      }
     }
   })
 
-  if (s.type === "fractionne") {
-    const groups = new Map<number, { interval: number; recovery: number }>()
-    for (const st of steps) {
-      if (st.repeat_group == null) continue
-      const g = groups.get(st.repeat_group) ?? { interval: 0, recovery: 0 }
-      if (st.step_type === "interval") g.interval++
-      if (st.step_type === "recovery") g.recovery++
-      groups.set(st.repeat_group, g)
-    }
-    const coherent = [...groups.values()].some((g) => g.interval > 0 && g.recovery > 0)
-    if (!coherent) {
-      errors.push(`${tag} : fractionné sans groupe interval/recovery cohérent (repeat_group requis)`)
-    }
+  if (s.type === "fractionne" && repeatBlocks === 0) {
+    errors.push(`${tag} : fractionné sans bloc de répétitions (champ "repeat" requis)`)
   }
 }
 

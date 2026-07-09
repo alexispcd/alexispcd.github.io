@@ -21,14 +21,14 @@ ALLURES (dérivées de la VMA, en secondes/km)
 - pace_tolerance_sec : ~5 en qualité, ~8-10 en facile/longue.
 - Justifie l'allure de chaque séance dans "rationale" (1 phrase).
 
-STEPS (séances de course uniquement)
-- Toute séance de course (facile, fractionne, tempo, sortie_longue) contient un tableau "steps" ordonné (order_index à partir de 0), reflétant EXACTEMENT le déroulé de la séance dans l'ordre des laps montre.
-- Un step est borné par "distance_m" OU "duration_sec" (au moins l'un des deux). "target_pace_sec" est requis SAUF pour step_type "recovery" (récup en allure libre → target_pace_sec null).
-- step_type ∈ warmup | run | interval | recovery | cooldown.
-- Fractionné : APLATIS les répétitions. Un step "interval" + un step "recovery" par répétition, avec "repeat_group" (numéro du bloc de répétitions, ex. 1) et "repeat_index" (1..N). Précède d'un "warmup" et termine par un "cooldown".
-  Exemple 6x1000m : warmup(order 0), puis pour i de 1 à 6 : interval(distance_m 1000, repeat_group 1, repeat_index i) + recovery(duration_sec, repeat_group 1, repeat_index i), puis cooldown.
-- Facile / sortie longue : généralement un seul step "run" (distance_m ou duration_sec + allure).
-- Tempo : warmup + un ou plusieurs "run"/"interval" au seuil + cooldown.
+STEPS (séances de course uniquement) — FORMAT COMPACT
+- Toute séance de course (facile, fractionne, tempo, sortie_longue) porte un tableau "steps" ordonné reflétant le déroulé, dans l'ordre. N'émets JAMAIS "order_index", "repeat_group" ni "repeat_index" : ils sont dérivés automatiquement.
+- Deux formes d'élément dans "steps" :
+  1. Step simple : { "step_type": warmup|run|interval|recovery|cooldown, "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }. Un step est borné par distance_m OU duration_sec. "target_pace_sec" requis SAUF pour "recovery" (allure libre).
+  2. Bloc de répétitions (fractionné) : { "repeat": N (≥2), "interval": { "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }, "recovery": { ("duration_sec" OU "distance_m"), "target_pace_sec"? } }. Un seul bloc "repeat" vaut N répétitions ; NE les recopie PAS une par une. La récup n'est pas répétée après la dernière répétition (géré automatiquement).
+- Fractionné : warmup (step simple) + un bloc "repeat" + cooldown (step simple). Exemple 6x1000m = un bloc { "repeat": 6, "interval": { distance_m 1000, allure }, "recovery": { duration_sec 90 } }.
+- Facile / sortie longue : généralement un seul step simple "run" (distance_m ou duration_sec + allure).
+- Tempo : warmup + un ou plusieurs "run" au seuil (ou un bloc "repeat" si intervalles au seuil) + cooldown.
 
 RENFO
 - La séance renfo n'a AUCUN step. Elle porte "strength_content" :
@@ -63,7 +63,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "title": "Sortie facile",
           "rationale": "endurance fondamentale à 70% VMA",
           "steps": [
-            { "order_index": 0, "step_type": "run", "target_pace_sec": 330, "pace_tolerance_sec": 8, "duration_sec": 2700 }
+            { "step_type": "run", "target_pace_sec": 330, "pace_tolerance_sec": 8, "duration_sec": 2700 }
           ]
         },
         {
@@ -73,12 +73,9 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "title": "6x1000m",
           "rationale": "VMA courte, allure 5-10k",
           "steps": [
-            { "order_index": 0, "step_type": "warmup", "target_pace_sec": 360, "pace_tolerance_sec": 10, "duration_sec": 900 },
-            { "order_index": 1, "step_type": "interval", "repeat_group": 1, "repeat_index": 1, "target_pace_sec": 250, "pace_tolerance_sec": 5, "distance_m": 1000 },
-            { "order_index": 2, "step_type": "recovery", "repeat_group": 1, "repeat_index": 1, "target_pace_sec": null, "duration_sec": 90 },
-            { "order_index": 3, "step_type": "interval", "repeat_group": 1, "repeat_index": 2, "target_pace_sec": 250, "pace_tolerance_sec": 5, "distance_m": 1000 },
-            { "order_index": 4, "step_type": "recovery", "repeat_group": 1, "repeat_index": 2, "target_pace_sec": null, "duration_sec": 90 },
-            { "order_index": 5, "step_type": "cooldown", "target_pace_sec": 360, "pace_tolerance_sec": 10, "duration_sec": 600 }
+            { "step_type": "warmup", "target_pace_sec": 360, "pace_tolerance_sec": 10, "duration_sec": 900 },
+            { "repeat": 6, "interval": { "target_pace_sec": 250, "pace_tolerance_sec": 5, "distance_m": 1000 }, "recovery": { "duration_sec": 90 } },
+            { "step_type": "cooldown", "target_pace_sec": 360, "pace_tolerance_sec": 10, "duration_sec": 600 }
           ]
         },
         {
@@ -88,7 +85,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "title": "Sortie longue",
           "rationale": "volume aérobie",
           "steps": [
-            { "order_index": 0, "step_type": "run", "target_pace_sec": 340, "pace_tolerance_sec": 8, "distance_m": 15000 }
+            { "step_type": "run", "target_pace_sec": 340, "pace_tolerance_sec": 8, "distance_m": 15000 }
           ]
         },
         {

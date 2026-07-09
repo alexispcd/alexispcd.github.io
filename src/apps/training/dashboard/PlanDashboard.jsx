@@ -46,6 +46,7 @@ const PlanDashboard = () => {
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [snack, setSnack] = useState(null)
+  const [genTimedOut, setGenTimedOut] = useState(false)
 
   const selectedWeekRef = useRef(null)
   const scrolledRef = useRef(false)
@@ -82,6 +83,14 @@ const PlanDashboard = () => {
     })
     return unsub
   }, [plan?.generation_status, planId, reloadPlan]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Filet anti-blocage : si ça génère depuis plus de 6 min, bascule en erreur ──
+  const isGenerating = regenBusy || plan?.generation_status === 'generating'
+  useEffect(() => {
+    if (!isGenerating) { setGenTimedOut(false); return }
+    const t = setTimeout(() => setGenTimedOut(true), 6 * 60 * 1000)
+    return () => clearTimeout(t)
+  }, [isGenerating])
 
   // ── Chargement des séances de la semaine sélectionnée ─────────────────────────
   const reloadSessions = useCallback(async () => {
@@ -221,7 +230,7 @@ const PlanDashboard = () => {
   }
 
   const generating = regenBusy || plan.generation_status === 'generating'
-  if (generating) {
+  if (generating && !genTimedOut) {
     const isRegen = regenBusy
     return (
       <Box sx={{
@@ -244,14 +253,19 @@ const PlanDashboard = () => {
     )
   }
 
-  if (plan.generation_status === 'error') {
+  if (plan.generation_status === 'error' || (generating && genTimedOut)) {
+    const timedOut = generating && genTimedOut
     return (
       <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
         <Box sx={{ maxWidth: 520, mx: 'auto', px: 2, pt: 3, textAlign: 'center' }}>
           <ErrorOutlined sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
-          <Typography variant="h6" fontWeight={700} gutterBottom>Génération échouée</Typography>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            {timedOut ? 'Génération trop longue' : 'Génération échouée'}
+          </Typography>
           <Alert severity="error" sx={{ textAlign: 'left', mb: 3 }}>
-            {plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.'}
+            {timedOut
+              ? 'La génération dépasse le délai attendu (plus de 6 minutes). Réessaie ou supprime ce plan.'
+              : (plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.')}
           </Alert>
           <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying}>

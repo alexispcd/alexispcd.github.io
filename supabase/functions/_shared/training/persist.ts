@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { GeneratedPlan, PlanSession } from "./types.ts"
+import type { ExpandedPlan, ExpandedSession, PlanStep } from "./types.ts"
 import { isStrengthSession } from "./validate.ts"
 
 /**
@@ -16,7 +16,7 @@ export async function persistPlan(
   supabaseAdmin: SupabaseClient,
   planId: string,
   userId: string,
-  plan: GeneratedPlan,
+  plan: ExpandedPlan,
 ): Promise<void> {
   const weekNumbers = plan.weeks.map((w) => w.week_number)
   try {
@@ -41,7 +41,7 @@ export async function persistPlan(
     )
 
     // 2. Séances — ordre préservé pour recoller les steps aux ids retournés.
-    const sessionsFlat: PlanSession[] = []
+    const sessionsFlat: ExpandedSession[] = []
     const sessionRows: Record<string, unknown>[] = []
     for (const w of plan.weeks) {
       const weekId = weekIdByNumber.get(w.week_number)
@@ -108,7 +108,7 @@ export async function persistPlan(
 export function buildStepRows(
   sessionId: string,
   userId: string,
-  steps: GeneratedPlan["weeks"][number]["sessions"][number]["steps"],
+  steps: PlanStep[] | undefined | null,
 ): Record<string, unknown>[] {
   if (!Array.isArray(steps)) return []
   return steps.map((st) => ({

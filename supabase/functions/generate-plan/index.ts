@@ -5,6 +5,7 @@ import { extractJson } from "../_shared/extract-json.ts"
 import { buildRetryPrompt, buildSystemPrompt, buildUserPrompt } from "./prompt.ts"
 import { validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
+import { expandPlan } from "../_shared/training/expand.ts"
 import type { GeneratedPlan, GenerateInput } from "./types.ts"
 
 const CORS = {
@@ -13,10 +14,34 @@ const CORS = {
 }
 
 const MODEL = "claude-sonnet-4-6"
-const MAX_TOKENS = 32000
+// Format compact : un plan 12 semaines ≈ 6k tokens de sortie ; 12000 couvre les
+// plans marathon (~20 semaines) avec marge, bien en deçà des 32000 d'avant.
+const MAX_TOKENS = 12000
+// Filet applicatif : si la tâche de fond dépasse ce délai, on pose une erreur
+// explicite au lieu de laisser le runtime tuer la fonction en silence.
+const TASK_TIMEOUT_MS = 5 * 60_000
 
 const json = (status: number, body: unknown) =>
   Response.json(body, { status, headers: CORS })
+
+/** Chronomètre une phase et logue sa durée en ms. */
+async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Promise<T> {
+  const t0 = Date.now()
+  try {
+    return await fn()
+  } finally {
+    console.log(`[generate-plan] ${planId} · ${phase} : ${Date.now() - t0} ms`)
+  }
+}
+
+/** Rejette après `ms` avec un message explicite (garde-fou anti-blocage). */
+function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: number | undefined
+  const guard = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms)
+  })
+  return Promise.race([p, guard]).finally(() => clearTimeout(timer))
+}
 
 function todayISO(): string {
   return new Date().toISOString().split("T")[0]
@@ -72,46 +97,53 @@ async function generateInBackground(
       .update({ generation_status: "error", generation_error: message })
       .eq("id", planId)
 
+  const t0 = Date.now()
   try {
-    const todayStr = todayISO()
-    const raceDateStr = input.race.date
-    const weeks = weeksUntil(todayStr, raceDateStr)
+    await withTimeout((async () => {
+      const todayStr = todayISO()
+      const raceDateStr = input.race.date
+      const weeks = weeksUntil(todayStr, raceDateStr)
 
-    const system = buildSystemPrompt()
-    const userPrompt = buildUserPrompt(input, todayStr, weeks)
+      const system = buildSystemPrompt()
+      const userPrompt = buildUserPrompt(input, todayStr, weeks)
 
-    // 1er essai
-    let plan = await generateAndParse(system, [{ role: "user", content: userPrompt }])
-    let errors = validatePlan(plan, todayStr, raceDateStr)
+      // 1er essai
+      let plan = await timed(planId, "sonnet initial + parse", () =>
+        generateAndParse(system, [{ role: "user", content: userPrompt }]))
+      let errors = await timed(planId, "validation", () =>
+        Promise.resolve(validatePlan(plan, todayStr, raceDateStr)))
 
-    // 1 retry avec la liste précise des erreurs
-    if (errors.length) {
-      console.warn(`[generate-plan] plan ${planId} invalide (essai 1) :`, errors.slice(0, 10))
-      plan = await generateAndParse(system, [
-        { role: "user", content: userPrompt },
-        { role: "assistant", content: JSON.stringify(plan) },
-        { role: "user", content: buildRetryPrompt(errors) },
-      ])
-      errors = validatePlan(plan, todayStr, raceDateStr)
-    }
+      // 1 retry avec la liste précise des erreurs
+      if (errors.length) {
+        console.warn(`[generate-plan] plan ${planId} invalide (essai 1) :`, errors.slice(0, 10))
+        plan = await timed(planId, "sonnet retry + parse", () =>
+          generateAndParse(system, [
+            { role: "user", content: userPrompt },
+            { role: "assistant", content: JSON.stringify(plan) },
+            { role: "user", content: buildRetryPrompt(errors) },
+          ]))
+        errors = validatePlan(plan, todayStr, raceDateStr)
+      }
 
-    if (errors.length) {
-      console.error(`[generate-plan] plan ${planId} invalide après retry :`, errors.slice(0, 10))
-      await setError(`Plan invalide après retry : ${errors.slice(0, 8).join(" | ")}`)
-      return
-    }
+      if (errors.length) {
+        console.error(`[generate-plan] plan ${planId} invalide après retry :`, errors.slice(0, 10))
+        await setError(`Plan invalide après retry : ${errors.slice(0, 8).join(" | ")}`)
+        return
+      }
 
-    // Insert atomique (rollback interne en cas d'échec partiel)
-    await persistPlan(supabaseAdmin, planId, userId, plan)
+      // Dépliage du format compact → steps aplatis, puis insert atomique.
+      const expanded = expandPlan(plan)
+      await timed(planId, "persistance", () => persistPlan(supabaseAdmin, planId, userId, expanded))
 
-    await supabaseAdmin.from("training_plans")
-      .update({ summary: plan.summary ?? null, generation_status: "ready" })
-      .eq("id", planId)
+      await supabaseAdmin.from("training_plans")
+        .update({ summary: plan.summary ?? null, generation_status: "ready" })
+        .eq("id", planId)
 
-    console.log(`[generate-plan] plan ${planId} prêt (${plan.weeks.length} semaines)`)
+      console.log(`[generate-plan] plan ${planId} prêt (${plan.weeks.length} semaines) en ${Date.now() - t0} ms`)
+    })(), TASK_TIMEOUT_MS, "Génération trop longue, réessayez")
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
-    console.error(`[generate-plan] plan ${planId} erreur :`, message)
+    console.error(`[generate-plan] plan ${planId} erreur (${Date.now() - t0} ms) :`, message)
     await setError(message)
   }
 }

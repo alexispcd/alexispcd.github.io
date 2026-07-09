@@ -15,6 +15,10 @@ const MCP_BETA = "mcp-client-2025-11-20"
 const COROS_MCP_URL = "https://mcpeu.coros.com/mcp"
 const COROS_SERVER_NAME = "coros"
 
+// Un appel qui traîne devient une erreur applicative propre plutôt qu'une mort
+// silencieuse de l'Edge Function (limite runtime).
+const DEFAULT_TIMEOUT_MS = 150_000
+
 export interface AnthropicMessage {
   role: "user" | "assistant"
   content: string | unknown[]
@@ -25,6 +29,8 @@ interface SimpleParams {
   messages: AnthropicMessage[]
   max_tokens: number
   system?: string
+  /** Timeout du fetch en ms (défaut 150s). */
+  timeoutMs?: number
 }
 
 interface CorosParams extends SimpleParams {
@@ -44,7 +50,10 @@ export function extractText(data: AnthropicResponse): string {
   return blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("")
 }
 
-async function callAnthropic(body: Record<string, unknown>): Promise<AnthropicResponse> {
+async function callAnthropic(
+  body: Record<string, unknown>,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): Promise<AnthropicResponse> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY manquante")
 
@@ -56,11 +65,24 @@ async function callAnthropic(body: Record<string, unknown>): Promise<AnthropicRe
   // Le mode MCP nécessite l'en-tête beta dédié.
   if ("mcp_servers" in body) headers["anthropic-beta"] = MCP_BETA
 
-  const res = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  let res: Response
+  try {
+    res = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Anthropic timeout après ${Math.round(timeoutMs / 1000)}s`)
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (!res.ok) {
     const errText = await res.text().catch(() => "")
@@ -76,7 +98,7 @@ export async function anthropicSimple(p: SimpleParams): Promise<string> {
     max_tokens: p.max_tokens,
     ...(p.system ? { system: p.system } : {}),
     messages: p.messages,
-  })
+  }, p.timeoutMs)
   const text = extractText(data)
   if (!text) throw new Error("Réponse Anthropic vide")
   return text
