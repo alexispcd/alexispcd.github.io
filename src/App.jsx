@@ -62,7 +62,7 @@ const router = createBrowserRouter([
       { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
       { path: '/training', element: <TrainingHome />, handle: { title: 'Training', backTo: '/' } },
       { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
-      { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/training' } },
+      { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/' } },
       { path: '/training/plan/:planId/session/:sessionId', element: <SessionPage />, handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
     ],
   },

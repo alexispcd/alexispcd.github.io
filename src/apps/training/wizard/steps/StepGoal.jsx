@@ -4,7 +4,8 @@ import {
 import AddCircleOutline from '@mui/icons-material/AddCircleOutlineOutlined'
 import DeleteOutline from '@mui/icons-material/DeleteOutlineOutlined'
 import { SectionLabel, GlassCard } from '../WizardParts'
-import { parseTimeInput } from '../../constants'
+import { formatGoalTime } from '../../constants'
+import WheelTimePicker from '../WheelTimePicker'
 
 const PREDICTION_LABELS = [
   ['five_k', '5 km'],
@@ -17,7 +18,7 @@ const StepGoal = ({ draft, patch }) => {
   const preds = draft.source === 'coros' ? draft.predictions : null
   const availablePreds = preds ? PREDICTION_LABELS.filter(([k]) => preds[k]) : []
 
-  const goalInvalid = draft.goalTime.trim() !== '' && parseTimeInput(draft.goalTime) == null
+  const hasGoal = draft.goalSec != null && draft.goalSec > 0
 
   const updateRace = (i, field, value) =>
     patch({
@@ -33,23 +34,29 @@ const StepGoal = ({ draft, patch }) => {
         Ton objectif
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-        Tout est optionnel — ces éléments affinent le plan.
+        Tout est optionnel : ces éléments affinent le plan.
       </Typography>
 
-      <SectionLabel>Temps cible (optionnel)</SectionLabel>
-      <TextField
-        fullWidth
-        placeholder="1:29:00"
-        value={draft.goalTime}
-        onChange={(e) => patch({ goalTime: e.target.value })}
-        error={goalInvalid}
-        helperText={goalInvalid ? 'Format h:mm:ss ou mm:ss' : 'Format h:mm:ss'}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mt: 2.5, mb: 1 }}>
+        <SectionLabel sx={{ mt: 0, mb: 0 }}>Temps cible (optionnel)</SectionLabel>
+        {hasGoal
+          ? (
+            <Button size="small" onClick={() => patch({ goalSec: null })} sx={{ color: 'text.secondary', fontSize: '0.7rem', minWidth: 0 }}>
+              Effacer
+            </Button>
+          )
+          : (
+            <Typography variant="caption" color="text.disabled" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+              {formatGoalTime(draft.goalSec ?? 0)}
+            </Typography>
+          )}
+      </Box>
+      <WheelTimePicker valueSec={draft.goalSec ?? 0} onChange={(sec) => patch({ goalSec: sec })} />
 
       {availablePreds.length > 0 && (
         <GlassCard sx={{ mt: 1.5, p: 1.75 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-            Repère — prédictions Coros
+            Repère : prédictions Coros
           </Typography>
           <Box sx={{ display: 'flex', gap: 2.5, mt: 1, flexWrap: 'wrap' }}>
             {availablePreds.map(([k, label]) => (

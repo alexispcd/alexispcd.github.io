@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Typography, Button, CircularProgress, Alert, Link } from '@mui/material'
+import { Box, Typography, Button, IconButton, CircularProgress, Alert, Link } from '@mui/material'
+import ArrowBack from '@mui/icons-material/ArrowBackRounded'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
+import { glassSx } from '../../../styles/glass'
 import { generatePlan } from '../../../lib/training'
-import { parsePaceInput, parseTimeInput } from '../constants'
-import { resolveDistanceM } from './draft'
+import { parsePaceInput } from '../constants'
+import { resolveDistanceM, resolveStartDate, todayISODate } from './draft'
 import StepRace from './steps/StepRace'
 import StepFitness from './steps/StepFitness'
 import StepGoal from './steps/StepGoal'
@@ -17,6 +19,9 @@ const STEPS = [
   { label: 'Récapitulatif', Component: StepReview },
 ]
 
+// Inset de la barre basse (coins concentriques : 34 = 10 + 24).
+const WIZARD_INSET = 10
+
 const emptyDraft = {
   // Étape 1 — course
   name: '',
@@ -24,6 +29,8 @@ const emptyDraft = {
   distancePreset: null,   // 5000 | 10000 | 21097 | 42195 | 'custom'
   distanceCustomM: '',
   elevationM: '',
+  startChoice: 'today',   // 'today' | 'monday' | 'custom'
+  startCustom: '',        // ISO yyyy-MM-dd si 'custom'
   // Étape 2 — forme
   source: 'coros',        // 'coros' | 'manual'
   corosLoaded: false,
@@ -33,7 +40,7 @@ const emptyDraft = {
   predictions: null,
   runningLevel: '',
   // Étape 3 — objectif
-  goalTime: '',           // "h:mm:ss"
+  goalSec: null,          // durée cible en secondes (sélecteur à roues)
   previousRaces: [],      // [{ name, time }]
   notes: '',
 }
@@ -41,28 +48,28 @@ const emptyDraft = {
 // ── Validité par étape (contrôle le bouton Suivant) ──────────────────────────
 const stepValid = (step, d) => {
   if (step === 0) {
-    const todayISO = new Date().toISOString().split('T')[0]
-    const future = Boolean(d.date) && d.date > todayISO
-    return Boolean(d.name.trim()) && future && resolveDistanceM(d) > 0
+    const today = todayISODate()
+    const future = Boolean(d.date) && d.date > today
+    const start = resolveStartDate(d)
+    const startOk = start >= today && (!d.date || start <= d.date)
+    return Boolean(d.name.trim()) && future && resolveDistanceM(d) > 0 && startOk
   }
   if (step === 1) {
     const vma = Number(d.vmaKmh)
     return !Number.isNaN(vma) && vma >= 10 && vma <= 25
   }
-  if (step === 2) {
-    return !d.goalTime.trim() || parseTimeInput(d.goalTime) != null
-  }
   return true
 }
 
 const buildPayload = (d) => ({
+  start_date: resolveStartDate(d),
   race: {
     name: d.name.trim(),
     date: d.date,
     distance_m: resolveDistanceM(d),
     elevation_m: Number(d.elevationM) > 0 ? Number(d.elevationM) : undefined,
   },
-  goal_time_sec: parseTimeInput(d.goalTime) ?? undefined,
+  goal_time_sec: d.goalSec != null && d.goalSec > 0 ? d.goalSec : undefined,
   fitness_snapshot: {
     source: d.source,
     vma_kmh: Number(d.vmaKmh),
@@ -128,7 +135,7 @@ const PlanWizard = () => {
             ))}
           </Box>
           <Typography variant="caption" color="text.secondary">
-            Étape {step + 1} / {STEPS.length} — {STEPS[step].label}
+            Étape {step + 1} / {STEPS.length} · {STEPS[step].label}
           </Typography>
         </Box>
 
@@ -149,28 +156,40 @@ const PlanWizard = () => {
 
       </Box>
 
-      {/* Barre de navigation */}
+      {/* Barre basse — pattern Côtes : pill primaire pleine largeur + bouton rond retour.
+          Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
       <Box sx={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1200,
-        px: 2, py: 1.75, pb: 'calc(env(safe-area-inset-bottom) + 14px)',
-        display: 'flex', gap: 1.25, maxWidth: 640, mx: 'auto',
-        bgcolor: 'background.default',
-        borderTop: '1px solid', borderColor: 'divider',
+        position: 'fixed', zIndex: 1200,
+        left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
+        bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
+        borderRadius: '34px', overflow: 'hidden', ...glassSx,
       }}>
-        {step > 0 && (
-          <Button fullWidth color="inherit" onClick={goPrev} disabled={generating}>
-            Précédent
+        <Box sx={{ p: `${WIZARD_INSET}px`, display: 'flex', gap: 1 }}>
+          {step > 0 && (
+            <IconButton
+              onClick={goPrev}
+              disabled={generating}
+              aria-label="Étape précédente"
+              sx={{
+                width: 48, height: 48, flexShrink: 0, borderRadius: '24px',
+                border: '1px solid', borderColor: 'divider', color: 'text.secondary',
+              }}
+            >
+              <ArrowBack sx={{ fontSize: 20 }} />
+            </IconButton>
+          )}
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={isLast ? handleGenerate : goNext}
+            disabled={!canNext || generating}
+            sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
+          >
+            {generating
+              ? <CircularProgress size={18} color="inherit" />
+              : isLast ? 'Générer mon plan' : 'Continuer'}
           </Button>
-        )}
-        {isLast ? (
-          <Button fullWidth variant="contained" onClick={handleGenerate} disabled={generating || !canNext}>
-            {generating ? <CircularProgress size={18} color="inherit" /> : 'Générer mon plan'}
-          </Button>
-        ) : (
-          <Button fullWidth variant="contained" onClick={goNext} disabled={!canNext}>
-            Suivant
-          </Button>
-        )}
+        </Box>
       </Box>
     </Box>
   )

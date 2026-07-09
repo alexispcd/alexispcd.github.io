@@ -131,7 +131,7 @@ const StepFitness = ({ draft, patch }) => {
         value={draft.vmaKmh}
         onChange={(e) => patch({ vmaKmh: e.target.value })}
         error={vmaInvalid}
-        helperText={vmaInvalid ? 'Valeur attendue entre 10 et 25 km/h' : 'Obligatoire — base des allures'}
+        helperText={vmaInvalid ? 'Valeur attendue entre 10 et 25 km/h' : 'Obligatoire · base des allures'}
         slotProps={{ htmlInput: { step: 0.1, min: 10, max: 25, inputMode: 'decimal' } }}
       />
 

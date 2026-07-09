@@ -23,6 +23,7 @@ import {
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL,
   formatKm, formatPace, formatDistance, formatDuration,
+  cleanText, shortDayLabel,
 } from '../constants'
 import {
   groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
@@ -52,8 +53,6 @@ const VERDICT = {
   partiellement:  { label: 'Séance partiellement réussie', color: '#eab308', Icon: ErrorOutline },
   a_retravailler: { label: 'À retravailler', color: '#ef4444', Icon: ReportProblem },
 }
-
-const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
 
 const SessionPage = () => {
   const { planId, sessionId } = useParams()
@@ -186,8 +185,14 @@ const SessionPage = () => {
   const zoneStyle = ZONE_STYLE[zone] ?? ZONE_STYLE.A
   const statusStyle = STATUS_CHIP[status] ?? STATUS_CHIP.planned
 
-  const d = new Date(session.scheduled_date)
-  const dateLabel = cap(d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }))
+  // Séance à venir : la date n'est plus affichée (placement par zone, date indicative).
+  // Une fois faite, on montre le jour réel ; sautée, on l'indique.
+  const weekLabel = session.week_number != null ? `Semaine ${session.week_number}` : ''
+  const metaLine = isDone
+    ? [shortDayLabel(session.completed_at) ? `Fait ${shortDayLabel(session.completed_at)}` : 'Faite', weekLabel].filter(Boolean).join(' · ')
+    : isSkipped
+      ? ['Sautée', weekLabel].filter(Boolean).join(' · ')
+      : weekLabel
 
   const analysis = session.analysis
   const laps = session.actual_laps
@@ -205,11 +210,13 @@ const SessionPage = () => {
           </Box>
 
           <Typography variant="h6" fontWeight={750} sx={{ letterSpacing: '-0.02em' }}>
-            {session.title}
+            {cleanText(session.title)}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-            {dateLabel}{session.week_number != null ? ` · Semaine ${session.week_number}` : ''}
-          </Typography>
+          {metaLine && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
+              {metaLine}
+            </Typography>
+          )}
 
           {!isRenfo && (
             <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
@@ -280,7 +287,7 @@ const SessionPage = () => {
                 <SectionLabel>Pourquoi ces allures</SectionLabel>
                 <Box sx={{ ...glassSx, borderRadius: '20px', p: 2 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                    {session.rationale}
+                    {cleanText(session.rationale)}
                   </Typography>
                 </Box>
               </>
@@ -344,7 +351,7 @@ const SessionPage = () => {
           <DialogContentText>
             {adapting
               ? 'Adaptation en cours… tu peux patienter ici.'
-              : `« ${session.title} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
+              : `« ${cleanText(session.title)} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -667,7 +674,7 @@ const AnalysisBlock = ({ analysis }) => {
         </Box>
       </Box>
       {advice && (
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{advice}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{cleanText(advice)}</Typography>
       )}
     </Box>
   )

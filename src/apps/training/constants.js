@@ -50,6 +50,63 @@ export const PLAN_STATUS_LABEL = {
   archived: 'Archivé',
 }
 
+// ── Zones : ordre d'affichage + plage de jours (méthodo) ─────────────────────
+export const ZONE_ORDER = ['A', 'B', 'C', 'renfo']
+
+export const ZONE_SUBLABEL = {
+  A: 'Facile',
+  B: 'Qualité',
+  C: 'Sortie longue',
+  renfo: null,
+}
+
+// Plages de jours par zone (tirets simples, jamais de cadratin).
+export const ZONE_DAYS = {
+  A: 'Lun-Mar',
+  B: 'Mer-Ven',
+  C: 'Sam-Dim',
+  renfo: 'Libre dans la semaine',
+}
+
+const DOW_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+
+/** "Jeu 9" à partir d'une date ISO (jour réel d'une séance faite). */
+export const shortDayLabel = (dateStr) => {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return null
+  return `${DOW_SHORT[d.getDay()]} ${d.getDate()}`
+}
+
+/**
+ * Groupe les séances d'une semaine par zone, dans l'ordre A, B, C, renfo.
+ * Ne renvoie que les zones ayant au moins une séance (groupes vides masqués).
+ * Chaque groupe : { zone, sessions, done, total }.
+ */
+export const groupSessionsByZone = (sessions) => {
+  const byZone = new Map(ZONE_ORDER.map((z) => [z, []]))
+  for (const s of sessions ?? []) {
+    const z = ZONE_ORDER.includes(s.zone) ? s.zone : 'A'
+    byZone.get(z).push(s)
+  }
+  return ZONE_ORDER
+    .map((zone) => {
+      const list = byZone.get(zone)
+      return { zone, sessions: list, done: list.filter((s) => s.status === 'done').length, total: list.length }
+    })
+    .filter((g) => g.total > 0)
+}
+
+/**
+ * Nettoyage défensif des textes générés par l'IA : supprime tout tiret cadratin
+ * ou demi-cadratin résiduel (title, rationale, advice, focus…) et le remplace
+ * par un séparateur médian propre. Idempotent, sûr sur null/undefined.
+ */
+export const cleanText = (str) => {
+  if (str == null) return str
+  return String(str).replace(/\s*[—–]\s*/g, ' · ')
+}
+
 // ── Formatters ───────────────────────────────────────────────────────────────
 
 /** Secondes → "1:29:00" (h:mm:ss) ou "42:30" (m:ss). */

@@ -1,5 +1,6 @@
 import { Box, TextField, Typography } from '@mui/material'
 import { SectionLabel } from '../WizardParts'
+import { nextMondayISO } from '../draft'
 
 // Presets de distance (mètres). 'custom' → champ libre en mètres.
 const PRESETS = [
@@ -10,7 +11,29 @@ const PRESETS = [
   { label: 'Autre', value: 'custom' },
 ]
 
+const START_OPTIONS = [
+  { label: "Aujourd'hui", value: 'today' },
+  { label: 'Lundi prochain', value: 'monday' },
+  { label: 'Personnalisée', value: 'custom' },
+]
+
 const todayISO = () => new Date().toISOString().split('T')[0]
+
+const Choice = ({ on, onClick, children }) => (
+  <Box
+    onClick={onClick}
+    sx={{
+      px: 1.75, py: 1, borderRadius: '12px', cursor: 'pointer', userSelect: 'none',
+      fontSize: '0.82rem', fontWeight: 600, border: '1px solid',
+      borderColor: on ? 'primary.main' : 'divider',
+      bgcolor: on ? 'primary.light' : 'transparent',
+      color: on ? 'primary.main' : 'text.secondary',
+      transition: 'all .15s',
+    }}
+  >
+    {children}
+  </Box>
+)
 
 const StepRace = ({ draft, patch }) => (
   <Box>
@@ -38,27 +61,37 @@ const StepRace = ({ draft, patch }) => (
       slotProps={{ htmlInput: { min: todayISO() } }}
     />
 
+    <SectionLabel>Départ de l'entraînement</SectionLabel>
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+      {START_OPTIONS.map((o) => (
+        <Choice key={o.value} on={draft.startChoice === o.value} onClick={() => patch({ startChoice: o.value })}>
+          {o.label}
+        </Choice>
+      ))}
+    </Box>
+    {draft.startChoice === 'custom' && (
+      <TextField
+        fullWidth
+        type="date"
+        value={draft.startCustom}
+        onChange={(e) => patch({ startCustom: e.target.value })}
+        sx={{ mt: 1.25 }}
+        slotProps={{ htmlInput: { min: todayISO(), max: draft.date || undefined } }}
+      />
+    )}
+    {draft.startChoice === 'monday' && (
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, ml: 0.5 }}>
+        Première semaine à partir du {new Date(nextMondayISO()).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.
+      </Typography>
+    )}
+
     <SectionLabel>Distance</SectionLabel>
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-      {PRESETS.map((p) => {
-        const on = draft.distancePreset === p.value
-        return (
-          <Box
-            key={p.label}
-            onClick={() => patch({ distancePreset: p.value })}
-            sx={{
-              px: 1.75, py: 1, borderRadius: '12px', cursor: 'pointer', userSelect: 'none',
-              fontSize: '0.82rem', fontWeight: 600, border: '1px solid',
-              borderColor: on ? 'primary.main' : 'divider',
-              bgcolor: on ? 'primary.light' : 'transparent',
-              color: on ? 'primary.main' : 'text.secondary',
-              transition: 'all .15s',
-            }}
-          >
-            {p.label}
-          </Box>
-        )
-      })}
+      {PRESETS.map((p) => (
+        <Choice key={p.label} on={draft.distancePreset === p.value} onClick={() => patch({ distancePreset: p.value })}>
+          {p.label}
+        </Choice>
+      ))}
     </Box>
 
     {draft.distancePreset === 'custom' && (
@@ -77,7 +110,7 @@ const StepRace = ({ draft, patch }) => (
     <TextField
       fullWidth
       type="number"
-      placeholder="D+ en mètres — laisse vide pour une course sur route"
+      placeholder="D+ en mètres, laisse vide pour une course sur route"
       value={draft.elevationM}
       onChange={(e) => patch({ elevationM: e.target.value })}
       slotProps={{ htmlInput: { min: 0, inputMode: 'numeric' } }}

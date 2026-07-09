@@ -10,7 +10,7 @@ import { corosMatch, completeSession } from '../../../lib/training'
 import { formatKm, formatGoalTime, formatPace } from '../constants'
 
 const fmtDate = (d) =>
-  d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : '—'
+  d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : '·'
 
 const candidateSub = (c) => [
   formatKm(c.distance_m) ? `${formatKm(c.distance_m)} km` : null,

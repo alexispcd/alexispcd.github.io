@@ -1,21 +1,15 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Box, Typography } from '@mui/material'
 import Check from '@mui/icons-material/Check'
 import Redo from '@mui/icons-material/Redo'
-import AutoAwesome from '@mui/icons-material/AutoAwesome'
-import { ZONE_STYLE, TYPE_LABEL, formatKm } from '../constants'
+import { ZONE_STYLE, TYPE_LABEL, formatKm, shortDayLabel, cleanText } from '../constants'
 
-const THRESHOLD = 80
-const MAX = 110
+// Déclenchement franc : il faut dépasser ce déplacement horizontal du doigt pour
+// qu'un swipe compte. En deçà, la carte revient à l'origine (dragSnapToOrigin).
+const SWIPE_THRESHOLD = 80
 
-const DOW = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM']
-
-const dayParts = (dateStr) => {
-  const d = new Date(dateStr)
-  return { dow: DOW[d.getDay()], num: d.getDate() }
-}
-
-/** Sous-titre "volume" dérivé de l'agrégat des steps ou du renfo. */
+/** Sous-titre « volume » dérivé de l'agrégat des steps ou du renfo. */
 const subtitle = (s) => {
   if (s.type === 'renfo') {
     const sc = s.strength_content
@@ -30,111 +24,99 @@ const subtitle = (s) => {
     || TYPE_LABEL[s.type]
 }
 
-const StatusMark = ({ status }) => {
-  if (status === 'done') return <Check sx={{ fontSize: 17, color: ZONE_STYLE.A.main }} />
-  if (status === 'skipped') return <Redo sx={{ fontSize: 16, color: 'text.disabled' }} />
-  if (status === 'adapted') return <AutoAwesome sx={{ fontSize: 15, color: '#a78bfa' }} />
+/** Pastille de jour : uniquement une fois la séance faite (jour réel) ou sautée. */
+const DayPill = ({ session }) => {
+  if (session.status === 'done') {
+    const day = shortDayLabel(session.completed_at ?? session.scheduled_date)
+    return (
+      <Box sx={{ ...pillBase, color: ZONE_STYLE.A.main, bgcolor: ZONE_STYLE.A.bg }}>
+        <Check sx={{ fontSize: 13 }} />{day}
+      </Box>
+    )
+  }
+  if (session.status === 'skipped') {
+    return (
+      <Box sx={{ ...pillBase, color: 'text.disabled', bgcolor: 'action.hover' }}>
+        <Redo sx={{ fontSize: 13 }} />Sautée
+      </Box>
+    )
+  }
   return null
 }
 
+const pillBase = {
+  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 0.4,
+  fontSize: '0.66rem', fontWeight: 700, px: 1, py: 0.4, borderRadius: '999px',
+  fontVariantNumeric: 'tabular-nums',
+}
+
 const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
-  const [dx, setDx] = useState(0)
-  const [settling, setSettling] = useState(false)
-  const start = useRef(0)
-  const dragging = useRef(false)
-  const moved = useRef(0)
+  const x = useMotionValue(0)
+  // Révélations d'arrière-plan pilotées par le déplacement réel.
+  const skipOpacity = useTransform(x, [8, 60], [0, 1])
+  const openOpacity = useTransform(x, [-60, -8], [1, 0])
+  const draggingRef = useRef(false)
 
-  const z = ZONE_STYLE[session.zone] ?? ZONE_STYLE.A
-  const { dow, num } = dayParts(session.scheduled_date)
   const isDone = session.status === 'done'
+  const isSkipped = session.status === 'skipped'
 
-  const onDown = (e) => {
-    start.current = e.clientX
-    moved.current = 0
-    dragging.current = true
-    setSettling(false)
-    e.currentTarget.setPointerCapture?.(e.pointerId)
-  }
-  const onMove = (e) => {
-    if (!dragging.current) return
-    let d = e.clientX - start.current
-    moved.current = Math.abs(d)
-    if (d > 0 && !canSkip) d = 0 // pas de saut si lecture seule
-    setDx(Math.max(-MAX, Math.min(MAX, d)))
-  }
-  const onUp = () => {
-    if (!dragging.current) return
-    dragging.current = false
-    const d = dx
-    setSettling(true)
-    setDx(0)
-    if (d > THRESHOLD && canSkip) onSkip(session)
-    else if (d < -THRESHOLD) onOpen(session)
-    else if (moved.current < 10) onOpen(session)
+  const handleDragEnd = (_e, info) => {
+    const dx = info.offset.x
+    if (dx > SWIPE_THRESHOLD && canSkip) onSkip(session)
+    else if (dx < -SWIPE_THRESHOLD) onOpen(session)
+    // Un tick avant de rouvrir le tap, pour ne pas enchaîner drag → tap.
+    requestAnimationFrame(() => { draggingRef.current = false })
   }
 
   return (
-    <Box sx={{ position: 'relative', borderRadius: 4, overflow: 'hidden' }}>
+    <Box sx={{ position: 'relative', borderRadius: '20px', overflow: 'hidden' }}>
       {/* Fond révélé au swipe */}
-      <Box sx={{
-        position: 'absolute', inset: 0, display: 'flex',
-        alignItems: 'center', justifyContent: 'space-between',
-        px: 2.5, borderRadius: 4,
-      }}>
-        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: '#6b7280', opacity: dx > 8 ? 1 : 0 }}>
-          Sauter
-        </Typography>
-        <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: 'primary.main', opacity: dx < -8 ? 1 : 0, ml: 'auto' }}>
+      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5 }}>
+        {canSkip && (
+          <Typography component={motion.p} style={{ opacity: skipOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary' }}>
+            Sauter
+          </Typography>
+        )}
+        <Typography component={motion.p} style={{ opacity: openOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', ml: 'auto' }}>
           Ouvrir
         </Typography>
       </Box>
 
-      {/* Ligne */}
+      {/* Carte — drag horizontal avec verrouillage d'axe */}
       <Box
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
+        component={motion.div}
+        drag="x"
+        dragDirectionLock
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.55}
+        dragSnapToOrigin
+        style={{ x }}
+        onDragStart={() => { draggingRef.current = true }}
+        onDragEnd={handleDragEnd}
+        onTap={() => { if (!draggingRef.current) onOpen(session) }}
         sx={{
           position: 'relative',
-          display: 'flex', alignItems: 'center', gap: 1.5,
-          p: 1.5, borderRadius: 4,
           bgcolor: 'background.paper',
-          border: '1px solid', borderColor: 'divider',
-          touchAction: 'pan-y', cursor: 'pointer', userSelect: 'none',
-          transform: `translateX(${dx}px)`,
-          transition: settling ? 'transform .25s ease' : 'none',
-          opacity: isDone ? 0.62 : 1,
+          border: '1px solid', borderColor: 'divider', borderRadius: '20px',
+          px: 1.9, py: 1.6, cursor: 'pointer', userSelect: 'none',
+          touchAction: 'pan-y',
+          opacity: isDone ? 0.64 : isSkipped ? 0.55 : 1,
         }}
       >
-        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: z.main, flexShrink: 0 }} />
-
-        <Box sx={{ width: 38, textAlign: 'center', flexShrink: 0 }}>
-          <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.06em', color: 'text.disabled' }}>
-            {dow}
-          </Typography>
-          <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-            {num}
-          </Typography>
-        </Box>
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
           <Typography
             variant="body2"
-            fontWeight={600}
+            fontWeight={650}
             noWrap
-            sx={{ textDecoration: isDone ? 'line-through' : 'none' }}
+            sx={{ minWidth: 0, fontSize: '0.92rem', textDecoration: isDone ? 'line-through' : 'none', textDecorationColor: 'text.disabled' }}
           >
-            {session.title}
+            {cleanText(session.title)}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>
-            {subtitle(session)}
-          </Typography>
+          <DayPill session={session} />
         </Box>
-
-        <Box sx={{ width: 20, display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
-          <StatusMark status={session.status} />
-        </Box>
+        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.5, fontVariantNumeric: 'tabular-nums' }}>
+          {subtitle(session)}
+        </Typography>
       </Box>
     </Box>
   )

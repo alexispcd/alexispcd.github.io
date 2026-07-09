@@ -111,17 +111,17 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
     const tol = s.pace_tolerance_sec ?? 5
     if (!synced) {
       tip = s.target_pace_sec != null
-        ? `${label} — cible ${formatPace(s.target_pace_sec)}/km ±${tol}s`
-        : `${label} — allure libre`
+        ? `${label} · cible ${formatPace(s.target_pace_sec)}/km ±${tol}s`
+        : `${label} · allure libre`
     } else {
       const c = compByStep.get(sel)
       if (!c) {
-        tip = `${label} — non réalisé`
+        tip = `${label} · non réalisé`
       } else if (c.status === 'free') {
-        tip = `${label} — réalisé ${formatPace(c.actual_pace)}/km (libre)`
+        tip = `${label} · réalisé ${formatPace(c.actual_pace)}/km (libre)`
       } else {
         const d = c.delta_sec ?? 0
-        tip = `${label} — cible ${formatPace(c.planned_pace)} · réalisé ${formatPace(c.actual_pace)} (${d > 0 ? '+' : ''}${d}s) ${STATUS_WORD[c.status] ?? ''}`
+        tip = `${label} · cible ${formatPace(c.planned_pace)} · réalisé ${formatPace(c.actual_pace)} (${d > 0 ? '+' : ''}${d}s) ${STATUS_WORD[c.status] ?? ''}`
       }
     }
   }

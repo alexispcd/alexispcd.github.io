@@ -17,6 +17,9 @@ import {
   PLAN_STATUS_LABEL, raceDistanceLabel, formatGoalTime,
 } from './constants'
 
+// Radius unifié des cartes de la liste des plans (hero actif/vide + plans passés).
+const PLAN_CARD_RADIUS = 4
+
 const formatEndDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
@@ -98,7 +101,7 @@ const TrainingHome = () => {
 
         {/* Hero — plan actif à reprendre, ou état vide */}
         {activePlan ? (
-          <Box sx={{ ...glassSx, borderRadius: 5, p: 3, mt: 2, textAlign: 'center' }}>
+          <Box sx={{ ...glassSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <Terrain sx={{ fontSize: 38, color: 'primary.main', mb: 1 }} />
             <Typography variant="h6" fontWeight={700}>{activePlan.race_name}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2.5 }}>
@@ -115,7 +118,7 @@ const TrainingHome = () => {
             </Button>
           </Box>
         ) : (
-          <Box sx={{ ...glassSx, borderRadius: 5, p: 3, mt: 2, textAlign: 'center' }}>
+          <Box sx={{ ...glassSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <Terrain sx={{ fontSize: 38, color: 'text.disabled', mb: 1 }} />
             <Typography variant="h6" fontWeight={700}>Aucun plan actif</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2.5, lineHeight: 1.5 }}>
@@ -145,7 +148,7 @@ const TrainingHome = () => {
                 <Box
                   key={plan.id}
                   sx={{
-                    ...glassSx, borderRadius: 4,
+                    ...glassSx, borderRadius: PLAN_CARD_RADIUS,
                     display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75,
                   }}
                 >
@@ -155,7 +158,7 @@ const TrainingHome = () => {
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600} noWrap>
                       {raceDistanceLabel(plan.race_distance_m)
-                        ? `${raceDistanceLabel(plan.race_distance_m)} — ${plan.race_name}`
+                        ? `${raceDistanceLabel(plan.race_distance_m)} · ${plan.race_name}`
                         : plan.race_name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.25 }}>

@@ -20,7 +20,8 @@ import {
 } from '../../../lib/training'
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
-  formatGoalTime, daysUntil, currentWeekNumber,
+  ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS,
+  formatGoalTime, daysUntil, currentWeekNumber, groupSessionsByZone, cleanText,
 } from '../constants'
 import SessionRow from './SessionRow'
 
@@ -285,7 +286,6 @@ const PlanDashboard = () => {
   const totalWeeks = weeks.length
   const currentWeek = currentWeekNumber(weeks)
   const curWeekObj = weeks.find((w) => w.week_number === currentWeek)
-  const selWeekObj = weeks.find((w) => w.week_number === effectiveWeek)
   const maxKm = weeks.reduce((m, w) => Math.max(m, w.target_km ?? 0), 0)
   const days = daysUntil(plan.race_date)
 
@@ -340,7 +340,7 @@ const PlanDashboard = () => {
         {/* Bande de semaines */}
         <SectionLabel>Semaines</SectionLabel>
         <Box sx={{
-          display: 'flex', gap: 1, overflowX: 'auto', px: 2, pb: 1,
+          display: 'flex', gap: 1, overflowX: 'auto', px: 2, py: 1.5,
           scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
         }}>
           {weeks.map((w) => {
@@ -368,7 +368,7 @@ const PlanDashboard = () => {
                   <Box sx={{ width: 16, height: `${Math.max(h, 6)}%`, borderRadius: '5px 5px 2px 2px', bgcolor: blk.main, opacity: 0.85 }} />
                 </Box>
                 <Typography sx={{ fontSize: '0.56rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-                  {w.target_km ? Math.round(w.target_km) : '—'} km
+                  {w.target_km ? `${Math.round(w.target_km)} km` : ''}
                 </Typography>
               </Box>
             )
@@ -385,11 +385,8 @@ const PlanDashboard = () => {
           ))}
         </Box>
 
-        {/* Séances de la semaine */}
-        <SectionLabel>
-          {selWeekObj ? `Semaine ${effectiveWeek} — ${BLOCK_LABEL[selWeekObj.block] ?? ''}` : 'Séances'}
-        </SectionLabel>
-        <Box sx={{ px: 2, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+        {/* Séances de la semaine, groupées par zone */}
+        <Box sx={{ px: 2, mt: 2.5 }}>
           {sessions === null && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
               <CircularProgress size={22} />
@@ -400,11 +397,11 @@ const PlanDashboard = () => {
               Aucune séance pour cette semaine.
             </Typography>
           )}
-          {(sessions ?? []).map((s) => (
-            <SessionRow
-              key={s.id}
-              session={s}
-              canSkip={!readOnly && s.status !== 'done'}
+          {sessions !== null && groupSessionsByZone(sessions).map((group) => (
+            <ZoneGroup
+              key={group.zone}
+              group={group}
+              readOnly={readOnly}
               onSkip={handleSkip}
               onOpen={handleOpen}
             />
@@ -412,8 +409,8 @@ const PlanDashboard = () => {
         </Box>
 
         {!readOnly && (sessions?.length ?? 0) > 0 && (
-          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1.5, px: 2 }}>
-            Glisse une séance : à droite pour sauter, à gauche pour l'ouvrir
+          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1, px: 2 }}>
+            Tape une séance pour l'ouvrir · glisse à droite pour la sauter
           </Typography>
         )}
       </Box>
@@ -429,7 +426,7 @@ const PlanDashboard = () => {
           <DialogContentText>
             {adapting
               ? 'Adaptation en cours… tu peux patienter ici.'
-              : `« ${skipDialog?.title} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
+              : `« ${cleanText(skipDialog?.title)} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -482,6 +479,44 @@ const Metric = ({ value, label }) => (
     <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{label}</Typography>
   </Box>
 )
+
+/** Groupe d'une zone : en-tête (pastille + plage de jours + compteur) et cartes
+ *  reliées par un filet vertical coloré. */
+const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
+  const { zone, sessions, done, total } = group
+  const z = ZONE_STYLE[zone] ?? ZONE_STYLE.A
+  const sub = ZONE_SUBLABEL[zone]
+
+  return (
+    <Box sx={{ mb: 2.25 }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, px: 0.5, pb: 1 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.85, color: z.main, fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.03em' }}>
+          <Box sx={{ width: 10, height: 10, borderRadius: '3.5px', bgcolor: z.main }} />
+          {ZONE_LABEL[zone]}{sub ? ` · ${sub}` : ''}
+        </Box>
+        <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', fontWeight: 600 }}>
+          {ZONE_DAYS[zone]}
+        </Typography>
+        <Typography sx={{ ml: 'auto', fontSize: '0.7rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
+          {done} / {total}
+        </Typography>
+      </Box>
+
+      <Box sx={{ position: 'relative', pl: '14px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ position: 'absolute', left: '4px', top: '6px', bottom: '6px', width: '3px', borderRadius: '2px', bgcolor: z.main, opacity: 0.55 }} />
+        {sessions.map((s) => (
+          <SessionRow
+            key={s.id}
+            session={s}
+            canSkip={!readOnly && s.status !== 'done'}
+            onSkip={onSkip}
+            onOpen={onOpen}
+          />
+        ))}
+      </Box>
+    </Box>
+  )
+}
 
 const SectionLabel = ({ children }) => (
   <Typography
