@@ -9,6 +9,7 @@ import { anthropicSimple } from "../_shared/anthropic.ts"
 import { validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
+import { computeWeekBounds, dayTs, type WeekBounds } from "../_shared/training/weeks.ts"
 import type { GeneratedPlan, GenerateInput } from "./types.ts"
 
 const CORS = {
@@ -29,17 +30,11 @@ const TASK_TIMEOUT_MS = 120_000
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
 const todayISO = () => new Date().toISOString().split("T")[0]
 
-/** yyyy-MM-dd de la semaine N (semaine 1 = today). */
-function startDateForWeek(todayStr: string, weekNumber: number): string {
-  const m = todayStr.match(/^(\d{4})-(\d{2})-(\d{2})/)!
-  const ts = Date.UTC(+m[1], +m[2] - 1, +m[3]) + (weekNumber - 1) * 7 * 86_400_000
-  return new Date(ts).toISOString().slice(0, 10)
-}
-
-/** Nombre de semaines entre aujourd'hui et la course (au moins 1). */
-function weeksUntil(todayStr: string, raceDateStr: string): number {
-  const ms = new Date(raceDateStr).getTime() - new Date(todayStr).getTime()
-  return Math.max(1, Math.round(ms / (7 * 24 * 3600 * 1000)))
+/** Date de début effective : start_date fournie (>= aujourd'hui) sinon aujourd'hui. */
+function planStartDate(input: GenerateInput, todayStr: string): string {
+  const sd = input.start_date
+  if (sd && dayTs(sd) >= dayTs(todayStr)) return sd
+  return todayStr
 }
 
 /** Chronomètre une phase et logue sa durée en ms. */
@@ -77,14 +72,22 @@ function validateInput(input: unknown): string | null {
   if (f.source !== "coros" && f.source !== "manual") return "fitness_snapshot.source invalide"
   if (typeof f.vma_kmh !== "number" || f.vma_kmh <= 0) return "fitness_snapshot.vma_kmh invalide"
 
-  const today = new Date(todayISO()).getTime()
+  const todayStr = todayISO()
+  const today = new Date(todayStr).getTime()
   if (new Date(r.date).getTime() < today) return "race.date est dans le passé"
+
+  if (i.start_date != null) {
+    if (Number.isNaN(dayTs(i.start_date))) return "start_date invalide"
+    if (dayTs(i.start_date) < dayTs(todayStr)) return "start_date est dans le passé"
+    if (dayTs(i.start_date) > dayTs(r.date)) return "start_date est après la course"
+  }
   return null
 }
 
 /** Reconstruit un GenerateInput depuis la ligne training_plans (auto-invocation). */
 function inputFromPlanRow(row: Record<string, unknown>): GenerateInput {
   return {
+    start_date: (row.start_date as string | null) ?? undefined,
     race: {
       name: row.race_name as string,
       date: row.race_date as string,
@@ -162,7 +165,10 @@ async function runChunkAndChain(
     await withTimeout((async () => {
       const todayStr = todayISO()
       const raceDateStr = input.race.date
-      const total = weeksUntil(todayStr, raceDateStr)
+      const startStr = planStartDate(input, todayStr)
+      const bounds = computeWeekBounds(startStr, raceDateStr)
+      const boundsByWeek = new Map<number, WeekBounds>(bounds.map((b) => [b.week_number, b]))
+      const total = bounds.length
 
       const { count } = await admin
         .from("training_weeks")
@@ -177,18 +183,31 @@ async function runChunkAndChain(
 
       const start = done + 1
       const end = Math.min(start + CHUNK_WEEKS - 1, total)
+      const chunkBounds = bounds.filter((b) => b.week_number >= start && b.week_number <= end)
       const prior = await fetchPriorWeeks(admin, planId)
       const userPrompt = buildChunkUserPrompt(
-        input, todayStr, total, start, end, startDateForWeek(todayStr, start), formatPriorWeeks(prior),
+        input, startStr, total, start, end, chunkBounds, formatPriorWeeks(prior),
       )
       const system = buildSystemPrompt()
 
+      // Borne basse des scheduled_date : la date de début du plan (>= aujourd'hui).
+      // Min défensif avec aujourd'hui pour ne jamais rejeter la S1.
+      const loStr = dayTs(startStr) < dayTs(todayStr) ? startStr : todayStr
+
+      const finalizeWeeks = (p: GeneratedPlan) => {
+        // Filtrer aux semaines demandées et forcer les bornes calendaires autoritaires.
+        p.weeks = (p.weeks ?? []).filter((w) => w.week_number >= start && w.week_number <= end)
+        for (const w of p.weeks) {
+          const b = boundsByWeek.get(w.week_number)
+          if (b) w.start_date = b.start
+        }
+      }
+
       let chunk = await timed(planId, `sonnet chunk ${start}-${end} + parse`, () =>
         generateAndParse(system, [{ role: "user", content: userPrompt }]))
-      // Ne garder que les semaines demandées (évite tout conflit avec l'existant).
-      chunk.weeks = (chunk.weeks ?? []).filter((w) => w.week_number >= start && w.week_number <= end)
+      finalizeWeeks(chunk)
 
-      let errors = validatePlan(chunk, todayStr, raceDateStr, start)
+      let errors = validatePlan(chunk, loStr, raceDateStr, start, boundsByWeek)
       if (errors.length) {
         console.warn(`[generate-plan] ${planId} chunk ${start}-${end} invalide (essai 1) :`, errors.slice(0, 8))
         chunk = await timed(planId, `sonnet chunk ${start}-${end} retry`, () =>
@@ -197,8 +216,8 @@ async function runChunkAndChain(
             { role: "assistant", content: JSON.stringify(chunk) },
             { role: "user", content: buildRetryPrompt(errors) },
           ]))
-        chunk.weeks = (chunk.weeks ?? []).filter((w) => w.week_number >= start && w.week_number <= end)
-        errors = validatePlan(chunk, todayStr, raceDateStr, start)
+        finalizeWeeks(chunk)
+        errors = validatePlan(chunk, loStr, raceDateStr, start, boundsByWeek)
       }
       if (errors.length) {
         console.error(`[generate-plan] ${planId} chunk ${start}-${end} invalide après retry :`, errors.slice(0, 8))
@@ -253,7 +272,7 @@ async function handleRequest(req: Request): Promise<Response> {
     const planId = body.continue_plan_id as string
     const { data: row } = await supabaseAdmin
       .from("training_plans")
-      .select("id, user_id, race_name, race_date, race_distance_m, race_elevation_m, goal_time_sec, fitness_snapshot, previous_races, notes, generation_status")
+      .select("id, user_id, start_date, race_name, race_date, race_distance_m, race_elevation_m, goal_time_sec, fitness_snapshot, previous_races, notes, generation_status")
       .eq("id", planId)
       .single()
     if (!row) return json(404, { error: "Plan introuvable" })
@@ -289,6 +308,7 @@ async function handleRequest(req: Request): Promise<Response> {
     user_id: user.id,
     status: "active",
     generation_status: "generating",
+    start_date: planStartDate(input, todayISO()),
     race_name: input.race.name,
     race_date: input.race.date,
     race_distance_m: input.race.distance_m,

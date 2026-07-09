@@ -3,6 +3,7 @@
 export type { GeneratedPlan } from "../_shared/training/types.ts"
 
 export interface GenerateInput {
+  start_date?: string     // yyyy-MM-dd, début d'entraînement (>= aujourd'hui). Défaut : aujourd'hui.
   race: {
     name: string
     date: string          // yyyy-MM-dd

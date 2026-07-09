@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { anthropicWithCoros } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
+import { dayTs, mondayOf, sundayOf } from "../_shared/training/weeks.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -13,20 +14,10 @@ const TZ = "Europe/Paris"
 const RUNNING_SPORT_CODE = 100
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const todayISO = () => new Date().toISOString().split("T")[0]
 
-/** yyyy-MM-dd → timestamp UTC minuit, ou NaN. */
-function dayTs(d: unknown): number {
-  if (typeof d !== "string") return NaN
-  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return NaN
-  return Date.UTC(+m[1], +m[2] - 1, +m[3])
-}
-
-/** Décale une date yyyy-MM-dd de n jours et renvoie yyyyMMdd (format Coros). */
-function shiftToCompact(dateStr: string, days: number): string {
-  const ts = dayTs(dateStr) + days * 86_400_000
-  return new Date(ts).toISOString().slice(0, 10).replace(/-/g, "")
-}
+/** yyyy-MM-dd → yyyyMMdd (format Coros). */
+const toCompact = (iso: string) => iso.replace(/-/g, "")
 
 interface RawRecord {
   labelId?: string
@@ -77,12 +68,11 @@ async function handleRequest(req: Request): Promise<Response> {
 
   const { data: session, error: sessionErr } = await supabaseAdmin
     .from("training_sessions")
-    .select("id, scheduled_date, type")
+    .select("id, scheduled_date, type, training_weeks(start_date)")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single()
   if (sessionErr || !session) return json(404, { error: "Séance introuvable" })
-  if (!session.scheduled_date) return json(422, { error: "Séance sans date planifiée" })
 
   // 3. Token Coros
   let corosToken: string
@@ -93,9 +83,18 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(503, { error: "Coros authentication required", detail })
   }
 
-  // 4. Fenêtre ±2 jours autour de la date planifiée
-  const startDate = shiftToCompact(session.scheduled_date, -2)
-  const endDate = shiftToCompact(session.scheduled_date, 2)
+  // 4. Fenêtre de candidats = la semaine de la séance (lundi→dimanche de sa
+  //    training_week), bornée à aujourd'hui. Fallback : semaine de la scheduled_date.
+  const weekStart = (session.training_weeks as { start_date?: string | null } | null)?.start_date ?? null
+  const anchor = weekStart ?? session.scheduled_date
+  if (!anchor) return json(422, { error: "Séance sans semaine ni date planifiée" })
+  const todayStr = todayISO()
+  const mondayStr = mondayOf(anchor)
+  const sundayStr = sundayOf(anchor)
+  // Ne pas chercher au-delà d'aujourd'hui (séances à venir non encore réalisées).
+  const endStr = dayTs(sundayStr) > dayTs(todayStr) ? todayStr : sundayStr
+  const startDate = toCompact(mondayStr)
+  const endDate = toCompact(dayTs(endStr) < dayTs(mondayStr) ? mondayStr : endStr)
 
   // 5. Appel MCP (querySportRecords uniquement) — le modèle relaie les données brutes,
   //    aucune décision IA : le tri et la normalisation sont faits en code.
@@ -144,7 +143,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   // 6. Normalisation + tri par proximité de date (en code)
-  const targetTs = dayTs(session.scheduled_date)
+  const targetTs = dayTs(session.scheduled_date ?? anchor)
   const candidates = (parsed.records ?? [])
     .filter((r) => r.labelId)
     .map((r) => {

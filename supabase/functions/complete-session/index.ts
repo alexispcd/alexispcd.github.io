@@ -220,7 +220,8 @@ async function analyze(
 
   const system =
     "Tu es un coach running. À partir de la comparaison prévu/réalisé d'une séance, tu donnes un verdict " +
-    "et un conseil concret. Réponds UNIQUEMENT en JSON, commence par { et termine par }, format : " +
+    "et un conseil concret. N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) dans le conseil : " +
+    "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, format : " +
     '{"verdict":"reussie|partiellement|a_retravailler","advice":"2-3 phrases concrètes en français"}'
 
   const userPrompt = [

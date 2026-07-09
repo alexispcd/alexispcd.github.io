@@ -5,13 +5,18 @@
  *  sans le schéma de sortie — partagées entre génération et adaptation. */
 export const TRAINING_RULES = `MÉTHODOLOGIE
 - 3 blocs successifs : construction → intensification → affûtage. L'affûtage occupe les 2-3 dernières semaines (volume réduit, intensité préservée).
-- Chaque semaine = exactement 4 séances :
-  - Zone A (type "facile") : lundi ou mardi, course facile en endurance.
-  - Zone B (type "fractionne" ou "tempo") : mercredi, jeudi ou vendredi, séance de qualité.
-  - Zone C (type "sortie_longue") : samedi ou dimanche, sortie longue progressive.
-  - Renfo (zone "renfo", type "renfo") : jour flexible, tapis de sol uniquement, orienté course (gainage, fessiers, ischios, proprioception).
+- Chaque semaine complète = exactement 4 séances, réparties par ZONE (plage de jours), pas par jour précis :
+  - Zone A (type "facile") : plage lundi-mardi, course facile en endurance.
+  - Zone B (type "fractionne" ou "tempo") : plage mercredi-vendredi, séance de qualité.
+  - Zone C (type "sortie_longue") : plage samedi-dimanche, sortie longue progressive.
+  - Renfo (zone "renfo", type "renfo") : n'importe quel jour de la semaine, tapis de sol uniquement, orienté course (gainage, fessiers, ischios, proprioception).
+- Raisonne en zones, jamais en jour fixe. La "scheduled_date" de chaque séance est INDICATIVE : elle sert seulement au tri et doit simplement tomber DANS la plage de jours de sa zone (renfo : n'importe où dans la semaine). Ne cherche pas à optimiser le jour exact.
 - Progression logique de semaine en semaine, jamais deux séances dures consécutives.
 - Ne copie pas des séances passées : calibre l'intensité sur les données de forme fournies.
+
+TYPOGRAPHIE (titres, focus, rationale, advice)
+- N'utilise JAMAIS de tiret cadratin (—) ni de tiret demi-cadratin (–) dans le texte généré.
+- Pour séparer deux idées, utilise " : ", " · ", une virgule, ou reformule en deux phrases.
 
 ALLURES (dérivées de la VMA, en secondes/km)
 - allure_sec = round(3600 / (VMA_kmh * fraction))

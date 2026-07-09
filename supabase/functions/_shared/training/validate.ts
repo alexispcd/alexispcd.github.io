@@ -1,5 +1,9 @@
 import type { CompactStep, GeneratedPlan, PlanSession } from "./types.ts"
 import { isRepeatBlock } from "./expand.ts"
+import { dayOfWeek, dayTs, type WeekBounds, type Zone, zoneRangeForWeek } from "./weeks.ts"
+
+// dayTs reste exposé depuis ce module (importé par d'autres fonctions Edge).
+export { dayTs }
 
 const BLOCKS = ["construction", "intensification", "affutage"]
 const ZONES = ["A", "B", "C", "renfo"]
@@ -8,14 +12,6 @@ const STEP_TYPES = ["warmup", "run", "interval", "recovery", "cooldown"]
 
 export const isStrengthSession = (s: Pick<PlanSession, "type" | "zone">) =>
   s.type === "renfo" || s.zone === "renfo"
-
-/** Parse une date yyyy-MM-dd en timestamp UTC (00:00), ou NaN. */
-export function dayTs(d: unknown): number {
-  if (typeof d !== "string") return NaN
-  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return NaN
-  return Date.UTC(+m[1], +m[2] - 1, +m[3])
-}
 
 /**
  * Valide le contenu d'une séance (zone, type, title, steps / strength_content).
@@ -91,6 +87,12 @@ function validateSteps(s: PlanSession, tag: string, errors: string[]): void {
  * Valide un plan (ou un sous-ensemble de semaines) renvoyé par le modèle contre
  * le schéma BDD et les règles métier. `firstWeek` = numéro de la première semaine
  * attendue (1 pour une génération complète, semaine courante pour une régénération).
+ *
+ * `boundsByWeek` (optionnel) : bornes calendaires lundi→dimanche par week_number.
+ * Fourni → on valide en plus que chaque semaine est bien bornée (start = borne de
+ * début de la semaine) et que la scheduled_date de chaque séance tombe dans la
+ * plage de sa zone (renfo : dans la semaine). Voir _shared/training/weeks.ts.
+ *
  * Retourne la liste des erreurs (vide si valide).
  */
 export function validatePlan(
@@ -98,6 +100,7 @@ export function validatePlan(
   todayStr: string,
   raceDateStr: string,
   firstWeek = 1,
+  boundsByWeek?: Map<number, WeekBounds>,
 ): string[] {
   const errors: string[] = []
   const lo = dayTs(todayStr)
@@ -114,7 +117,14 @@ export function validatePlan(
     const wn = w.week_number
     if (wn !== expected) errors.push(`week_number non continu : attendu ${expected}, reçu ${wn}`)
     if (!BLOCKS.includes(w.block)) errors.push(`semaine ${wn} : block invalide "${w.block}"`)
-    if (w.start_date != null) {
+
+    const bounds = boundsByWeek?.get(wn)
+    if (bounds) {
+      // Bornes calendaires : start attendu = début de la semaine (lundi hors S1).
+      if (w.start_date != null && w.start_date !== bounds.start) {
+        errors.push(`semaine ${wn} : start_date ${w.start_date} attendu ${bounds.start} (semaine lundi→dimanche)`)
+      }
+    } else if (w.start_date != null) {
       const ts = dayTs(w.start_date)
       if (Number.isNaN(ts)) errors.push(`semaine ${wn} : start_date invalide "${w.start_date}"`)
       else if (ts < lo || ts > hi) errors.push(`semaine ${wn} : start_date ${w.start_date} hors [${todayStr}, ${raceDateStr}]`)
@@ -130,9 +140,36 @@ export function validatePlan(
       const ts = dayTs(s.scheduled_date)
       if (Number.isNaN(ts)) errors.push(`${tag} : scheduled_date invalide "${s.scheduled_date}"`)
       else if (ts < lo || ts > hi) errors.push(`${tag} : scheduled_date ${s.scheduled_date} hors [${todayStr}, ${raceDateStr}]`)
+      else if (bounds && (s.zone === "A" || s.zone === "B" || s.zone === "C" || s.zone === "renfo")) {
+        validateSessionPlacement(s.zone as Zone, s.scheduled_date, bounds, wn, tag, errors)
+      }
       validateSessionContent(s, tag, errors)
     })
   })
 
   return errors
 }
+
+/** Vérifie que la scheduled_date d'une séance tombe dans la plage de sa zone. */
+function validateSessionPlacement(
+  zone: Zone,
+  scheduledDate: string,
+  bounds: WeekBounds,
+  weekNumber: number,
+  tag: string,
+  errors: string[],
+): void {
+  const range = zoneRangeForWeek(bounds, zone)
+  if (!range) {
+    errors.push(`${tag} : zone ${zone} indisponible en semaine ${weekNumber} (plage hors de la semaine partielle)`)
+    return
+  }
+  const ts = dayTs(scheduledDate)
+  if (ts < dayTs(range.start) || ts > dayTs(range.end)) {
+    const label = zone === "renfo" ? "la semaine" : `la plage zone ${zone}`
+    errors.push(`${tag} : scheduled_date ${scheduledDate} (${zoneDow(scheduledDate)}) hors de ${label} [${range.start} → ${range.end}]`)
+  }
+}
+
+const DOW_LABELS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+const zoneDow = (iso: string) => DOW_LABELS[dayOfWeek(iso) - 1] ?? "?"
