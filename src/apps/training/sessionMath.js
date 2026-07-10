@@ -1,6 +1,6 @@
 // Helpers partagés entre SessionPage (totaux, structure) et PaceChart (échelles).
 // Toute l'estimation est faite en code, sans dépendance.
-import { formatDistance, formatDuration } from '../constants'
+import { formatDistance, formatDuration } from './constants'
 
 // Allure souple par défaut quand un step n'a pas de cible (récup libre) mais
 // qu'on doit tout de même estimer sa durée / distance.

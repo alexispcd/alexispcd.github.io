@@ -193,6 +193,24 @@ export const daysUntil = (raceDate) => {
   return Math.round(ms / 86_400_000)
 }
 
+/**
+ * "Semaine du 6 au 12 juillet" (même mois) ou "Semaine du 29 juin au 5 juillet".
+ * end = veille du start de la semaine suivante, sinon start + 6 jours (gère la S1 partielle).
+ */
+export const formatWeekRange = (week, nextWeek) => {
+  if (!week?.start_date) return ''
+  const start = midnight(week.start_date)
+  const end = nextWeek?.start_date
+    ? new Date(midnight(nextWeek.start_date).getTime() - 86_400_000)
+    : new Date(start.getTime() + 6 * 86_400_000)
+  const sameMonth = start.getMonth() === end.getMonth()
+  const startLabel = sameMonth
+    ? String(start.getDate())
+    : start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  const endLabel = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+  return `Semaine du ${startLabel} au ${endLabel}`
+}
+
 /** Numéro de la semaine courante d'après les start_date des semaines. */
 export const currentWeekNumber = (weeks) => {
   if (!weeks?.length) return 1

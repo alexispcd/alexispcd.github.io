@@ -1,4 +1,5 @@
 import supabase from './supabase'
+import { totalMeters, totalSeconds } from '../apps/training/sessionMath'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Edge Functions — helper commun (auth + fetch + gestion d'erreur)
@@ -84,19 +85,17 @@ export const getPlan = async (planId) => {
 export const getWeekSessions = async (weekId) => {
   const { data, error } = await supabase
     .from('training_sessions')
-    .select('*, session_steps(distance_m, duration_sec)')
+    .select('*, session_steps(distance_m, duration_sec, target_pace_sec)')
     .eq('week_id', weekId)
     .order('scheduled_date', { ascending: true })
   if (error) throw error
 
   return (data ?? []).map(({ session_steps, ...s }) => {
     const steps = session_steps ?? []
-    const distance = steps.reduce((a, st) => a + (st.distance_m ?? 0), 0)
-    const duration = steps.reduce((a, st) => a + (st.duration_sec ?? 0), 0)
     return {
       ...s,
-      agg_distance_m: distance || null,
-      agg_duration_sec: duration || null,
+      agg_distance_m: totalMeters(steps) || null,
+      agg_duration_sec: totalSeconds(steps) || null,
     }
   })
 }

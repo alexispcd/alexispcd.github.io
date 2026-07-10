@@ -3,7 +3,7 @@ import { Box, Typography, useTheme } from '@mui/material'
 import { formatPace } from '../constants'
 import {
   estimateStepSeconds, groupSteps, stepSizeLabel, stepShortLabel,
-} from './sessionMath'
+} from '../sessionMath'
 
 // Géométrie du viewBox (unités SVG, mises à l'échelle en 100% de largeur).
 const PAD_L = 38

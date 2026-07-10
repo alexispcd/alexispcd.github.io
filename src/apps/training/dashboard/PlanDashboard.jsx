@@ -21,7 +21,8 @@ import {
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
   ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS,
-  formatGoalTime, daysUntil, currentWeekNumber, groupSessionsByZone, cleanText,
+  formatGoalTime, daysUntil, currentWeekNumber, formatWeekRange,
+  groupSessionsByZone, cleanText,
 } from '../constants'
 import SessionRow from './SessionRow'
 
@@ -38,7 +39,12 @@ const PlanDashboard = () => {
 
   // Semaine sélectionnée : null tant que l'utilisateur n'a pas choisi → on retombe
   // sur la semaine courante (état dérivé plutôt que miroir dans un effet).
-  const [selectedWeek, setSelectedWeek] = useState(null)
+  // Persistée en sessionStorage pour survivre à un aller-retour vers une séance.
+  const weekStorageKey = `training:selectedWeek:${planId}`
+  const [selectedWeek, setSelectedWeek] = useState(() => {
+    const v = sessionStorage.getItem(`training:selectedWeek:${planId}`)
+    return v ? Number(v) : null
+  })
   const [sessions, setSessions] = useState(null)
 
   const [skipDialog, setSkipDialog] = useState(null)
@@ -53,6 +59,11 @@ const PlanDashboard = () => {
   const scrolledRef = useRef(false)
 
   const flash = (message, severity = 'error') => setSnack({ message, severity })
+
+  const selectWeek = (weekNumber) => {
+    sessionStorage.setItem(weekStorageKey, String(weekNumber))
+    setSelectedWeek(weekNumber)
+  }
 
   const readyWeeks = plan?.generation_status === 'ready' ? (plan.weeks ?? []) : []
   const effectiveWeek = selectedWeek ?? (readyWeeks.length ? currentWeekNumber(readyWeeks) : null)
@@ -74,6 +85,15 @@ const PlanDashboard = () => {
       .catch((e) => { if (!cancelled) { setLoadError(e.message); setLoading(false) } })
     return () => { cancelled = true }
   }, [planId])
+
+  // ── Garde-fou : semaine restaurée absente du plan chargé (autre plan, régén) ──
+  useEffect(() => {
+    if (selectedWeek == null || !readyWeeks.length) return
+    if (!readyWeeks.some((w) => w.week_number === selectedWeek)) {
+      sessionStorage.removeItem(weekStorageKey)
+      setSelectedWeek(null)
+    }
+  }, [selectedWeek, readyWeeks, weekStorageKey])
 
   // ── Suivi de génération tant que le plan génère ──────────────────────────────
   useEffect(() => {
@@ -285,7 +305,9 @@ const PlanDashboard = () => {
   const weeks = plan.weeks
   const totalWeeks = weeks.length
   const currentWeek = currentWeekNumber(weeks)
-  const curWeekObj = weeks.find((w) => w.week_number === currentWeek)
+  const effWeekObj = weeks.find((w) => w.week_number === effectiveWeek)
+  const nextWeekObj = weeks.find((w) => w.week_number === effectiveWeek + 1)
+  const isCurrentWeek = effectiveWeek === currentWeek
   const maxKm = weeks.reduce((m, w) => Math.max(m, w.target_km ?? 0), 0)
   const days = daysUntil(plan.race_date)
 
@@ -316,7 +338,7 @@ const PlanDashboard = () => {
               />
             )}
             <Typography variant="caption" color="text.disabled">
-              Semaine {currentWeek} / {totalWeeks}
+              Semaine {effectiveWeek} / {totalWeeks}
             </Typography>
           </Box>
 
@@ -331,8 +353,11 @@ const PlanDashboard = () => {
             {plan.goal_time_sec != null && (
               <Metric value={formatGoalTime(plan.goal_time_sec)} label="objectif" />
             )}
-            {curWeekObj?.target_km != null && (
-              <Metric value={`${Math.round(curWeekObj.target_km)} km`} label="cette semaine" />
+            {effWeekObj?.target_km != null && (
+              <Metric
+                value={`${Math.round(effWeekObj.target_km)} km`}
+                label={isCurrentWeek ? 'cette semaine' : `semaine S${effectiveWeek}`}
+              />
             )}
           </Box>
         </Box>
@@ -351,7 +376,7 @@ const PlanDashboard = () => {
               <Box
                 key={w.id}
                 ref={sel ? selectedWeekRef : null}
-                onClick={() => setSelectedWeek(w.week_number)}
+                onClick={() => selectWeek(w.week_number)}
                 sx={{
                   flex: '0 0 58px', borderRadius: '14px', px: 1, py: 1,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
@@ -387,6 +412,11 @@ const PlanDashboard = () => {
 
         {/* Séances de la semaine, groupées par zone */}
         <Box sx={{ px: 2, mt: 2.5 }}>
+          {effWeekObj && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 0.5, mb: 1.5 }}>
+              {formatWeekRange(effWeekObj, nextWeekObj)}
+            </Typography>
+          )}
           {sessions === null && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
               <CircularProgress size={22} />

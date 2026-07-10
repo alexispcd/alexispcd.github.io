@@ -27,7 +27,7 @@ import {
 } from '../constants'
 import {
   groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
-} from './sessionMath'
+} from '../sessionMath'
 import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
@@ -199,7 +199,7 @@ const SessionPage = () => {
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: 6 }}>
+      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? '90px' : 6 }}>
 
         {/* ── En-tête ─────────────────────────────────────────────── */}
         <Box sx={{ ...glassSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
@@ -305,33 +305,78 @@ const SessionPage = () => {
           </>
         )}
 
-        {/* ── Barre d'actions ─────────────────────────────────────── */}
-        {canComplete && (
-          <Box sx={{ display: 'flex', gap: 1.25, mt: 2.5 }}>
-            <Button fullWidth color="inherit" onClick={doSkip} disabled={busy}>Sauter</Button>
-            {isRenfo ? (
-              <Button fullWidth variant="contained" onClick={doCompleteRenfo} disabled={busy}>
-                {busy ? <CircularProgress size={18} color="inherit" /> : 'Valider'}
-              </Button>
-            ) : (
-              <Button fullWidth variant="contained" onClick={() => setCompleteOpen(true)} disabled={busy}>
-                Valider &amp; lier Coros
-              </Button>
-            )}
-          </Box>
-        )}
-
-        {isDone && (
-          <Box sx={{ display: 'flex', gap: 1.25, mt: 2.5 }}>
-            <Button fullWidth color="inherit" onClick={() => setConfirmReset(true)} disabled={busy}>
-              {busy ? <CircularProgress size={18} color="inherit" /> : 'Réinitialiser'}
-            </Button>
-            {session.coros_activity_id && (
-              <Button fullWidth color="inherit" onClick={doDelink} disabled={busy}>Délier Coros</Button>
-            )}
-          </Box>
-        )}
       </Box>
+
+      {/* ── Barre d'actions fixe (pattern wizard/Côtes) ─────────────
+          Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
+      {(canComplete || isDone) && (
+        <Box sx={{
+          position: 'fixed', zIndex: 1200,
+          left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
+          bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
+          borderRadius: '34px', overflow: 'hidden', ...glassSx,
+        }}>
+          <Box sx={{ p: '10px', display: 'flex', gap: 1 }}>
+            {canComplete && (
+              <>
+                <Button
+                  variant="outlined"
+                  onClick={doSkip}
+                  disabled={busy}
+                  sx={{
+                    flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
+                    textTransform: 'none', fontWeight: 600, boxShadow: 'none',
+                    borderColor: 'divider', color: 'text.secondary',
+                  }}
+                >
+                  Sauter
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  onClick={isRenfo ? doCompleteRenfo : () => setCompleteOpen(true)}
+                  disabled={busy}
+                  sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
+                >
+                  {busy
+                    ? <CircularProgress size={18} color="inherit" />
+                    : isRenfo ? 'Valider' : 'Valider & lier Coros'}
+                </Button>
+              </>
+            )}
+            {isDone && (
+              <>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={() => setConfirmReset(true)}
+                  disabled={busy}
+                  sx={{
+                    height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
+                    boxShadow: 'none', borderColor: 'divider', color: 'text.secondary',
+                  }}
+                >
+                  {busy ? <CircularProgress size={18} color="inherit" /> : 'Réinitialiser'}
+                </Button>
+                {session.coros_activity_id && (
+                  <Button
+                    variant="outlined"
+                    onClick={doDelink}
+                    disabled={busy}
+                    sx={{
+                      flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
+                      textTransform: 'none', fontWeight: 600, boxShadow: 'none',
+                      borderColor: 'divider', color: 'text.secondary',
+                    }}
+                  >
+                    Délier Coros
+                  </Button>
+                )}
+              </>
+            )}
+          </Box>
+        </Box>
+      )}
 
       {/* ── Dialogs ──────────────────────────────────────────────── */}
       <CompleteDialog
