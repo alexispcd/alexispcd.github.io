@@ -15,6 +15,16 @@ export const BLOCK_STYLE = {
   affutage:        { main: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
 }
 
+// Pastille "adaptée" — partagée entre le dashboard (SessionRow) et la vue séance.
+export const ADAPTED_STYLE = { main: '#a78bfa', bg: 'rgba(167,139,250,0.16)' }
+
+// Verdict d'analyse post-séance : label + couleur (icônes côté vue séance).
+export const VERDICT = {
+  reussie:        { label: 'Séance réussie', color: ZONE_STYLE.A.main },
+  partiellement:  { label: 'Séance partiellement réussie', color: '#eab308' },
+  a_retravailler: { label: 'À retravailler', color: '#ef4444' },
+}
+
 // ── Labels FR ────────────────────────────────────────────────────────────────
 export const ZONE_LABEL = {
   A: 'Zone A',

@@ -21,7 +21,7 @@ import {
   completeSession, resetSession, updateStrengthContent,
 } from '../../../lib/training'
 import {
-  ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL,
+  ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
   formatKm, formatPace, formatDistance, formatDuration,
   cleanText, shortDayLabel,
 } from '../constants'
@@ -36,7 +36,7 @@ import CompleteDialog from './CompleteDialog'
 const STATUS_CHIP = {
   planned: { main: '#60a5fa', bg: 'rgba(96,165,250,0.14)' },
   done:    { main: ZONE_STYLE.A.main, bg: ZONE_STYLE.A.bg },
-  adapted: { main: '#a78bfa', bg: 'rgba(167,139,250,0.16)' },
+  adapted: ADAPTED_STYLE,
   skipped: { main: '#94a3b8', bg: 'rgba(148,163,184,0.16)' },
 }
 
@@ -48,10 +48,11 @@ const STEP_ICON = {
   cooldown: Bedtime,
 }
 
-const VERDICT = {
-  reussie:        { label: 'Séance réussie', color: ZONE_STYLE.A.main, Icon: CheckCircle },
-  partiellement:  { label: 'Séance partiellement réussie', color: '#eab308', Icon: ErrorOutline },
-  a_retravailler: { label: 'À retravailler', color: '#ef4444', Icon: ReportProblem },
+// Icônes de verdict (labels + couleurs partagés via constants).
+const VERDICT_ICON = {
+  reussie: CheckCircle,
+  partiellement: ErrorOutline,
+  a_retravailler: ReportProblem,
 }
 
 const SessionPage = () => {
@@ -699,7 +700,8 @@ const AnalysisBlock = ({ analysis }) => {
     )
   }
 
-  const { Icon, color, label } = v
+  const { color, label } = v
+  const Icon = VERDICT_ICON[verdict] ?? CheckCircle
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>

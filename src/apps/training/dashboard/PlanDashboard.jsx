@@ -21,7 +21,7 @@ import {
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
   ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS,
-  formatGoalTime, daysUntil, currentWeekNumber, formatWeekRange,
+  formatGoalTime, formatKm, daysUntil, currentWeekNumber, formatWeekRange,
   groupSessionsByZone, cleanText,
 } from '../constants'
 import SessionRow from './SessionRow'
@@ -311,6 +311,20 @@ const PlanDashboard = () => {
   const maxKm = weeks.reduce((m, w) => Math.max(m, w.target_km ?? 0), 0)
   const days = daysUntil(plan.race_date)
 
+  // Km réalisés de la semaine sélectionnée : séances faites hors renfo, laps réels
+  // si synchronisés, sinon fallback sur l'agrégat prévu.
+  const doneMeters = (sessions ?? []).reduce((sum, s) => {
+    if (s.type === 'renfo' || s.status !== 'done') return sum
+    const laps = s.actual_laps
+    if (Array.isArray(laps) && laps.length) {
+      return sum + laps.reduce((a, l) => a + (l.distance_m ?? 0), 0)
+    }
+    return sum + (s.agg_distance_m ?? 0)
+  }, 0)
+  const targetKm = effWeekObj?.target_km
+  const doneKmLabel = doneMeters ? formatKm(doneMeters) : '0'
+  const donePct = targetKm ? Math.min(100, (doneMeters / 1000 / targetKm) * 100) : 0
+
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', pb: 6 }}>
@@ -353,13 +367,19 @@ const PlanDashboard = () => {
             {plan.goal_time_sec != null && (
               <Metric value={formatGoalTime(plan.goal_time_sec)} label="objectif" />
             )}
-            {effWeekObj?.target_km != null && (
+            {targetKm != null && (
               <Metric
-                value={`${Math.round(effWeekObj.target_km)} km`}
+                value={`${doneKmLabel} / ${Math.round(targetKm)} km`}
                 label={isCurrentWeek ? 'cette semaine' : `semaine S${effectiveWeek}`}
               />
             )}
           </Box>
+
+          {targetKm != null && sessions !== null && (
+            <Box sx={{ mt: 1.5, height: 4, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
+              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${donePct}%`, transition: 'width .3s' }} />
+            </Box>
+          )}
         </Box>
 
         {/* Bande de semaines */}

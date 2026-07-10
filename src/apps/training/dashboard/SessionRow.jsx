@@ -3,7 +3,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Box, Typography } from '@mui/material'
 import Check from '@mui/icons-material/Check'
 import Redo from '@mui/icons-material/Redo'
-import { ZONE_STYLE, TYPE_LABEL, formatKm, shortDayLabel, cleanText } from '../constants'
+import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, shortDayLabel, cleanText } from '../constants'
 
 // Déclenchement franc : il faut dépasser ce déplacement horizontal du doigt pour
 // qu'un swipe compte. En deçà, la carte revient à l'origine (dragSnapToOrigin).
@@ -24,6 +24,18 @@ const subtitle = (s) => {
     || TYPE_LABEL[s.type]
 }
 
+/** Sous-titre « réalisé » d'une séance running faite et synchronisée (laps). */
+const realizedSubtitle = (s) => {
+  const laps = s.actual_laps
+  if (!Array.isArray(laps) || laps.length === 0) return null
+  const meters = laps.reduce((sum, l) => sum + (l.distance_m ?? 0), 0)
+  const seconds = laps.reduce((sum, l) => sum + (l.duration_sec ?? 0), 0)
+  if (!meters) return null
+  const km = formatKm(meters)
+  const pace = formatPace(seconds / (meters / 1000))
+  return [km ? `${km} km` : null, pace ? `${pace} /km` : null].filter(Boolean).join(' · ') || null
+}
+
 /** Pastille de jour : uniquement une fois la séance faite (jour réel) ou sautée. */
 const DayPill = ({ session }) => {
   if (session.status === 'done') {
@@ -38,6 +50,13 @@ const DayPill = ({ session }) => {
     return (
       <Box sx={{ ...pillBase, color: 'text.disabled', bgcolor: 'action.hover' }}>
         <Redo sx={{ fontSize: 13 }} />Sautée
+      </Box>
+    )
+  }
+  if (session.status === 'adapted') {
+    return (
+      <Box sx={{ ...pillBase, color: ADAPTED_STYLE.main, bgcolor: ADAPTED_STYLE.bg }}>
+        Adaptée
       </Box>
     )
   }
@@ -59,6 +78,10 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
 
   const isDone = session.status === 'done'
   const isSkipped = session.status === 'skipped'
+
+  // Séance faite et synchronisée : on affiche le réalisé + un point de verdict.
+  const realized = isDone && session.type !== 'renfo' ? realizedSubtitle(session) : null
+  const verdictColor = realized ? VERDICT[session.analysis?.verdict]?.color : null
 
   const handleDragEnd = (_e, info) => {
     const dx = info.offset.x
@@ -114,9 +137,14 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
           </Typography>
           <DayPill session={session} />
         </Box>
-        <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mt: 0.5, fontVariantNumeric: 'tabular-nums' }}>
-          {subtitle(session)}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.5 }}>
+          {verdictColor && (
+            <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: verdictColor }} />
+          )}
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, fontVariantNumeric: 'tabular-nums' }}>
+            {realized ?? subtitle(session)}
+          </Typography>
+        </Box>
       </Box>
     </Box>
   )
