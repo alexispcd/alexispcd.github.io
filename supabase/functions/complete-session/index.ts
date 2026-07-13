@@ -122,7 +122,13 @@ async function handleRequest(req: Request): Promise<Response> {
     : null
 
   // 9. Analyse IA (mode simple, pas de MCP). L'échec ne bloque pas la complétion.
-  const { verdict, advice } = await analyze(session.type, session.title, steps, comparisons)
+  const { verdict, advice } = await analyze(
+    session.type,
+    session.title,
+    steps,
+    comparisons,
+    lapsResult.kmLaps,
+  )
 
   const analysis = { verdict, advice, comparisons }
 
@@ -325,12 +331,60 @@ interface AnalysisOut {
   advice: string | null
 }
 
+/** Allure de repli quand un step sans cible doit tout de même être estimé (miroir front). */
+const FALLBACK_PACE_SEC = 360
+
+/** Distance estimée d'un step en mètres (version minimale du helper front). */
+function estimateStepMeters(step: Step): number | null {
+  if (step.distance_m != null) return step.distance_m
+  if (step.duration_sec != null) {
+    return Math.round((step.duration_sec / (step.target_pace_sec ?? FALLBACK_PACE_SEC)) * 1000)
+  }
+  return null
+}
+
+/**
+ * Construit les lignes "Splits par km" pour l'analyse. Chaque km est rattaché au
+ * step qui le couvre (distances cumulées, même logique que le front). Retourne []
+ * si kmLaps est absent ou vide.
+ */
+function kmSplitLines(steps: Step[], kmLaps: Lap[] | null): string[] {
+  if (!kmLaps || kmLaps.length === 0) return []
+
+  // Distance cumulée (m) en fin de chaque step ; step couvrant le km = celui qui
+  // contient son milieu, sinon on étend le dernier step connu.
+  const stepEnds = steps.reduce<number[]>((arr, s) => {
+    arr.push((arr.length ? arr[arr.length - 1] : 0) + (estimateStepMeters(s) ?? 0))
+    return arr
+  }, [])
+  const stepForKm = (k: number): Step | undefined => {
+    const d = (k - 0.5) * 1000
+    for (let i = 0; i < stepEnds.length; i++) if (d <= stepEnds[i]) return steps[i]
+    return steps[steps.length - 1]
+  }
+
+  return kmLaps.map((l, i) => {
+    const km = i + 1
+    const step = stepForKm(km)
+    const target = step?.target_pace_sec ?? null
+    const pace = l.avg_pace_sec
+    if (target != null && pace != null) {
+      const tol = step?.pace_tolerance_sec ?? 5
+      const delta = Math.round(pace - target)
+      const sign = delta > 0 ? "+" : ""
+      return `km ${km} : réalisé ${paceStr(pace)}, cible ${paceStr(target)} ± ${tol}s (delta ${sign}${delta}s)`
+    }
+    return `km ${km} : réalisé ${paceStr(pace)} (libre)`
+  })
+}
+
 /** Analyse IA (Haiku, mode simple). Renvoie { verdict: null, advice: null } si échec définitif. */
 async function analyze(
   type: string,
   title: string,
   steps: Step[],
   comparisons: Comparison[],
+  kmLaps: Lap[] | null,
 ): Promise<AnalysisOut> {
   const cmpByStep = new Map<number, Comparison>()
   for (const c of comparisons) cmpByStep.set(c.step_index, c)
@@ -349,15 +403,21 @@ async function analyze(
 
   const system =
     "Tu es un coach running. À partir de la comparaison prévu/réalisé d'une séance, tu donnes un verdict " +
-    "et un conseil concret. N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) dans le conseil : " +
+    "et un conseil concret. Le verdict se fonde UNIQUEMENT sur la comparaison des steps (lignes 'Steps comparés'). " +
+    "Les splits par km servent seulement à enrichir le conseil (gestion d'allure, régularité, négatif/positif split). " +
+    "Ne dégrade pas le verdict à cause des splits. " +
+    "N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) dans le conseil : " +
     "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, format : " +
     '{"verdict":"reussie|partiellement|a_retravailler","advice":"2-3 phrases concrètes en français"}'
+
+  const kmLines = kmSplitLines(steps, kmLaps)
 
   const userPrompt = [
     `Séance : ${title} (type ${type})`,
     `Steps comparés : ${comparisons.length} — dans la cible : ${nOk}, en écart : ${nEcart}.`,
     "Détail :",
     ...lines,
+    ...(kmLines.length ? ["", "Splits par km :", ...kmLines] : []),
   ].join("\n")
 
   const parseAnalysis = (raw: string): AnalysisOut | null => {

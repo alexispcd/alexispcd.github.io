@@ -150,9 +150,13 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
 
   // ── Tip sous le graphe ───────────────────────────────────────────────────
   let tip
+  // Seconde ligne de légende, uniquement en vue km sans sélection.
+  let subTip = null
   if (kmView) {
     tip = 'Touche un km pour le détail'
+    subTip = 'Couleurs : chaque km comparé à la cible du step'
     if (sel != null && kmLaps[sel]) {
+      subTip = null
       const lap = kmLaps[sel]
       const step = steps[stepForKm(sel + 1)]
       const target = step?.target_pace_sec
@@ -401,6 +405,14 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
       }}>
         {tip}
       </Typography>
+      {subTip && (
+        <Typography sx={{
+          fontSize: '0.7rem', color: 'text.secondary', textAlign: 'center',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {subTip}
+        </Typography>
+      )}
     </Box>
   )
 }
