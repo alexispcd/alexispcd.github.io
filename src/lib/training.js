@@ -232,6 +232,7 @@ export const resetSession = async (sessionId) => {
       completed_at: null,
       coros_activity_id: null,
       actual_laps: null,
+      km_laps: null,
       analysis: null,
     })
     .eq('id', sessionId)

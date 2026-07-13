@@ -273,7 +273,7 @@ const SessionPage = () => {
             <SectionLabel>Allure par step</SectionLabel>
             <Box sx={{ ...glassSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
               <ChartLegend synced={Boolean(laps?.length)} />
-              <PaceChart steps={steps} actualLaps={laps} comparisons={analysis?.comparisons ?? []} />
+              <PaceChart steps={steps} actualLaps={laps} kmLaps={session.km_laps} comparisons={analysis?.comparisons ?? []} />
             </Box>
 
             {/* Structure */}

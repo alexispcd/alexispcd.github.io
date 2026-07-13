@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Box, Typography, useTheme } from '@mui/material'
 import { formatPace } from '../constants'
 import {
-  estimateStepSeconds, groupSteps, stepSizeLabel, stepShortLabel,
+  estimateStepSeconds, estimateStepMeters, groupSteps, stepSizeLabel, stepShortLabel,
 } from '../sessionMath'
 
 // Géométrie du viewBox (unités SVG, mises à l'échelle en 100% de largeur).
@@ -22,14 +22,24 @@ const STATUS_WORD = { ok: '✓ dans la cible', proche: '≈ proche', ecart: '✗
  * Graphe d'allure par step (SVG maison).
  * - `steps` : session_steps ordonnés.
  * - `actualLaps` : null tant que non synchronisé, sinon [{ lap_index, step_index, avg_pace_sec, ... }].
+ * - `kmLaps` : laps auto-kilomètre bruts (vue "par km", purement visuelle), null si indispo.
  * - `comparisons` : issu de analysis.comparisons (statut ok/proche/ecart/free par step).
  */
-const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
+const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }) => {
   const theme = useTheme()
   const dark = theme.palette.mode === 'dark'
   const [sel, setSel] = useState(null)
+  const [view, setView] = useState('step')
 
   const synced = Array.isArray(actualLaps) && actualLaps.length > 0
+  const showKm = synced && Array.isArray(kmLaps) && kmLaps.length > 0
+  const kmView = showKm && view === 'km'
+
+  const switchView = (v) => {
+    if (v === view) return
+    setSel(null) // sel change de sémantique (index step ↔ index km)
+    setView(v)
+  }
 
   // ── Palette ──────────────────────────────────────────────────────────────
   const C = {
@@ -56,6 +66,7 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
     }
   })
   if (synced) actualLaps.forEach((l) => { if (l.avg_pace_sec != null) paces.push(l.avg_pace_sec) })
+  if (showKm) kmLaps.forEach((l) => { if (l.avg_pace_sec != null) paces.push(l.avg_pace_sec) })
   const minP = paces.length ? Math.min(...paces) - 20 : 200
   const maxP = paces.length ? Math.max(...paces) + 20 : 400
   const y = (p) => PAD_T + ((p - minP) / (maxP - minP)) * PLOT_H
@@ -70,6 +81,38 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
   }))
   const W = PAD_L + widths.reduce((a, b) => a + b, 0) + PAD_R
   const center = (i) => xs[i].x0 + xs[i].w / 2
+
+  // ── Échelle X vue km (slots uniformes, un par km) ───────────────────────────
+  const KM_MIN_W = 22
+  const kmCount = showKm ? kmLaps.length : 0
+  const kmSlotW = kmCount ? Math.max(KM_MIN_W, INNER_BASE / kmCount) : 0
+  const kmXs = Array.from({ length: kmCount }, (_, i) => ({ x0: PAD_L + i * kmSlotW, w: kmSlotW }))
+  const kmW = PAD_L + kmCount * kmSlotW + PAD_R
+  const kmCenter = (i) => kmXs[i].x0 + kmXs[i].w / 2
+
+  // Distance cumulée (m) en fin de chaque step, pour rattacher un km à son step.
+  const stepEnds = steps.reduce((arr, s) => {
+    arr.push((arr.length ? arr[arr.length - 1] : 0) + (estimateStepMeters(s) ?? 0))
+    return arr
+  }, [])
+  // Step couvrant le km k (1-based) : celui qui contient le milieu du km.
+  // Au-delà de la distance connue, on étend le dernier step.
+  const stepForKm = (k) => {
+    const d = (k - 0.5) * 1000
+    for (let i = 0; i < stepEnds.length; i++) if (d <= stepEnds[i]) return i
+    return steps.length - 1
+  }
+  // Statut d'un km vs. la cible de son step (mêmes seuils que le backend).
+  const kmStatus = (pace, step) => {
+    if (step?.target_pace_sec == null || pace == null) return 'free'
+    const abs = Math.abs(pace - step.target_pace_sec)
+    const tol = step.pace_tolerance_sec ?? 5
+    if (abs <= tol) return 'ok'
+    if (abs <= tol + 4) return 'proche'
+    return 'ecart'
+  }
+
+  const activeW = kmView ? kmW : W
 
   // ── Gridlines ──────────────────────────────────────────────────────────────
   const gridVals = [0, 1, 2, 3].map((k) => {
@@ -104,8 +147,26 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
   const compByLap = new Map(comparisons.map((c) => [c.lap_index, c]))
 
   // ── Tip sous le graphe ───────────────────────────────────────────────────
-  let tip = synced ? 'Touche un lap pour le détail' : 'Touche un intervalle pour sa cible'
-  if (sel != null) {
+  let tip
+  if (kmView) {
+    tip = 'Touche un km pour le détail'
+    if (sel != null && kmLaps[sel]) {
+      const lap = kmLaps[sel]
+      const step = steps[stepForKm(sel + 1)]
+      const target = step?.target_pace_sec
+      const pace = lap.avg_pace_sec
+      const hr = lap.avg_hr != null ? ` · FC ${lap.avg_hr}` : ''
+      if (target == null || pace == null) {
+        tip = pace != null ? `Km ${sel + 1} · réalisé ${formatPace(pace)}/km${hr}` : `Km ${sel + 1}`
+      } else {
+        const d = Math.round(pace - target)
+        const st = kmStatus(pace, step)
+        tip = `Km ${sel + 1} · cible ${formatPace(target)} · réalisé ${formatPace(pace)} (${d > 0 ? '+' : ''}${d}s) ${STATUS_WORD[st] ?? ''}${hr}`
+      }
+    }
+  } else if (sel == null || !steps[sel]) {
+    tip = synced ? 'Touche un lap pour le détail' : 'Touche un intervalle pour sa cible'
+  } else {
     const s = steps[sel]
     const label = stepShortLabel(s)
     const tol = s.pace_tolerance_sec ?? 5
@@ -142,15 +203,39 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
 
   return (
     <Box>
-      <Box component="svg" viewBox={`0 0 ${W} ${H}`} sx={{ display: 'block', width: '100%', height: 'auto' }}>
+      {showKm && (
+        <Box sx={{ display: 'flex', gap: 0.75, mb: 1.25, px: 0.5 }}>
+          {[['step', 'Par step'], ['km', 'Par km']].map(([v, label]) => {
+            const on = view === v
+            return (
+              <Box
+                key={v}
+                onClick={() => switchView(v)}
+                sx={{
+                  flex: 1, textAlign: 'center', py: 0.6, borderRadius: '10px', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 600, userSelect: 'none', border: '1px solid',
+                  borderColor: on ? 'primary.main' : 'divider',
+                  bgcolor: on ? 'rgba(29,158,117,0.12)' : 'transparent',
+                  color: on ? 'primary.main' : 'text.secondary',
+                  transition: 'all .15s',
+                }}
+              >
+                {label}
+              </Box>
+            )
+          })}
+        </Box>
+      )}
+      <Box component="svg" viewBox={`0 0 ${activeW} ${H}`} sx={{ display: 'block', width: '100%', height: 'auto' }}>
         {/* Grille + axe Y */}
         {gridVals.map((p, i) => (
           <g key={i}>
-            <line x1={PAD_L} y1={y(p)} x2={W - PAD_R} y2={y(p)} stroke={C.grid} strokeDasharray="3 4" />
+            <line x1={PAD_L} y1={y(p)} x2={activeW - PAD_R} y2={y(p)} stroke={C.grid} strokeDasharray="3 4" />
             <text x={PAD_L - 5} y={y(p) + 3} fontSize="9" fill={C.axis} textAnchor="end">{formatPace(p)}</text>
           </g>
         ))}
 
+        {!kmView && (<>
         {/* Bandes de tolérance / fonds neutres + lignes cibles */}
         {steps.map((s, i) => {
           const { x0, w } = xs[i]
@@ -228,6 +313,84 @@ const PaceChart = ({ steps, actualLaps = null, comparisons = [] }) => {
         {xLabels.map((l, i) => (
           <text key={i} x={l.x} y={H - 6} fontSize="9" fill={C.axis} textAnchor="middle">{l.text}</text>
         ))}
+        </>)}
+
+        {kmView && (<>
+          {/* Bandes cibles par km (step couvrant) */}
+          {kmLaps.map((_, i) => {
+            const { x0, w } = kmXs[i]
+            const step = steps[stepForKm(i + 1)]
+            if (step?.target_pace_sec != null) {
+              const tol = step.pace_tolerance_sec ?? 5
+              const top = y(step.target_pace_sec - tol)
+              const bot = y(step.target_pace_sec + tol)
+              return (
+                <g key={i}>
+                  <rect x={x0} y={top} width={w} height={bot - top} fill={C.band} rx="2" />
+                  <line x1={x0} y1={y(step.target_pace_sec)} x2={x0 + w} y2={y(step.target_pace_sec)} stroke={C.target} strokeWidth="2" />
+                </g>
+              )
+            }
+            return <rect key={i} x={x0} y={PAD_T} width={w} height={PLOT_H} fill={C.neutral} />
+          })}
+
+          {/* Réalisé : ligne + point par km */}
+          {(() => {
+            const pts = kmLaps
+              .map((l, i) => ({ l, i }))
+              .filter(({ l }) => l.avg_pace_sec != null)
+            const path = pts
+              .map(({ l, i }, k) => `${k === 0 ? 'M' : 'L'}${kmCenter(i).toFixed(1)} ${y(l.avg_pace_sec).toFixed(1)}`)
+              .join(' ')
+            return (
+              <g>
+                {pts.length > 1 && <path d={path} fill="none" stroke={C.line} strokeWidth="1.5" />}
+                {kmLaps.map((l, i) => {
+                  if (l.avg_pace_sec == null) return null
+                  const col = statusColor(kmStatus(l.avg_pace_sec, steps[stepForKm(i + 1)]))
+                  return (
+                    <circle
+                      key={i}
+                      cx={kmCenter(i)}
+                      cy={y(l.avg_pace_sec)}
+                      r="4.5"
+                      fill={col}
+                      stroke={C.dot}
+                      strokeWidth="1.5"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSel(i)}
+                    />
+                  )
+                })}
+              </g>
+            )
+          })()}
+
+          {/* Zones tapables par km */}
+          {kmLaps.map((_, i) => {
+            const { x0, w } = kmXs[i]
+            return (
+              <rect
+                key={i}
+                x={x0}
+                y={PAD_T}
+                width={w}
+                height={PLOT_H}
+                fill={sel === i ? (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') : 'transparent'}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setSel(i)}
+              />
+            )
+          })}
+
+          {/* Labels axe X (numéro de km, clairsemés si > 8) */}
+          {kmLaps.map((_, i) => {
+            if (kmLaps.length > 8 && i % 2 !== 0) return null
+            return (
+              <text key={i} x={kmCenter(i)} y={H - 6} fontSize="9" fill={C.axis} textAnchor="middle">{i + 1}</text>
+            )
+          })}
+        </>)}
       </Box>
 
       <Typography sx={{

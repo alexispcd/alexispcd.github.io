@@ -115,6 +115,12 @@ async function handleRequest(req: Request): Promise<Response> {
   // 8. Matching + comparaison (100% en code)
   const { actualLaps, comparisons } = matchStepsToLaps(steps, laps)
 
+  // Laps auto-km : même forme que actual_laps (lap_index, avg_pace_sec, avg_hr…)
+  // mais sans rattachement à un step. Purement visuel côté client.
+  const kmLaps = lapsResult.kmLaps
+    ? lapsResult.kmLaps.map((l, i) => ({ lap_index: i, step_index: null, ...l }))
+    : null
+
   // 9. Analyse IA (mode simple, pas de MCP). L'échec ne bloque pas la complétion.
   const { verdict, advice } = await analyze(session.type, session.title, steps, comparisons)
 
@@ -126,6 +132,7 @@ async function handleRequest(req: Request): Promise<Response> {
     .update({
       coros_activity_id: corosActivityId,
       actual_laps: actualLaps,
+      km_laps: kmLaps,
       analysis,
       status: "done",
       completed_at: new Date().toISOString(),
@@ -154,7 +161,7 @@ async function manualComplete(supabaseAdmin: SupabaseClient, sessionId: string):
 const PACE_MIN_SEC = 120
 const PACE_MAX_SEC = 900
 
-type LapsResult = { laps: Lap[] } | { failure: string }
+type LapsResult = { laps: Lap[]; kmLaps: Lap[] | null } | { failure: string }
 
 /**
  * Récupère les laps via le connecteur MCP (queryActivityLapData) puis les parse
@@ -222,7 +229,29 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number)
   if (laps.every((l) => l.avg_pace_sec == null)) {
     return { failure: "Aucune allure exploitable dans les laps Coros" }
   }
-  return { laps }
+
+  // Groupe auto-kilomètre (lapDistance=100000 = 1 km) : conservé pour la vue
+  // "par km" du graphe. Ignoré s'il est absent OU identique au groupe matché.
+  const kmGroup = pickKmGroup(lapGroups)
+  let kmLaps: Lap[] | null = null
+  if (kmGroup && kmGroup !== group) {
+    const mapped = kmGroup
+      .filter((l): l is Record<string, unknown> => l !== null && typeof l === "object" && !Array.isArray(l))
+      .sort((a, b) => lapIndexOf(a) - lapIndexOf(b))
+      .map(mapLap)
+    if (mapped.length > 0) kmLaps = mapped
+  }
+  return { laps, kmLaps }
+}
+
+/** Groupe auto-kilomètre Coros : lapDistance en centièmes de mètre = 100000 (1 km). */
+function pickKmGroup(lapGroups: unknown[]): unknown[] | null {
+  for (const g of lapGroups) {
+    const rec = g as Record<string, unknown> | null
+    const laps = rec?.laps
+    if (rec?.lapDistance === 100000 && Array.isArray(laps) && laps.length > 0) return laps
+  }
+  return null
 }
 
 const isFiniteNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
