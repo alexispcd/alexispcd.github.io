@@ -65,8 +65,10 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
       paces.push(s.target_pace_sec - tol, s.target_pace_sec + tol)
     }
   })
-  if (synced) actualLaps.forEach((l) => { if (l.avg_pace_sec != null) paces.push(l.avg_pace_sec) })
-  if (showKm) kmLaps.forEach((l) => { if (l.avg_pace_sec != null) paces.push(l.avg_pace_sec) })
+  // Échelle calculée par vue active : les allures réalisées incluses sont celles
+  // de la vue affichée (les cibles ± tolérance bornent la bande dans les deux cas).
+  const scaleLaps = kmView ? kmLaps : (synced ? actualLaps : [])
+  scaleLaps.forEach((l) => { if (l.avg_pace_sec != null) paces.push(l.avg_pace_sec) })
   const minP = paces.length ? Math.min(...paces) - 20 : 200
   const maxP = paces.length ? Math.max(...paces) + 20 : 400
   const y = (p) => PAD_T + ((p - minP) / (maxP - minP)) * PLOT_H
