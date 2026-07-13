@@ -15,14 +15,14 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getSession, skipSession, unskipSession, adaptSessions,
   completeSession, resetSession, updateStrengthContent,
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
-  formatKm, formatPace, formatDistance, formatDuration,
+  formatKm, formatPace, formatDistance, formatDuration, formatMin,
   cleanText, shortDayLabel,
 } from '../constants'
 import {
@@ -197,13 +197,14 @@ const SessionPage = () => {
 
   const analysis = session.analysis
   const laps = session.actual_laps
+  const hasHr = [...(laps ?? []), ...(session.km_laps ?? [])].some((l) => l?.avg_hr != null)
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? '90px' : 6 }}>
 
         {/* ── En-tête ─────────────────────────────────────────────── */}
-        <Box sx={{ ...glassSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
+        <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
             <StatusChip label={ZONE_LABEL[zone]} main={zoneStyle.main} bg={zoneStyle.bg} />
             {!isRenfo && <StatusChip label={TYPE_LABEL[type]} />}
@@ -222,14 +223,14 @@ const SessionPage = () => {
           {!isRenfo && (
             <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
               {totalMeters(steps) > 0 && <Metric value={`${formatKm(totalMeters(steps))} km`} label="distance" />}
-              {totalSeconds(steps) > 0 && <Metric value={`~${Math.round(totalSeconds(steps) / 60)} min`} label="durée" />}
+              {totalSeconds(steps) > 0 && <Metric value={`~${formatMin(Math.round(totalSeconds(steps) / 60))}`} label="durée" />}
               {keyPaceSec(steps) != null && <Metric value={`${formatPace(keyPaceSec(steps))} /km`} label="allure clé" />}
             </Box>
           )}
           {isRenfo && session.strength_content && (
             <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
               {session.strength_content.target_duration_min && (
-                <Metric value={`${session.strength_content.target_duration_min} min`} label="durée" />
+                <Metric value={formatMin(session.strength_content.target_duration_min)} label="durée" />
               )}
               {Array.isArray(session.strength_content.blocks) && (
                 <Metric value={`${session.strength_content.blocks.length} blocs`} label="au programme" />
@@ -271,14 +272,14 @@ const SessionPage = () => {
           <>
             {/* Graphique */}
             <SectionLabel>Allure</SectionLabel>
-            <Box sx={{ ...glassSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
-              <ChartLegend synced={Boolean(laps?.length)} />
+            <Box sx={{ ...cardSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
+              <ChartLegend synced={Boolean(laps?.length)} hasHr={hasHr} />
               <PaceChart steps={steps} actualLaps={laps} kmLaps={session.km_laps} comparisons={analysis?.comparisons ?? []} />
             </Box>
 
             {/* Structure */}
             <SectionLabel>Structure</SectionLabel>
-            <Box sx={{ ...glassSx, borderRadius: '20px', py: 0.5 }}>
+            <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
               <StepsList steps={steps} type={type} />
             </Box>
 
@@ -286,7 +287,7 @@ const SessionPage = () => {
             {session.rationale && (
               <>
                 <SectionLabel>Pourquoi ces allures</SectionLabel>
-                <Box sx={{ ...glassSx, borderRadius: '20px', p: 2 }}>
+                <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
                   <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
                     {cleanText(session.rationale)}
                   </Typography>
@@ -298,7 +299,7 @@ const SessionPage = () => {
             {analysis && (
               <>
                 <SectionLabel>Analyse</SectionLabel>
-                <Box sx={{ ...glassSx, borderRadius: '20px', p: 2 }}>
+                <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
                   <AnalysisBlock analysis={analysis} />
                 </Box>
               </>
@@ -485,10 +486,11 @@ const Banner = ({ icon, text, action, onAction, disabled }) => (
   </Box>
 )
 
-const ChartLegend = ({ synced }) => (
+const ChartLegend = ({ synced, hasHr }) => (
   <Box sx={{ display: 'flex', gap: 1.5, px: 1, pb: 1, flexWrap: 'wrap' }}>
     <LegendItem color="rgba(96,165,250,0.5)" label="Cible ± tolérance" />
     {synced && <LegendItem color="text.secondary" label="Réalisé" />}
+    {hasHr && <LegendItem color="rgba(244,63,94,0.55)" label="FC" />}
     {synced && (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <Dot color="primary.main" />
@@ -611,7 +613,7 @@ const RenfoBody = ({ content, editable, onChangeDuration }) => {
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   if (!blocks.length) {
     return (
-      <Box sx={{ ...glassSx, borderRadius: '20px', p: 3, mt: 2, textAlign: 'center' }}>
+      <Box sx={{ ...cardSx, borderRadius: '20px', p: 3, mt: 2, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">Contenu de la séance indisponible.</Typography>
       </Box>
     )
@@ -651,7 +653,7 @@ const RenfoBody = ({ content, editable, onChangeDuration }) => {
         {blocks.map((b, i) => {
           const exos = Array.isArray(b.exercises) ? b.exercises : []
           return (
-            <Box key={i} sx={{ ...glassSx, borderRadius: '20px', overflow: 'hidden' }}>
+            <Box key={i} sx={{ ...cardSx, borderRadius: '20px', overflow: 'hidden' }}>
               <Box sx={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider',

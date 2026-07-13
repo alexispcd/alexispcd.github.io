@@ -41,6 +41,19 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
     setView(v)
   }
 
+  // ── Série FC (axe secondaire à droite) ──────────────────────────────────────
+  // Présente si au moins un lap de la vue active porte une avg_hr.
+  const hrLaps = kmView ? (kmLaps ?? []) : (synced ? actualLaps : [])
+  const hrValues = hrLaps.filter((l) => l.avg_hr != null).map((l) => l.avg_hr)
+  const showHr = hrValues.length > 0
+  const hrMin = showHr ? Math.min(...hrValues) - 5 : 0
+  const hrMax = showHr ? Math.max(...hrValues) + 5 : 1
+  const yHr = (h) => PAD_T + (1 - (h - hrMin) / (hrMax - hrMin)) * PLOT_H
+  const hrGridVals = showHr ? [0, 1, 2].map((k) => Math.round((hrMin + (hrMax - hrMin) * k / 2) / 5) * 5) : []
+  const hrColor = 'rgba(244,63,94,0.55)'
+  // Réserve de la marge droite pour les labels bpm quand la série FC est tracée.
+  const padR = showHr ? 30 : PAD_R
+
   // ── Palette ──────────────────────────────────────────────────────────────
   const C = {
     grid: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
@@ -81,7 +94,7 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
     x0: PAD_L + widths.slice(0, i).reduce((a, b) => a + b, 0),
     w,
   }))
-  const W = PAD_L + widths.reduce((a, b) => a + b, 0) + PAD_R
+  const W = PAD_L + widths.reduce((a, b) => a + b, 0) + padR
   const center = (i) => xs[i].x0 + xs[i].w / 2
 
   // ── Échelle X vue km (slots uniformes, un par km) ───────────────────────────
@@ -89,7 +102,7 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
   const kmCount = showKm ? kmLaps.length : 0
   const kmSlotW = kmCount ? Math.max(KM_MIN_W, INNER_BASE / kmCount) : 0
   const kmXs = Array.from({ length: kmCount }, (_, i) => ({ x0: PAD_L + i * kmSlotW, w: kmSlotW }))
-  const kmW = PAD_L + kmCount * kmSlotW + PAD_R
+  const kmW = PAD_L + kmCount * kmSlotW + padR
   const kmCenter = (i) => kmXs[i].x0 + kmXs[i].w / 2
 
   // Distance cumulée (m) en fin de chaque step, pour rattacher un km à son step.
@@ -141,7 +154,7 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
         return center(0)
       })
     } else {
-      lapX = actualLaps.map((_, i) => PAD_L + ((i + 0.5) / actualLaps.length) * (W - PAD_L - PAD_R))
+      lapX = actualLaps.map((_, i) => PAD_L + ((i + 0.5) / actualLaps.length) * (W - PAD_L - padR))
     }
   }
 
@@ -150,13 +163,9 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
 
   // ── Tip sous le graphe ───────────────────────────────────────────────────
   let tip
-  // Seconde ligne de légende, uniquement en vue km sans sélection.
-  let subTip = null
   if (kmView) {
     tip = 'Touche un km pour le détail'
-    subTip = 'Couleurs : chaque km comparé à la cible du step'
     if (sel != null && kmLaps[sel]) {
-      subTip = null
       const lap = kmLaps[sel]
       const step = steps[stepForKm(sel + 1)]
       const target = step?.target_pace_sec
@@ -236,9 +245,14 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
         {/* Grille + axe Y */}
         {gridVals.map((p, i) => (
           <g key={i}>
-            <line x1={PAD_L} y1={y(p)} x2={activeW - PAD_R} y2={y(p)} stroke={C.grid} strokeDasharray="3 4" />
+            <line x1={PAD_L} y1={y(p)} x2={activeW - padR} y2={y(p)} stroke={C.grid} strokeDasharray="3 4" />
             <text x={PAD_L - 5} y={y(p) + 3} fontSize="9" fill={C.axis} textAnchor="end">{formatPace(p)}</text>
           </g>
+        ))}
+
+        {/* Axe FC (droite) */}
+        {showHr && hrGridVals.map((h, i) => (
+          <text key={`hr${i}`} x={activeW - 4} y={yHr(h) + 3} fontSize="9" fill={hrColor} textAnchor="end">{h}</text>
         ))}
 
         {!kmView && (<>
@@ -294,6 +308,24 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
                   />
                 )
               })}
+            </g>
+          )
+        })()}
+
+        {/* FC : ligne fine + petits points (axe droit) */}
+        {showHr && (() => {
+          const pts = actualLaps
+            .map((l, i) => ({ l, i }))
+            .filter(({ l, i }) => l.avg_hr != null && lapX[i] != null)
+          const path = pts
+            .map(({ l, i }, k) => `${k === 0 ? 'M' : 'L'}${lapX[i].toFixed(1)} ${yHr(l.avg_hr).toFixed(1)}`)
+            .join(' ')
+          return (
+            <g>
+              {pts.length > 1 && <path d={path} fill="none" stroke={hrColor} strokeWidth="1.25" />}
+              {pts.map(({ l, i }) => (
+                <circle key={i} cx={lapX[i]} cy={yHr(l.avg_hr)} r="3" fill={hrColor} />
+              ))}
             </g>
           )
         })()}
@@ -372,6 +404,24 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
             )
           })()}
 
+          {/* FC : ligne fine + petits points (axe droit) */}
+          {showHr && (() => {
+            const pts = kmLaps
+              .map((l, i) => ({ l, i }))
+              .filter(({ l }) => l.avg_hr != null)
+            const path = pts
+              .map(({ l, i }, k) => `${k === 0 ? 'M' : 'L'}${kmCenter(i).toFixed(1)} ${yHr(l.avg_hr).toFixed(1)}`)
+              .join(' ')
+            return (
+              <g>
+                {pts.length > 1 && <path d={path} fill="none" stroke={hrColor} strokeWidth="1.25" />}
+                {pts.map(({ l, i }) => (
+                  <circle key={i} cx={kmCenter(i)} cy={yHr(l.avg_hr)} r="3" fill={hrColor} />
+                ))}
+              </g>
+            )
+          })()}
+
           {/* Zones tapables par km */}
           {kmLaps.map((_, i) => {
             const { x0, w } = kmXs[i]
@@ -405,14 +455,6 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
       }}>
         {tip}
       </Typography>
-      {subTip && (
-        <Typography sx={{
-          fontSize: '0.7rem', color: 'text.secondary', textAlign: 'center',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {subTip}
-        </Typography>
-      )}
     </Box>
   )
 }

@@ -150,10 +150,19 @@ export const formatDistance = (m) => {
   return m < 1000 ? `${Math.round(m)} m` : `${formatKm(m)} km`
 }
 
-/** Secondes → "15 min" (multiples de minute) ou "1:30" (m:ss). */
+/** Minutes → "50 min" (< 60) ou "1h12min" / "2h" (≥ 60, minutes sur 2 chiffres). */
+export const formatMin = (min) => {
+  if (!min) return null
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = Math.round(min % 60)
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}min`
+}
+
+/** Secondes → "15 min" / "1h12min" (multiples de minute) ou "1:30" (m:ss). */
 export const formatDuration = (sec) => {
   if (!sec) return null
-  if (sec % 60 === 0) return `${sec / 60} min`
+  if (sec % 60 === 0) return formatMin(sec / 60)
   return formatPace(sec)
 }
 

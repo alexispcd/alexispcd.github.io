@@ -11,7 +11,7 @@ import MilitaryTech from '@mui/icons-material/MilitaryTech'
 import MoreVert from '@mui/icons-material/MoreVert'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { glassSx, GLASS_BACKDROP } from '../../styles/glass'
+import { glassSx, cardSx, GLASS_BACKDROP } from '../../styles/glass'
 import { getActivePlan, getPlans, deletePlan } from '../../lib/training'
 import {
   PLAN_STATUS_LABEL, raceDistanceLabel, formatGoalTime,
@@ -101,7 +101,7 @@ const TrainingHome = () => {
 
         {/* Hero — plan actif à reprendre, ou état vide */}
         {activePlan ? (
-          <Box sx={{ ...glassSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
+          <Box sx={{ ...cardSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <Terrain sx={{ fontSize: 38, color: 'primary.main', mb: 1 }} />
             <Typography variant="h6" fontWeight={700}>{activePlan.race_name}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2.5 }}>
@@ -118,7 +118,7 @@ const TrainingHome = () => {
             </Button>
           </Box>
         ) : (
-          <Box sx={{ ...glassSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
+          <Box sx={{ ...cardSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <Terrain sx={{ fontSize: 38, color: 'text.disabled', mb: 1 }} />
             <Typography variant="h6" fontWeight={700}>Aucun plan actif</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2.5, lineHeight: 1.5 }}>
@@ -148,7 +148,7 @@ const TrainingHome = () => {
                 <Box
                   key={plan.id}
                   sx={{
-                    ...glassSx, borderRadius: PLAN_CARD_RADIUS,
+                    ...cardSx, borderRadius: PLAN_CARD_RADIUS,
                     display: 'flex', alignItems: 'center', gap: 1.5, p: 1.75,
                   }}
                 >

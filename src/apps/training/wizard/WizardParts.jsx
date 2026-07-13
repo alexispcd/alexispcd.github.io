@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material'
-import { glassSx } from '../../../styles/glass'
+import { cardSx } from '../../../styles/glass'
 
 export const SectionLabel = ({ children, sx }) => (
   <Typography
@@ -14,5 +14,5 @@ export const SectionLabel = ({ children, sx }) => (
 )
 
 export const GlassCard = ({ children, sx }) => (
-  <Box sx={{ ...glassSx, borderRadius: '20px', p: 2, ...sx }}>{children}</Box>
+  <Box sx={{ ...cardSx, borderRadius: '20px', p: 2, ...sx }}>{children}</Box>
 )

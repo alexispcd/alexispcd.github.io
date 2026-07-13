@@ -15,4 +15,17 @@ export const glassSx = {
     : '1px solid rgba(0,0,0,0.06)',
 }
 
+// Variante opaque pour les cartes DANS le flux de la page (contenu scrollable).
+// Même bordure que glassSx mais sans backdrop-filter (perf mobile/Safari) : fond
+// background.paper et ombre portée légère plutôt que reflets de verre.
+export const cardSx = {
+  background: (t) => t.palette.background.paper,
+  boxShadow: (t) => t.palette.mode === 'dark'
+    ? '0 2px 12px rgba(0,0,0,0.30)'
+    : '0 2px 12px rgba(0,0,0,0.06)',
+  border: (t) => t.palette.mode === 'dark'
+    ? '1px solid rgba(255,255,255,0.07)'
+    : '1px solid rgba(0,0,0,0.06)',
+}
+
 export const GLASS_BACKDROP = { sx: { bgcolor: 'rgba(0,0,0,0.25)' } }

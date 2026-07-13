@@ -3,7 +3,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Box, Typography } from '@mui/material'
 import Check from '@mui/icons-material/Check'
 import Redo from '@mui/icons-material/Redo'
-import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, shortDayLabel, cleanText } from '../constants'
+import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, formatMin, shortDayLabel, cleanText } from '../constants'
 
 // Déclenchement franc : il faut dépasser ce déplacement horizontal du doigt pour
 // qu'un swipe compte. En deçà, la carte revient à l'origine (dragSnapToOrigin).
@@ -15,12 +15,12 @@ const subtitle = (s) => {
     const sc = s.strength_content
     const min = sc?.target_duration_min
     const blocks = Array.isArray(sc?.blocks) ? sc.blocks.length : null
-    return [min ? `${min} min` : null, blocks ? `${blocks} bloc${blocks > 1 ? 's' : ''}` : null]
+    return [formatMin(min), blocks ? `${blocks} bloc${blocks > 1 ? 's' : ''}` : null]
       .filter(Boolean).join(' · ') || TYPE_LABEL[s.type]
   }
   const km = formatKm(s.agg_distance_m)
   const min = s.agg_duration_sec ? Math.round(s.agg_duration_sec / 60) : null
-  return [km ? `${km} km` : null, min ? `~${min} min` : null].filter(Boolean).join(' · ')
+  return [km ? `${km} km` : null, min ? `~${formatMin(min)}` : null].filter(Boolean).join(' · ')
     || TYPE_LABEL[s.type]
 }
 

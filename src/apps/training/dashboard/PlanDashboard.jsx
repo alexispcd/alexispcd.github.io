@@ -12,7 +12,7 @@ import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { useAppCtx } from '../../../lib/context'
-import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
   skipSession, unskipSession, adaptSessions,
@@ -46,6 +46,7 @@ const PlanDashboard = () => {
     return v ? Number(v) : null
   })
   const [sessions, setSessions] = useState(null)
+  const [sessionsLoading, setSessionsLoading] = useState(false)
 
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
@@ -121,10 +122,14 @@ const PlanDashboard = () => {
     setSessions(data)
   }, [plan, effectiveWeek])
 
+  // Au changement de semaine on ne vide PAS la liste (setSessions(null)) : on garde
+  // l'ancienne rendue en fondu pour préserver la hauteur et donc la position de scroll.
   useEffect(() => {
     if (effectiveWeek == null || !plan?.weeks?.length) return
-    setSessions(null)
-    reloadSessions().catch((e) => console.error('[PlanDashboard]', e.message))
+    setSessionsLoading(true)
+    reloadSessions()
+      .catch((e) => console.error('[PlanDashboard]', e.message))
+      .finally(() => setSessionsLoading(false))
   }, [effectiveWeek, plan, reloadSessions])
 
   // ── Scroll auto vers la semaine courante (une fois) ───────────────────────────
@@ -330,7 +335,7 @@ const PlanDashboard = () => {
       <Box sx={{ maxWidth: 640, mx: 'auto', pb: 6 }}>
 
         {/* En-tête plan */}
-        <Box sx={{ ...glassSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
+        <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {readOnly ? (
               <Chip
@@ -369,7 +374,7 @@ const PlanDashboard = () => {
             )}
             {targetKm != null && (
               <Metric
-                value={`${sessions === null ? '…' : doneKmLabel} / ${Math.round(targetKm)} km`}
+                value={`${(sessionsLoading || sessions === null) ? '…' : doneKmLabel} / ${Math.round(targetKm)} km`}
                 label={isCurrentWeek ? 'cette semaine' : `semaine S${effectiveWeek}`}
               />
             )}
@@ -377,7 +382,7 @@ const PlanDashboard = () => {
 
           {targetKm != null && (
             <Box sx={{ mt: 1.5, height: 4, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
-              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${donePct}%`, transition: 'width .3s' }} />
+              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${(sessionsLoading || sessions === null) ? 0 : donePct}%`, transition: 'width .3s' }} />
             </Box>
           )}
         </Box>
@@ -442,20 +447,28 @@ const PlanDashboard = () => {
               <CircularProgress size={22} />
             </Box>
           )}
-          {sessions !== null && sessions.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              Aucune séance pour cette semaine.
-            </Typography>
+          {sessions !== null && (
+            <Box sx={{
+              opacity: sessionsLoading ? 0.45 : 1,
+              pointerEvents: sessionsLoading ? 'none' : 'auto',
+              transition: 'opacity .15s',
+            }}>
+              {sessions.length === 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  Aucune séance pour cette semaine.
+                </Typography>
+              )}
+              {groupSessionsByZone(sessions).map((group) => (
+                <ZoneGroup
+                  key={group.zone}
+                  group={group}
+                  readOnly={readOnly}
+                  onSkip={handleSkip}
+                  onOpen={handleOpen}
+                />
+              ))}
+            </Box>
           )}
-          {sessions !== null && groupSessionsByZone(sessions).map((group) => (
-            <ZoneGroup
-              key={group.zone}
-              group={group}
-              readOnly={readOnly}
-              onSkip={handleSkip}
-              onOpen={handleOpen}
-            />
-          ))}
         </Box>
 
         {!readOnly && (sessions?.length ?? 0) > 0 && (
