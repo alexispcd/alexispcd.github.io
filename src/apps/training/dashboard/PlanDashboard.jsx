@@ -369,13 +369,13 @@ const PlanDashboard = () => {
             )}
             {targetKm != null && (
               <Metric
-                value={`${doneKmLabel} / ${Math.round(targetKm)} km`}
+                value={`${sessions === null ? '…' : doneKmLabel} / ${Math.round(targetKm)} km`}
                 label={isCurrentWeek ? 'cette semaine' : `semaine S${effectiveWeek}`}
               />
             )}
           </Box>
 
-          {targetKm != null && sessions !== null && (
+          {targetKm != null && (
             <Box sx={{ mt: 1.5, height: 4, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
               <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${donePct}%`, transition: 'width .3s' }} />
             </Box>
