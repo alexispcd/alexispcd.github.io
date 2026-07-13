@@ -20,10 +20,11 @@ TYPOGRAPHIE (titres, focus, rationale, advice)
 
 ALLURES (dérivées de la VMA, en secondes/km)
 - allure_sec = round(3600 / (VMA_kmh * fraction))
-- Facile / sortie longue : fraction 0.65 à 0.72.
+- Facile : fraction 0.60 à 0.66. L'endurance fondamentale doit rester confortable, en aisance respiratoire totale. En cas de doute, choisis la fraction basse.
+- Sortie longue : fraction 0.62 à 0.68, légèrement plus soutenue que le facile mais toujours en endurance.
 - Tempo (allure seuil) : fraction 0.85 à 0.88 — si un threshold_pace_sec est fourni, utilise-le comme base tempo.
 - Fractionné (intervalles) : fraction 0.93 à 1.00 selon la longueur (plus court = plus rapide).
-- pace_tolerance_sec : ~5 en qualité, ~8-10 en facile/longue.
+- pace_tolerance_sec : ~5 en qualité, ~10-12 en facile/longue (l'allure exacte importe peu en endurance).
 - Justifie l'allure de chaque séance dans "rationale" (1 phrase).
 
 STEPS (séances de course uniquement) — FORMAT COMPACT
@@ -66,9 +67,9 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "zone": "A",
           "type": "facile",
           "title": "Sortie facile",
-          "rationale": "endurance fondamentale à 70% VMA",
+          "rationale": "endurance fondamentale à 63% VMA",
           "steps": [
-            { "step_type": "run", "target_pace_sec": 330, "pace_tolerance_sec": 8, "duration_sec": 2700 }
+            { "step_type": "run", "target_pace_sec": 350, "pace_tolerance_sec": 10, "duration_sec": 2700 }
           ]
         },
         {
@@ -90,7 +91,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "title": "Sortie longue",
           "rationale": "volume aérobie",
           "steps": [
-            { "step_type": "run", "target_pace_sec": 340, "pace_tolerance_sec": 8, "distance_m": 15000 }
+            { "step_type": "run", "target_pace_sec": 345, "pace_tolerance_sec": 10, "distance_m": 15000 }
           ]
         },
         {
