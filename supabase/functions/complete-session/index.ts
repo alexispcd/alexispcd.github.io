@@ -105,7 +105,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // 7. UN appel MCP : queryActivityLapData uniquement. Les laps bruts sont
   //    parsés en code (le modèle n'est jamais la source des valeurs numériques).
-  const lapsResult = await fetchLaps(corosToken, corosActivityId)
+  const lapsResult = await fetchLaps(corosToken, corosActivityId, steps.length)
   if ("failure" in lapsResult) {
     // Données inexploitables : on n'écrit RIEN, la séance reste "planned".
     return json(422, { error: "Données Coros inexploitables", detail: lapsResult.failure })
@@ -161,7 +161,7 @@ type LapsResult = { laps: Lap[] } | { failure: string }
  * en code déterministe. Le LLM n'est qu'un déclencheur d'appel d'outil : sa
  * réponse texte est ignorée, seul le bloc mcp_tool_result est exploité.
  */
-async function fetchLaps(corosToken: string, labelId: string): Promise<LapsResult> {
+async function fetchLaps(corosToken: string, labelId: string, stepCount: number): Promise<LapsResult> {
   const system =
     "Tu appelles l'outil MCP demandé, rien d'autre. Ta réponse texte sera ignorée : " +
     "seul l'appel d'outil compte. N'interprète pas, ne reformule pas, n'invente pas de données."
@@ -204,10 +204,19 @@ async function fetchLaps(corosToken: string, labelId: string): Promise<LapsResul
     }
   }
 
-  const rawLaps = findLapArray(parsed)
-  if (!rawLaps || rawLaps.length === 0) {
+  const lapGroups = (parsed as Record<string, unknown> | null)?.lapGroups
+  if (!Array.isArray(lapGroups)) {
+    return { failure: "Schéma Coros inattendu (lapGroups absent)" }
+  }
+
+  const group = pickLapGroup(lapGroups, stepCount)
+  if (!group) {
     return { failure: "Aucun lap trouvé dans la réponse Coros" }
   }
+
+  const rawLaps = [...group]
+    .filter((l): l is Record<string, unknown> => l !== null && typeof l === "object" && !Array.isArray(l))
+    .sort((a, b) => lapIndexOf(a) - lapIndexOf(b))
 
   const laps = rawLaps.map(mapLap)
   if (laps.every((l) => l.avg_pace_sec == null)) {
@@ -218,63 +227,54 @@ async function fetchLaps(corosToken: string, labelId: string): Promise<LapsResul
 
 const isFiniteNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
 
-/** Premier champ numérique fini présent parmi les clés candidates. */
-function pickNum(obj: Record<string, unknown>, keys: string[]): number | null {
-  for (const k of keys) {
-    if (isFiniteNum(obj[k])) return obj[k] as number
-  }
-  return null
-}
-
-function isObjArray(v: unknown): v is Record<string, unknown>[] {
-  return Array.isArray(v) && v.length > 0 &&
-    v.every((x) => x !== null && typeof x === "object" && !Array.isArray(x))
-}
-
-const LAP_KEYS = ["laps", "lapList", "lapItemList"]
+const lapIndexOf = (lap: Record<string, unknown>): number =>
+  isFiniteNum(lap.lapIndex) ? lap.lapIndex : Number.MAX_SAFE_INTEGER
 
 /**
- * Cherche le tableau de laps dans un payload de schéma inconnu : d'abord sous les
- * clés candidates (y compris data.laps / data.lapList via récursion), sinon le
- * premier tableau d'objets trouvé à profondeur <= 3.
+ * Choisit le groupe de laps parmi lapGroups[].laps. Un seul groupe non vide : on
+ * le prend. Plusieurs : on prend celui dont le nombre de laps est le plus proche
+ * de stepCount (départage par le premier), et on logge la liste des groupes.
  */
-function findLapArray(root: unknown, depth = 0): Record<string, unknown>[] | null {
-  if (depth > 3 || root === null || typeof root !== "object") return null
-  if (isObjArray(root)) return root
-  const obj = root as Record<string, unknown>
+function pickLapGroup(lapGroups: unknown[], stepCount: number): unknown[] | null {
+  const groups = lapGroups
+    .map((g) => {
+      const laps = (g as Record<string, unknown> | null)?.laps
+      return {
+        laps: Array.isArray(laps) ? laps : [],
+        type: (g as Record<string, unknown> | null)?.type,
+        lapDistance: (g as Record<string, unknown> | null)?.lapDistance,
+      }
+    })
+    .filter((g) => g.laps.length > 0)
 
-  for (const key of LAP_KEYS) {
-    if (isObjArray(obj[key])) return obj[key] as Record<string, unknown>[]
+  if (groups.length === 0) return null
+  if (groups.length === 1) return groups[0].laps
+
+  console.warn(
+    "[complete-session] plusieurs groupes de laps, sélection sur proximité avec " +
+      `${stepCount} steps :`,
+    JSON.stringify(groups.map((g) => ({ type: g.type, lapDistance: g.lapDistance, laps: g.laps.length }))),
+  )
+
+  let best = groups[0]
+  for (const g of groups) {
+    if (Math.abs(g.laps.length - stepCount) < Math.abs(best.laps.length - stepCount)) best = g
   }
-  for (const v of Object.values(obj)) {
-    if (isObjArray(v)) return v as Record<string, unknown>[]
-  }
-  for (const v of Object.values(obj)) {
-    const found = findLapArray(v, depth + 1)
-    if (found) return found
-  }
-  return null
+  return best.laps
 }
 
 /**
- * Mappe un lap brut Coros vers Lap. L'allure est TOUJOURS recalculée en code
- * (duration_sec / distance_km) : aucun champ de vitesse/allure fourni par Coros
- * n'est utilisé, car c'est précisément là que naissaient les valeurs absurdes.
+ * Mappe un lap brut Coros (schéma queryActivityLapData) vers Lap :
+ * - distance en centimètres → mètres (distance / 100)
+ * - time en secondes (décimal) → durée arrondie
+ * - avgHr FC moyenne
+ * L'allure est TOUJOURS recalculée en code (duration_sec / distance_km) : les
+ * champs avgPace / avgSpeedV2 / adjustedPace fournis par Coros ne sont JAMAIS lus.
  */
 function mapLap(lap: Record<string, unknown>): Lap {
-  let distance_m = pickNum(lap, ["distance", "distanceM", "lapDistance", "totalDistance"])
-  let duration_sec = pickNum(lap, ["duration", "durationSec", "totalTime", "elapsedTime", "lapTime", "seconds"])
-  const avg_hr = pickNum(lap, ["avgHeartRate", "avgHr", "averageHeartRate"])
-
-  // Distance vraisemblablement en km (< 100) alors que *1000 donne une distance plausible.
-  if (distance_m != null && distance_m < 100) {
-    const asMeters = distance_m * 1000
-    if (asMeters >= 100 && asMeters <= 100_000) distance_m = asMeters
-  }
-  // Durée vraisemblablement en millisecondes pour un lap (> 20000).
-  if (duration_sec != null && duration_sec > 20_000) {
-    duration_sec = Math.round(duration_sec / 1000)
-  }
+  const distance_m = isFiniteNum(lap.distance) && lap.distance > 0 ? lap.distance / 100 : null
+  const duration_sec = isFiniteNum(lap.time) && lap.time > 0 ? Math.round(lap.time) : null
+  const avg_hr = isFiniteNum(lap.avgHr) && lap.avgHr > 0 ? lap.avgHr : null
 
   let avg_pace_sec: number | null = null
   if (distance_m != null && distance_m > 0 && duration_sec != null && duration_sec > 0) {
