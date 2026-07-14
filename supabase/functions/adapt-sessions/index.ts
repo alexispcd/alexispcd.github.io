@@ -6,7 +6,12 @@ import { isStrengthSession, validateSessionContent } from "../_shared/training/v
 import { buildStepRows } from "../_shared/training/persist.ts"
 import { expandSteps } from "../_shared/training/expand.ts"
 import type { CompactStep, PlanSession, PlanStep } from "../_shared/training/types.ts"
-import { buildAdaptSystemPrompt, buildAdaptUserPrompt, type SessionContent } from "./prompt.ts"
+import {
+  buildAdaptSystemPrompt,
+  buildAdaptUserPrompt,
+  type FeedbackHistoryRow,
+  type SessionContent,
+} from "./prompt.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -133,6 +138,21 @@ async function handleRequest(req: Request): Promise<Response> {
     .single()
   if (planErr || !plan) return json(404, { error: "Plan introuvable" })
 
+  // Ressenti des séances complétées des 3 dernières semaines (RPE / douleurs /
+  // note). Sert à moduler l'adaptation : fatigue ou douleur récurrente → réduire.
+  const historyStart = shiftDate(skipped.scheduled_date, -21)
+  const { data: feedbackRows } = await supabaseAdmin
+    .from("training_sessions")
+    .select("scheduled_date, zone, type, title, rpe, pain_areas, feedback_note")
+    .eq("plan_id", planId)
+    .eq("status", "done")
+    .gte("scheduled_date", historyStart)
+    .lte("scheduled_date", skipped.scheduled_date)
+    .order("scheduled_date", { ascending: true })
+  const feedbackHistory = (feedbackRows ?? []).filter(
+    (r) => r.rpe != null || (Array.isArray(r.pain_areas) && r.pain_areas.length) || r.feedback_note,
+  ) as FeedbackHistoryRow[]
+
   // 4. Fenêtre : séances suivantes 'planned' dans [date sautée, +10 jours]
   const windowEnd = shiftDate(skipped.scheduled_date, WINDOW_DAYS)
   const { data: windowRows, error: winErr } = await supabaseAdmin
@@ -152,7 +172,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // 5. Appel Sonnet (synchrone, mode simple)
   const system = buildAdaptSystemPrompt()
-  const userPrompt = buildAdaptUserPrompt(plan as never, skipped, windowSessions)
+  const userPrompt = buildAdaptUserPrompt(plan as never, skipped, windowSessions, feedbackHistory)
 
   let adapted: AdaptedOut[]
   try {

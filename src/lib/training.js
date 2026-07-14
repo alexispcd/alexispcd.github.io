@@ -258,9 +258,16 @@ export const adaptSessions = (sessionId) => callFunction('adapt-sessions', { ses
 /** Cherche les activités Coros candidates pour une séance. → { candidates } */
 export const corosMatch = (sessionId) => callFunction('coros-match', { session_id: sessionId })
 
-/** Complète une séance (avec ou sans activité Coros). → { session } */
-export const completeSession = (sessionId, corosActivityId = null) =>
-  callFunction('complete-session', { session_id: sessionId, coros_activity_id: corosActivityId })
+/**
+ * Complète une séance (avec ou sans activité Coros). → { session }
+ * feedback = { rpe, pain_areas, feedback_note } ou null (ressenti post-séance).
+ */
+export const completeSession = (sessionId, corosActivityId = null, feedback = null) =>
+  callFunction('complete-session', {
+    session_id: sessionId,
+    coros_activity_id: corosActivityId,
+    feedback,
+  })
 
 /** Bilan de forme Coros pour le wizard. */
 export const getCorosFitness = () => callFunction('coros-fitness', undefined)

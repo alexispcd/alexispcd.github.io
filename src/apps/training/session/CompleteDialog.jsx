@@ -8,6 +8,8 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { corosMatch, completeSession } from '../../../lib/training'
 import { formatKm, formatGoalTime, formatPace } from '../constants'
+import RpeForm from './RpeForm'
+import { emptyFeedback, toFeedbackPayload } from './feedback'
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : '·'
@@ -23,11 +25,13 @@ const candidateSub = (c) => [
  * puis complétion (import laps + analyse). onDone reçoit la séance mise à jour.
  */
 const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
-  const [phase, setPhase] = useState('matching') // matching | choose | completing | done
+  const [phase, setPhase] = useState('matching') // matching | choose | feedback | completing | done
   const [candidates, setCandidates] = useState([])
   const [selected, setSelected] = useState(null)
   const [error, setError] = useState(null)
   const [withCoros, setWithCoros] = useState(true) // pour le message de complétion
+  const [pendingLabel, setPendingLabel] = useState(null) // activité choisie, en attente du ressenti
+  const [feedback, setFeedback] = useState(emptyFeedback())
 
   useEffect(() => {
     if (!open) return
@@ -36,6 +40,8 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     setCandidates([])
     setSelected(null)
     setError(null)
+    setPendingLabel(null)
+    setFeedback(emptyFeedback())
     corosMatch(sessionId)
       .then(({ candidates: list }) => {
         if (cancelled) return
@@ -53,16 +59,24 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     return () => { cancelled = true }
   }, [open, sessionId])
 
-  const runComplete = async (labelId) => {
-    setWithCoros(Boolean(labelId))
+  // Étape 1 : l'activité (ou son absence) est choisie → on passe au ressenti.
+  const goToFeedback = (labelId) => {
+    setPendingLabel(labelId)
+    setError(null)
+    setPhase('feedback')
+  }
+
+  // Étape 2 : envoi effectif avec ou sans ressenti.
+  const runComplete = async (fb) => {
+    setWithCoros(Boolean(pendingLabel))
     setPhase('completing')
     setError(null)
     try {
-      const { session } = await completeSession(sessionId, labelId)
+      const { session } = await completeSession(sessionId, pendingLabel, fb)
       onDone(session)
     } catch (e) {
       setError(e.message || 'La validation a échoué.')
-      setPhase('choose')
+      setPhase('feedback')
     }
   }
 
@@ -133,18 +147,39 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
             </Box>
           </>
         )}
+
+        {phase === 'feedback' && (
+          <>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Ton ressenti</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Optionnel, mais ça affine l'analyse et l'adaptation des prochaines séances.
+            </Typography>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <RpeForm value={feedback} onChange={setFeedback} />
+          </>
+        )}
       </DialogContent>
 
-      {!busy && (
+      {phase === 'choose' && (
         <DialogActions sx={{ px: 3, pb: 2.5, flexWrap: 'wrap', gap: 1 }}>
           <Button onClick={onClose} color="inherit">Annuler</Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={() => runComplete(null)} color="inherit">Valider sans Coros</Button>
+          <Button onClick={() => goToFeedback(null)} color="inherit">Valider sans Coros</Button>
           {candidates.length > 0 && (
-            <Button onClick={() => runComplete(selected)} variant="contained" disabled={!selected}>
-              Valider
+            <Button onClick={() => goToFeedback(selected)} variant="contained" disabled={!selected}>
+              Continuer
             </Button>
           )}
+        </DialogActions>
+      )}
+
+      {phase === 'feedback' && (
+        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
+          <Button onClick={() => runComplete(null)} color="inherit">Passer</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => runComplete(toFeedbackPayload(feedback))} variant="contained">
+            Valider
+          </Button>
         </DialogActions>
       )}
     </Dialog>

@@ -31,6 +31,8 @@ import {
 import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
+import RpeForm from './RpeForm'
+import { emptyFeedback, toFeedbackPayload } from './feedback'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
 const STATUS_CHIP = {
@@ -66,6 +68,8 @@ const SessionPage = () => {
   const [snack, setSnack] = useState(null)
 
   const [completeOpen, setCompleteOpen] = useState(false)
+  const [renfoFeedbackOpen, setRenfoFeedbackOpen] = useState(false)
+  const [renfoFeedback, setRenfoFeedback] = useState(emptyFeedback())
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -118,10 +122,16 @@ const SessionPage = () => {
     backToDashboard()
   }
 
-  const doCompleteRenfo = async () => {
+  const openRenfoComplete = () => {
+    setRenfoFeedback(emptyFeedback())
+    setRenfoFeedbackOpen(true)
+  }
+
+  const doCompleteRenfo = async (feedback) => {
+    setRenfoFeedbackOpen(false)
     setBusy(true)
     try {
-      await completeSession(sessionId)
+      await completeSession(sessionId, null, feedback)
       await reload()
     } catch (e) { flash(e.message) } finally { setBusy(false) }
   }
@@ -336,7 +346,7 @@ const SessionPage = () => {
                 <Button
                   fullWidth
                   variant="contained"
-                  onClick={isRenfo ? doCompleteRenfo : () => setCompleteOpen(true)}
+                  onClick={isRenfo ? openRenfoComplete : () => setCompleteOpen(true)}
                   disabled={busy}
                   sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
                 >
@@ -387,6 +397,28 @@ const SessionPage = () => {
         onClose={() => setCompleteOpen(false)}
         onDone={() => { setCompleteOpen(false); reload().catch((e) => flash(e.message)) }}
       />
+
+      <Dialog
+        open={renfoFeedbackOpen}
+        onClose={() => !busy && setRenfoFeedbackOpen(false)}
+        fullWidth
+        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Ton ressenti</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Optionnel, mais ça affine l'adaptation des prochaines séances.
+          </DialogContentText>
+          <RpeForm value={renfoFeedback} onChange={setRenfoFeedback} />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button onClick={() => doCompleteRenfo(null)} color="inherit">Passer</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => doCompleteRenfo(toFeedbackPayload(renfoFeedback))} variant="contained">
+            Valider
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={skipOpen}

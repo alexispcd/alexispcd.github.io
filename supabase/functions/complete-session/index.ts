@@ -25,6 +25,68 @@ function paceStr(sec: number | null): string {
   return `${m}:${String(s).padStart(2, "0")}/km`
 }
 
+// ── Ressenti post-séance ──────────────────────────────────────────────────────
+interface Feedback {
+  rpe: number | null
+  pain_areas: string[] | null
+  feedback_note: string | null
+}
+
+/** Codes de zones (RpeForm) → libellés lisibles pour le prompt. */
+const PAIN_LABELS: Record<string, string> = {
+  mollet_g: "mollet gauche",
+  mollet_d: "mollet droit",
+  genou_g: "genou gauche",
+  genou_d: "genou droit",
+  achille_g: "tendon d'Achille gauche",
+  achille_d: "tendon d'Achille droit",
+  quadri_g: "cuisse gauche",
+  quadri_d: "cuisse droite",
+  tfl_g: "hanche/TFL gauche",
+  tfl_d: "hanche/TFL droite",
+  dos: "dos",
+  autre: "autre",
+}
+
+/** Valide/normalise le ressenti reçu du client. null si rien d'exploitable. */
+function parseFeedback(raw: unknown): Feedback | null {
+  if (!raw || typeof raw !== "object") return null
+  const r = raw as Record<string, unknown>
+
+  let rpe: number | null = null
+  if (r.rpe != null) {
+    const n = Number(r.rpe)
+    if (Number.isInteger(n) && n >= 1 && n <= 10) rpe = n
+  }
+
+  let pain_areas: string[] | null = null
+  if (Array.isArray(r.pain_areas)) {
+    const arr = r.pain_areas.filter((x): x is string => typeof x === "string" && x.length > 0)
+    pain_areas = arr.length ? arr : null
+  }
+
+  let feedback_note: string | null = null
+  if (typeof r.feedback_note === "string" && r.feedback_note.trim()) {
+    feedback_note = r.feedback_note.trim()
+  }
+
+  if (rpe == null && pain_areas == null && feedback_note == null) return null
+  return { rpe, pain_areas, feedback_note }
+}
+
+/** Bloc "Ressenti athlète" pour les prompts Haiku (vide si aucun ressenti). */
+function feedbackPromptBlock(fb: Feedback | null): string {
+  if (!fb) return ""
+  const parts: string[] = []
+  if (fb.rpe != null) parts.push(`RPE (effort perçu) : ${fb.rpe}/10`)
+  if (fb.pain_areas?.length) {
+    parts.push(`Douleurs signalées : ${fb.pain_areas.map((c) => PAIN_LABELS[c] ?? c).join(", ")}`)
+  }
+  if (fb.feedback_note) parts.push(`Note de l'athlète : ${fb.feedback_note}`)
+  if (!parts.length) return ""
+  return ["", "Ressenti athlète :", ...parts.map((p) => `- ${p}`)].join("\n")
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
   try {
@@ -57,14 +119,21 @@ async function handleRequest(req: Request): Promise<Response> {
   // 2. Corps
   let sessionId: string
   let corosActivityId: string | null
+  let feedback: Feedback | null
   try {
     const body = await req.json()
     sessionId = body.session_id
     corosActivityId = body.coros_activity_id ?? null
+    feedback = parseFeedback(body.feedback)
     if (!sessionId) throw new Error("session_id requis")
   } catch (err) {
     return json(400, { error: "Corps invalide", detail: String(err) })
   }
+
+  // Champs de ressenti persistés tels quels (uniquement si un ressenti est fourni).
+  const feedbackFields = feedback
+    ? { rpe: feedback.rpe, pain_areas: feedback.pain_areas, feedback_note: feedback.feedback_note }
+    : {}
 
   // 3. Séance + steps ordonnés
   const { data: session, error: sessionErr } = await supabaseAdmin
@@ -76,9 +145,10 @@ async function handleRequest(req: Request): Promise<Response> {
   if (sessionErr || !session) return json(404, { error: "Séance introuvable" })
   if (session.status === "done") return json(409, { error: "Séance déjà complétée" })
 
-  // 4. Cas sans Coros : validation manuelle simple.
+  // 4. Cas sans Coros (renfo ou course non liée) : pas de laps à comparer.
+  //    On persiste le ressenti et, s'il est présent, un conseil fondé dessus.
   if (!corosActivityId) {
-    return await manualComplete(supabaseAdmin, sessionId)
+    return await manualComplete(supabaseAdmin, sessionId, session.type, feedback, feedbackFields)
   }
 
   // 5. Renfo : pas de matching Coros possible.
@@ -128,6 +198,7 @@ async function handleRequest(req: Request): Promise<Response> {
     steps,
     comparisons,
     lapsResult.kmLaps,
+    feedback,
   )
 
   const analysis = { verdict, advice, comparisons }
@@ -142,6 +213,7 @@ async function handleRequest(req: Request): Promise<Response> {
       analysis,
       status: "done",
       completed_at: new Date().toISOString(),
+      ...feedbackFields,
     })
     .eq("id", sessionId)
     .eq("user_id", user.id)
@@ -152,15 +224,60 @@ async function handleRequest(req: Request): Promise<Response> {
   return json(200, { session: updated })
 }
 
-async function manualComplete(supabaseAdmin: SupabaseClient, sessionId: string): Promise<Response> {
+async function manualComplete(
+  supabaseAdmin: SupabaseClient,
+  sessionId: string,
+  type: string,
+  feedback: Feedback | null,
+  feedbackFields: Record<string, unknown>,
+): Promise<Response> {
+  // Sans laps, il n'y a pas de comparaison prévu/réalisé : le conseil se fonde
+  // uniquement sur le ressenti quand il est présent (verdict laissé à null).
+  let analysis: { verdict: null; advice: string } | undefined
+  if (feedback) {
+    const advice = await adviceFromFeedback(type, feedback)
+    if (advice) analysis = { verdict: null, advice }
+  }
+
   const { data: updated, error } = await supabaseAdmin
     .from("training_sessions")
-    .update({ status: "done", completed_at: new Date().toISOString() })
+    .update({
+      status: "done",
+      completed_at: new Date().toISOString(),
+      ...(analysis ? { analysis } : {}),
+      ...feedbackFields,
+    })
     .eq("id", sessionId)
     .select("*")
     .single()
   if (error) return json(500, { error: "Mise à jour impossible", detail: error.message })
   return json(200, { session: updated })
+}
+
+/** Conseil (Haiku) fondé uniquement sur le ressenti, pour une séance sans laps. */
+async function adviceFromFeedback(type: string, feedback: Feedback): Promise<string | null> {
+  const system =
+    "Tu es un coach running. À partir du seul ressenti de l'athlète sur une séance qu'il vient de faire, " +
+    "tu donnes un conseil court et concret (1-2 phrases). Signale toute douleur récurrente ou un RPE élevé " +
+    "comme un signe de fatigue à surveiller. N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) : " +
+    "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, " +
+    'format : {"advice":"1-2 phrases en français"}'
+
+  const userPrompt = [`Séance de type ${type}, réalisée.`, feedbackPromptBlock(feedback).trim()].join("\n")
+
+  try {
+    const raw = await anthropicSimple({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 256,
+      system,
+      messages: [{ role: "user", content: userPrompt }],
+    })
+    const obj = JSON.parse(extractJson(raw))
+    return typeof obj.advice === "string" && obj.advice.trim() ? obj.advice.trim() : null
+  } catch (err) {
+    console.error("[complete-session] advice ressenti échoué:", err instanceof Error ? err.message : err)
+    return null
+  }
 }
 
 /** Bornes plausibles d'une allure de course, en s/km (2:00 à 15:00 par km). */
@@ -385,6 +502,7 @@ async function analyze(
   steps: Step[],
   comparisons: Comparison[],
   kmLaps: Lap[] | null,
+  feedback: Feedback | null,
 ): Promise<AnalysisOut> {
   const cmpByStep = new Map<number, Comparison>()
   for (const c of comparisons) cmpByStep.set(c.step_index, c)
@@ -405,7 +523,10 @@ async function analyze(
     "Tu es un coach running. À partir de la comparaison prévu/réalisé d'une séance, tu donnes un verdict " +
     "et un conseil concret. Le verdict se fonde UNIQUEMENT sur la comparaison des steps (lignes 'Steps comparés'). " +
     "Les splits par km servent seulement à enrichir le conseil (gestion d'allure, régularité, négatif/positif split). " +
-    "Ne dégrade pas le verdict à cause des splits. " +
+    "Ne dégrade pas le verdict à cause des splits ni du ressenti. " +
+    "Le CONSEIL (advice), lui, doit tenir compte du ressenti de l'athlète quand il est fourni : " +
+    "un RPE >= 8 sur une séance facile pourtant réussie doit être signalé dans le conseil comme un signe de " +
+    "fatigue, et toute douleur mentionnée doit être prise en compte. " +
     "N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) dans le conseil : " +
     "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, format : " +
     '{"verdict":"reussie|partiellement|a_retravailler","advice":"2-3 phrases concrètes en français"}'
@@ -418,6 +539,7 @@ async function analyze(
     "Détail :",
     ...lines,
     ...(kmLines.length ? ["", "Splits par km :", ...kmLines] : []),
+    feedbackPromptBlock(feedback),
   ].join("\n")
 
   const parseAnalysis = (raw: string): AnalysisOut | null => {
