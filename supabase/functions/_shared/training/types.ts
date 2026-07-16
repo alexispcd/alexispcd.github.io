@@ -56,6 +56,36 @@ export interface PlanSession {
   strength_content?: unknown
 }
 
+// ── Renfo (musculation) ──────────────────────────────────────────────────────
+// Sortie modèle : chaque exercice porte un `slug` du catalogue (exercises.ts) +
+// sets / reps|duration_sec / rest_sec. Le code enrichit ensuite name /
+// description / category / equipment / unilateral depuis le catalogue.
+export interface StrengthExercise {
+  slug: string
+  sets: number
+  reps?: number | null
+  duration_sec?: number | null
+  rest_sec: number
+  // Champs résolus à l'enrichissement (persistance) :
+  name?: string
+  description?: string
+  category?: string
+  equipment?: string
+  unilateral?: boolean
+}
+
+export interface StrengthBlock {
+  theme: string
+  exercises: StrengthExercise[]
+}
+
+export interface StrengthContent {
+  target_duration_min: number
+  blocks: StrengthBlock[]
+  // Base complète (~45 min) figée à la persistance, source de la recomposition.
+  base_blocks?: StrengthBlock[]
+}
+
 export interface PlanWeek {
   week_number: number
   block: "construction" | "intensification" | "affutage"

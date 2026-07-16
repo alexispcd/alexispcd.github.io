@@ -252,6 +252,9 @@ export const generatePlan = (payload) => callFunction('generate-plan', payload)
 /** Régénère les semaines restantes. → { plan_id } */
 export const regeneratePlan = (planId) => callFunction('regenerate-plan', { plan_id: planId })
 
+/** Régénère le contenu renfo des séances futures planifiées. → { updated, sessions } */
+export const regenerateRenfo = (planId) => callFunction('regenerate-renfo', { plan_id: planId })
+
 /** Adapte les séances suivant une séance sautée. → { sessions } */
 export const adaptSessions = (sessionId) => callFunction('adapt-sessions', { session_id: sessionId })
 

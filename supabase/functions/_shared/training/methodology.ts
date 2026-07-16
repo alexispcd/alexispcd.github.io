@@ -1,6 +1,33 @@
 // Méthodologie de coaching + schéma de sortie JSON, partagés par les prompts de
 // génération, régénération et adaptation.
 
+import { CATALOG_SUMMARY } from "./exercises.ts"
+
+/** Règles renfo (structure 4 blocs, catalogue, parité, progression) — partagées
+ *  par TRAINING_RULES et par la régénération dédiée regenerate-renfo. */
+export const RENFO_RULES = `RENFO (renforcement musculaire)
+- La séance renfo n'a AUCUN step. Elle porte "strength_content" :
+  { "target_duration_min": 45, "blocks": [ { "theme": string, "exercises": [ { "slug": string, "sets": number, "reps"?: number, "duration_sec"?: number, "rest_sec": number } ] } ] }
+- Chaque exercice est choisi EXCLUSIVEMENT par son "slug" dans le CATALOGUE ci-dessous. N'invente JAMAIS d'exercice ni de slug hors catalogue. N'émets PAS "name" ni "description" (le code les résout depuis le catalogue).
+- Un exercice porte "reps" (mode reps) OU "duration_sec" (mode duration) selon son mode au catalogue, jamais les deux.
+- STRUCTURE FIXE : EXACTEMENT 4 blocs, dans cet ordre :
+  1. Échauffement : uniquement des exercices de catégorie activation_mobilite.
+  2. Force : uniquement des exercices de catégorie fessiers et/ou ischios.
+  3. Gainage : uniquement des exercices de catégorie gainage.
+  4. Bonus (ALTERNE d'une semaine à l'autre selon la parité de week_number) :
+     - semaines IMPAIRES (1, 3, 5, ...) → uniquement proprioception et/ou pied_mollets ;
+     - semaines PAIRES (2, 4, 6, ...) → uniquement haut_corps.
+- La base vise TOUJOURS ~45 min avec ces 4 blocs et 10 à 13 exercices au total (2 à 4 par bloc). N'ajoute pas de bloc, n'en retire pas.
+- ROTATION : varie les exercices d'une semaine à l'autre ; ne répète JAMAIS deux renfos consécutifs à l'identique.
+- PROGRESSION selon le bloc du plan :
+  - construction : volume modéré (séries et reps proches des valeurs de base).
+  - intensification : plus de séries, davantage d'unilatéral et de variantes exigeantes (ex. copenhague_longue, nordic_curl_assiste, souleve_terre_unipodal, squat_unipodal_chaise).
+  - affûtage : volume réduit (moins de séries), on préserve la qualité du geste.
+- Bornes strictes : sets entre 1 et 5, rest_sec entre 0 et 120.
+
+CATALOGUE D'EXERCICES RENFO (slug · mode · equipment ; "unilat" = travaillé côté par côté) :
+${CATALOG_SUMMARY}`
+
 /** Règles de coaching réutilisables (méthodologie + allures + steps + renfo),
  *  sans le schéma de sortie — partagées entre génération et adaptation. */
 export const TRAINING_RULES = `MÉTHODOLOGIE
@@ -36,9 +63,7 @@ STEPS (séances de course uniquement) — FORMAT COMPACT
 - Facile / sortie longue : généralement un seul step simple "run" (distance_m ou duration_sec + allure).
 - Tempo : warmup + un ou plusieurs "run" au seuil (ou un bloc "repeat" si intervalles au seuil) + cooldown.
 
-RENFO
-- La séance renfo n'a AUCUN step. Elle porte "strength_content" :
-  { "target_duration_min": number, "blocks": [ { "name": string, "exercises": [ { "name": string, "sets": number, "reps"?: number, "duration_sec"?: number, "rest_sec": number } ] } ] }`
+${RENFO_RULES}`
 
 /** System prompt commun (coach + méthodologie + schéma de sortie). */
 export function buildPlanSystemPrompt(): string {
@@ -99,11 +124,14 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "zone": "renfo",
           "type": "renfo",
           "title": "Renforcement course",
-          "rationale": "gainage et chaîne postérieure",
+          "rationale": "chaîne postérieure, gainage et proprioception (semaine 1, bloc bonus proprio/pied)",
           "strength_content": {
-            "target_duration_min": 30,
+            "target_duration_min": 45,
             "blocks": [
-              { "name": "Gainage", "exercises": [ { "name": "Planche", "sets": 3, "duration_sec": 45, "rest_sec": 30 } ] }
+              { "theme": "Échauffement", "exercises": [ { "slug": "rotations_hanches", "sets": 1, "duration_sec": 40, "rest_sec": 15 }, { "slug": "squats_air", "sets": 1, "reps": 20, "rest_sec": 20 } ] },
+              { "theme": "Force", "exercises": [ { "slug": "pont_fessier", "sets": 3, "reps": 15, "rest_sec": 60 }, { "slug": "squat_bulgare", "sets": 3, "reps": 10, "rest_sec": 60 }, { "slug": "souleve_terre_unipodal", "sets": 3, "reps": 10, "rest_sec": 60 } ] },
+              { "theme": "Gainage", "exercises": [ { "slug": "planche", "sets": 3, "duration_sec": 60, "rest_sec": 30 }, { "slug": "planche_laterale", "sets": 3, "duration_sec": 40, "rest_sec": 30 } ] },
+              { "theme": "Proprioception et pied", "exercises": [ { "slug": "equilibre_unipodal", "sets": 2, "duration_sec": 45, "rest_sec": 20 }, { "slug": "montees_mollets_unipodal", "sets": 3, "reps": 12, "rest_sec": 45 } ] }
             ]
           }
         }

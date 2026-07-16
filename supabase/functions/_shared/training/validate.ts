@@ -1,6 +1,10 @@
 import type { CompactStep, GeneratedPlan, PlanSession } from "./types.ts"
 import { isRepeatBlock } from "./expand.ts"
 import { dayOfWeek, dayTs, type WeekBounds, type Zone, zoneRangeForWeek } from "./weeks.ts"
+import {
+  BLOCK_CATEGORIES, detectBonusKind, EXERCISE_INDEX, type ExerciseCategory, isExerciseSlug,
+} from "./exercises.ts"
+import { estimateStrengthDuration } from "./strength.ts"
 
 // dayTs reste exposé depuis ce module (importé par d'autres fonctions Edge).
 export { dayTs }
@@ -23,9 +27,7 @@ export function validateSessionContent(s: PlanSession, tag: string, errors: stri
   if (!s.title) errors.push(`${tag} : title manquant`)
 
   if (isStrengthSession(s)) {
-    if (!s.strength_content || typeof s.strength_content !== "object") {
-      errors.push(`${tag} : renfo sans strength_content`)
-    }
+    validateStrengthContent(s.strength_content, tag, errors)
     if (Array.isArray(s.steps) && s.steps.length > 0) {
       errors.push(`${tag} : renfo ne doit pas avoir de steps`)
     }
@@ -80,6 +82,96 @@ function validateSteps(s: PlanSession, tag: string, errors: string[]): void {
 
   if (s.type === "fractionne" && repeatBlocks === 0) {
     errors.push(`${tag} : fractionné sans bloc de répétitions (champ "repeat" requis)`)
+  }
+}
+
+// ── Renfo (catalogue + structure 4 blocs) ─────────────────────────────────────
+const RENFO_MIN_EXERCISES = 10
+const RENFO_MAX_EXERCISES = 13
+const RENFO_BASE_MIN_MIN = 40
+const RENFO_BASE_MAX_MIN = 50
+
+/**
+ * Valide le strength_content d'une séance renfo (sortie modèle, base ~45 min) :
+ * exactement 4 blocs dans l'ordre, slugs du catalogue, catégories cohérentes par
+ * bloc, bornes (sets 1-5, rest 0-120), 10 à 13 exercices, durée estimée 40-50 min.
+ */
+export function validateStrengthContent(content: unknown, tag: string, errors: string[]): void {
+  if (!content || typeof content !== "object") {
+    errors.push(`${tag} : renfo sans strength_content`)
+    return
+  }
+  const blocks = (content as { blocks?: unknown }).blocks
+  if (!Array.isArray(blocks) || blocks.length !== 4) {
+    errors.push(`${tag} : renfo doit avoir EXACTEMENT 4 blocs (échauffement, force, gainage, bonus)`)
+    return
+  }
+
+  let totalExos = 0
+  blocks.forEach((bU, bi) => {
+    const btag = `${tag} bloc ${bi + 1}`
+    const exos = (bU as { exercises?: unknown }).exercises
+    if (!Array.isArray(exos) || exos.length === 0) {
+      errors.push(`${btag} : aucun exercice`)
+      return
+    }
+    totalExos += exos.length
+
+    const cats: ExerciseCategory[] = []
+    exos.forEach((exU, ei) => {
+      const etag = `${btag} exercice ${ei + 1}`
+      const ex = exU as Record<string, unknown>
+      if (!isExerciseSlug(ex.slug)) {
+        errors.push(`${etag} : slug inconnu "${String(ex.slug)}" (hors catalogue)`)
+        return
+      }
+      const cat = EXERCISE_INDEX[ex.slug]
+      cats.push(cat.category)
+
+      const hasReps = ex.reps != null
+      const hasDur = ex.duration_sec != null
+      if (hasReps === hasDur) {
+        errors.push(`${etag} (${ex.slug}) : renseigne "reps" OU "duration_sec" (exactement un des deux)`)
+      } else if (cat.mode === "reps" && !hasReps) {
+        errors.push(`${etag} (${ex.slug}) : exercice en mode reps, "reps" attendu`)
+      } else if (cat.mode === "duration" && !hasDur) {
+        errors.push(`${etag} (${ex.slug}) : exercice en mode duration, "duration_sec" attendu`)
+      }
+      if (hasReps && (typeof ex.reps !== "number" || (ex.reps as number) <= 0)) {
+        errors.push(`${etag} (${ex.slug}) : reps invalide`)
+      }
+      if (hasDur && (typeof ex.duration_sec !== "number" || (ex.duration_sec as number) <= 0)) {
+        errors.push(`${etag} (${ex.slug}) : duration_sec invalide`)
+      }
+      const sets = ex.sets
+      if (typeof sets !== "number" || !Number.isInteger(sets) || sets < 1 || sets > 5) {
+        errors.push(`${etag} (${ex.slug}) : sets doit être un entier entre 1 et 5`)
+      }
+      const rest = ex.rest_sec
+      if (typeof rest !== "number" || rest < 0 || rest > 120) {
+        errors.push(`${etag} (${ex.slug}) : rest_sec doit être entre 0 et 120`)
+      }
+    })
+
+    // Catégories autorisées par position ; bonus (bloc 4) = un seul thème cohérent.
+    if (bi < 3) {
+      const allowed = BLOCK_CATEGORIES[bi]
+      const bad = [...new Set(cats.filter((c) => !allowed.includes(c)))]
+      if (bad.length) {
+        errors.push(`${btag} : catégorie(s) ${bad.join(", ")} interdite(s) ici (attendu : ${allowed.join(" / ")})`)
+      }
+    } else if (detectBonusKind(cats) == null) {
+      errors.push(`${btag} (bonus) : mélange interdit, choisis proprioception/pied_mollets OU haut_corps`)
+    }
+  })
+
+  if (totalExos < RENFO_MIN_EXERCISES || totalExos > RENFO_MAX_EXERCISES) {
+    errors.push(`${tag} : ${totalExos} exercices au total (attendu ${RENFO_MIN_EXERCISES} à ${RENFO_MAX_EXERCISES})`)
+  }
+
+  const est = estimateStrengthDuration(blocks as never)
+  if (est < RENFO_BASE_MIN_MIN || est > RENFO_BASE_MAX_MIN) {
+    errors.push(`${tag} : durée estimée de la base ${est} min hors bornes (${RENFO_BASE_MIN_MIN} à ${RENFO_BASE_MAX_MIN} min)`)
   }
 }
 

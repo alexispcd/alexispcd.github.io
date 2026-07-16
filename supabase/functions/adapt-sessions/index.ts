@@ -4,6 +4,7 @@ import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
 import { buildStepRows } from "../_shared/training/persist.ts"
+import { finalizeStrengthContent } from "../_shared/training/strength.ts"
 import { expandSteps } from "../_shared/training/expand.ts"
 import type { CompactStep, PlanSession, PlanStep } from "../_shared/training/types.ts"
 import {
@@ -228,7 +229,9 @@ async function handleRequest(req: Request): Promise<Response> {
       .update({
         title: a.title ?? cur.title,
         rationale: a.rationale ?? cur.rationale,
-        strength_content: isRenfo ? (a.strength_content ?? cur.strength_content) : cur.strength_content,
+        strength_content: isRenfo
+          ? (a.strength_content ? finalizeStrengthContent(a.strength_content as never) : cur.strength_content)
+          : cur.strength_content,
         previous_version: previousVersion,
         status: "adapted",
         adapted_at: now,

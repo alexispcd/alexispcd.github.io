@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Box, Typography, Button, CircularProgress, Alert, Snackbar,
+  Box, Typography, Button, CircularProgress, Alert, Snackbar, Collapse,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
 import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
@@ -10,6 +10,8 @@ import DirectionsRun from '@mui/icons-material/DirectionsRunOutlined'
 import PauseCircle from '@mui/icons-material/PauseCircleOutlined'
 import Bedtime from '@mui/icons-material/BedtimeOutlined'
 import AutoAwesome from '@mui/icons-material/AutoAwesome'
+import ExpandMore from '@mui/icons-material/ExpandMore'
+import EventSeat from '@mui/icons-material/EventSeatOutlined'
 import Redo from '@mui/icons-material/Redo'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
@@ -641,6 +643,60 @@ const exoDetail = (ex) => {
   return `${sets}${load}${rest}`.trim()
 }
 
+// Puce "chaise" quand l'exercice nécessite une chaise (equipment === 'chair').
+const ChairChip = () => (
+  <Box sx={{
+    display: 'inline-flex', alignItems: 'center', gap: 0.25, px: 0.6, py: 0.15,
+    borderRadius: '6px', bgcolor: 'action.hover', color: 'text.secondary',
+    fontSize: '0.58rem', fontWeight: 600, letterSpacing: '0.02em', flexShrink: 0,
+  }}>
+    <EventSeat sx={{ fontSize: 12 }} />
+    chaise
+  </Box>
+)
+
+// Ligne exercice : dépliable au tap pour révéler la description (si présente).
+// Rétrocompatible : sans description/equipment, s'affiche comme une ligne simple.
+const RenfoExerciseRow = ({ ex, first }) => {
+  const [open, setOpen] = useState(false)
+  const hasDesc = Boolean(ex.description)
+  const isChair = ex.equipment === 'chair'
+  return (
+    <Box sx={{ borderTop: first ? 'none' : '1px solid', borderColor: 'divider' }}>
+      <Box
+        onClick={hasDesc ? () => setOpen((o) => !o) : undefined}
+        sx={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
+          px: 2, py: 1.25, cursor: hasDesc ? 'pointer' : 'default', userSelect: 'none',
+        }}
+      >
+        <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+          <Typography variant="body2">{ex.name}</Typography>
+          {isChair && <ChairChip />}
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+            {exoDetail(ex)}
+          </Typography>
+          {hasDesc && (
+            <ExpandMore sx={{
+              fontSize: 18, color: 'text.disabled',
+              transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s',
+            }} />
+          )}
+        </Box>
+      </Box>
+      {hasDesc && (
+        <Collapse in={open} unmountOnExit>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, pb: 1.25, lineHeight: 1.5 }}>
+            {cleanText(ex.description)}
+          </Typography>
+        </Collapse>
+      )}
+    </Box>
+  )
+}
+
 const RenfoBody = ({ content, editable, onChangeDuration }) => {
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   if (!blocks.length) {
@@ -690,21 +746,13 @@ const RenfoBody = ({ content, editable, onChangeDuration }) => {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider',
               }}>
-                <Typography variant="body2" fontWeight={700}>{b.name}</Typography>
+                <Typography variant="body2" fontWeight={700}>{cleanText(b.theme ?? b.name)}</Typography>
                 <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
                   {exos.length} exercice{exos.length > 1 ? 's' : ''}
                 </Typography>
               </Box>
               {exos.map((ex, j) => (
-                <Box key={j} sx={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
-                  px: 2, py: 1.25, borderTop: j === 0 ? 'none' : '1px solid', borderColor: 'divider',
-                }}>
-                  <Typography variant="body2">{ex.name}</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0 }}>
-                    {exoDetail(ex)}
-                  </Typography>
-                </Box>
+                <RenfoExerciseRow key={ex.slug ?? j} ex={ex} first={j === 0} />
               ))}
             </Box>
           )

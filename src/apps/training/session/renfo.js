@@ -1,15 +1,48 @@
 // Recomposition locale déterministe du contenu renfo selon la durée choisie.
 //
-// Le contenu généré par generate-plan sert de référence ("base", ~40 min).
-// Les 3 durées proposées en sont dérivées par une règle simple et idempotente
-// (toujours calculée depuis la base, jamais depuis l'état courant) :
-//   • 30 min → on retire le dernier exercice des blocs de 3 exercices ou plus.
-//   • 40 min → base inchangée (référence).
-//   • 45 min → on ajoute une série à l'exercice principal (le 1er) de chaque bloc.
-// Aucune recomposition IA à la volée : tout est local et prévisible.
+// MIROIR de supabase/functions/_shared/training/strength.ts : mêmes constantes,
+// même heuristique d'estimation et même logique de trim. Le frontend ne peut pas
+// importer depuis supabase/functions, d'où cette copie. Toute évolution de
+// l'heuristique doit être répercutée des deux côtés.
+//
+// La base (base_blocks, ~45 min) sert de référence. Les 3 durées proposées en
+// sont dérivées par retrait piloté par l'estimateur, jamais par expansion :
+//   • 45 min → base complète (référence).
+//   • 40 min → base réduite jusqu'à 40 min (retrait des derniers exercices).
+//   • 30 min → bloc bonus retiré, puis réduction jusqu'à 30 min.
+// Toujours recalculé depuis la base → idempotent.
 
-// La base correspond au palier moyen (40 min) : 30 min la réduit, 45 min l'étend.
+// Palier par défaut à la persistance = 40 min (voir finalizeStrengthContent).
 export const RENFO_DURATIONS = [30, 40, 45]
+
+// ── Heuristique d'estimation (identique au backend) ──────────────────────────
+const PER_REP_SEC = 3
+const TRANSITION_SEC = 15
+const BLOCK_GAP_SEC = 30
+
+/** Durée estimée d'un exercice en secondes (toutes séries + repos inter-séries). */
+export const estimateExerciseSeconds = (ex) => {
+  const sets = ex.sets ?? 1
+  const perSet = ex.duration_sec != null
+    ? ex.duration_sec * (ex.unilateral ? 2 : 1) // duration unilatéral = deux côtés
+    : (ex.reps ?? 0) * PER_REP_SEC
+  const work = sets * perSet
+  const rest = Math.max(0, sets - 1) * (ex.rest_sec ?? 0)
+  return work + rest
+}
+
+/** Durée estimée de la séance renfo (blocs), en minutes. */
+export const estimateStrengthDuration = (blocks) => {
+  const list = blocks ?? []
+  let total = 0
+  for (const b of list) {
+    const exos = b.exercises ?? []
+    for (const ex of exos) total += estimateExerciseSeconds(ex)
+    total += Math.max(0, exos.length - 1) * TRANSITION_SEC
+  }
+  total += Math.max(0, list.length - 1) * BLOCK_GAP_SEC
+  return Math.round(total / 60)
+}
 
 const cloneBlocks = (blocks) =>
   (blocks ?? []).map((b) => ({
@@ -17,25 +50,23 @@ const cloneBlocks = (blocks) =>
     exercises: (b.exercises ?? []).map((e) => ({ ...e })),
   }))
 
-const trim = (blocks) =>
-  cloneBlocks(blocks).map((b) => ({
-    ...b,
-    exercises: b.exercises.length >= 3 ? b.exercises.slice(0, -1) : b.exercises,
-  }))
+/** Réduit la base vers une durée cible (miroir de trimToTarget backend). */
+export const trimToTarget = (baseBlocks, targetMin) => {
+  let blocks = cloneBlocks(baseBlocks)
+  if (targetMin <= 30 && blocks.length > 3) blocks = blocks.slice(0, 3)
 
-const expand = (blocks) =>
-  cloneBlocks(blocks).map((b) => ({
-    ...b,
-    exercises: b.exercises.map((e, i) =>
-      i === 0 && typeof e.sets === 'number' ? { ...e, sets: e.sets + 1 } : e,
-    ),
-  }))
-
-/** Blocs dérivés de la base pour une durée cible. */
-export const recomposeBlocks = (baseBlocks, duration) => {
-  if (duration <= 30) return trim(baseBlocks)
-  if (duration >= 45) return expand(baseBlocks)
-  return cloneBlocks(baseBlocks)
+  let guard = 0
+  while (estimateStrengthDuration(blocks) > targetMin && guard++ < 200) {
+    let bi = -1
+    let max = 1
+    blocks.forEach((b, i) => {
+      const n = b.exercises?.length ?? 0
+      if (n > max) { max = n; bi = i }
+    })
+    if (bi < 0) break
+    blocks[bi] = { ...blocks[bi], exercises: blocks[bi].exercises.slice(0, -1) }
+  }
+  return blocks
 }
 
 /**
@@ -48,7 +79,7 @@ export const applyDuration = (content, duration) => {
   return {
     ...content,
     base_blocks: cloneBlocks(base),
-    blocks: recomposeBlocks(base, duration),
+    blocks: trimToTarget(base, duration),
     target_duration_min: duration,
   }
 }

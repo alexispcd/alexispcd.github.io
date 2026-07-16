@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { ExpandedPlan, ExpandedSession, PlanStep } from "./types.ts"
 import { isStrengthSession } from "./validate.ts"
+import { finalizeStrengthContent } from "./strength.ts"
 
 /**
  * Insère semaines → séances → steps pour un plan existant.
@@ -56,7 +57,10 @@ export async function persistPlan(
           type: s.type,
           title: s.title,
           rationale: s.rationale ?? null,
-          strength_content: isStrengthSession(s) ? (s.strength_content ?? null) : null,
+          // Renfo : enrichissement catalogue + base figée + trim à 40 min (défaut).
+          strength_content: isStrengthSession(s)
+            ? finalizeStrengthContent(s.strength_content as never)
+            : null,
           status: "planned",
         })
       }
