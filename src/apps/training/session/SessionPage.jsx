@@ -16,6 +16,7 @@ import Redo from '@mui/icons-material/Redo'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
+import PlayArrow from '@mui/icons-material/PlayArrow'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
@@ -34,6 +35,7 @@ import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 import RpeForm from './RpeForm'
+import RenfoPlayer from './player/RenfoPlayer'
 import { emptyFeedback, toFeedbackPayload } from './feedback'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
@@ -75,6 +77,8 @@ const SessionPage = () => {
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+
+  const [player, setPlayer] = useState(null) // { audioCtx } quand le player est ouvert
 
   const flash = (message, severity = 'error') => setSnack({ message, severity })
   const backToDashboard = () => navigate(`/training/plan/${planId}`)
@@ -127,6 +131,25 @@ const SessionPage = () => {
   const openRenfoComplete = () => {
     setRenfoFeedback(emptyFeedback())
     setRenfoFeedbackOpen(true)
+  }
+
+  // Player renfo : l'AudioContext est créé DANS le geste utilisateur (contrainte
+  // iOS) puis confié au player, qui le referme à sa fermeture.
+  const startPlayer = () => {
+    let audioCtx
+    try {
+      const Ctor = window.AudioContext ?? window.webkitAudioContext
+      audioCtx = Ctor ? new Ctor() : null
+      audioCtx?.resume?.().catch(() => {})
+    } catch { audioCtx = null }
+    setPlayer({ audioCtx })
+  }
+
+  const closePlayer = () => setPlayer(null)
+
+  const validateFromPlayer = () => {
+    closePlayer()
+    openRenfoComplete()
   }
 
   const doCompleteRenfo = async (feedback) => {
@@ -279,6 +302,7 @@ const SessionPage = () => {
             content={session.strength_content}
             editable={canComplete}
             onChangeDuration={handleRenfoDuration}
+            onStart={startPlayer}
           />
         ) : (
           <>
@@ -470,6 +494,15 @@ const SessionPage = () => {
           {snack?.message}
         </Alert>
       </Snackbar>
+
+      {player && (
+        <RenfoPlayer
+          blocks={session.strength_content?.blocks}
+          audioCtx={player.audioCtx}
+          onClose={closePlayer}
+          onValidate={validateFromPlayer}
+        />
+      )}
     </Box>
   )
 }
@@ -697,7 +730,7 @@ const RenfoExerciseRow = ({ ex, first }) => {
   )
 }
 
-const RenfoBody = ({ content, editable, onChangeDuration }) => {
+const RenfoBody = ({ content, editable, onChangeDuration, onStart }) => {
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   if (!blocks.length) {
     return (
@@ -735,6 +768,21 @@ const RenfoBody = ({ content, editable, onChangeDuration }) => {
             })}
           </Box>
         </>
+      )}
+      {editable && (
+        <Button
+          fullWidth
+          variant="contained"
+          startIcon={<PlayArrow />}
+          onClick={onStart}
+          sx={{
+            mt: 2, height: 52, borderRadius: '26px', textTransform: 'none', fontWeight: 700,
+            fontSize: '1rem', boxShadow: 'none',
+            bgcolor: ZONE_STYLE.renfo.main, '&:hover': { bgcolor: ZONE_STYLE.renfo.main },
+          }}
+        >
+          Démarrer la séance
+        </Button>
       )}
       <SectionLabel>Programme</SectionLabel>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
