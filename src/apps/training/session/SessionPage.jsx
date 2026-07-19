@@ -669,9 +669,12 @@ const exoDuration = (sec) => {
   return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} min`
 }
 
-const exoDetail = (ex) => {
-  const sets = ex.sets ? `${ex.sets} × ` : ''
+// En circuit, séries et repos ne sont plus portés par l'exercice : seule la
+// charge (reps ou durée) est affichée. Les blocs hérités gardent l'ancien format.
+const exoDetail = (ex, circuit) => {
   const load = ex.reps != null ? `${ex.reps}` : (exoDuration(ex.duration_sec) ?? '')
+  if (circuit) return load
+  const sets = ex.sets ? `${ex.sets} × ` : ''
   const rest = ex.rest_sec != null ? ` · repos ${ex.rest_sec} s` : ''
   return `${sets}${load}${rest}`.trim()
 }
@@ -690,7 +693,7 @@ const ChairChip = () => (
 
 // Ligne exercice : dépliable au tap pour révéler la description (si présente).
 // Rétrocompatible : sans description/equipment, s'affiche comme une ligne simple.
-const RenfoExerciseRow = ({ ex, first }) => {
+const RenfoExerciseRow = ({ ex, first, circuit }) => {
   const [open, setOpen] = useState(false)
   const hasDesc = Boolean(ex.description)
   const isChair = ex.equipment === 'chair'
@@ -709,7 +712,7 @@ const RenfoExerciseRow = ({ ex, first }) => {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-            {exoDetail(ex)}
+            {exoDetail(ex, circuit)}
           </Typography>
           {hasDesc && (
             <ExpandMore sx={{
@@ -788,6 +791,8 @@ const RenfoBody = ({ content, editable, onChangeDuration, onStart }) => {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
         {blocks.map((b, i) => {
           const exos = Array.isArray(b.exercises) ? b.exercises : []
+          const circuit = b.rounds != null
+          const count = `${exos.length} exercice${exos.length > 1 ? 's' : ''}`
           return (
             <Box key={i} sx={{ ...cardSx, borderRadius: '20px', overflow: 'hidden' }}>
               <Box sx={{
@@ -796,11 +801,11 @@ const RenfoBody = ({ content, editable, onChangeDuration, onStart }) => {
               }}>
                 <Typography variant="body2" fontWeight={700}>{cleanText(b.theme ?? b.name)}</Typography>
                 <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-                  {exos.length} exercice{exos.length > 1 ? 's' : ''}
+                  {circuit ? `${b.rounds} tours · ${count}` : count}
                 </Typography>
               </Box>
               {exos.map((ex, j) => (
-                <RenfoExerciseRow key={ex.slug ?? j} ex={ex} first={j === 0} />
+                <RenfoExerciseRow key={ex.slug ?? j} ex={ex} first={j === 0} circuit={circuit} />
               ))}
             </Box>
           )

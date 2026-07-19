@@ -57,15 +57,21 @@ export interface PlanSession {
 }
 
 // ── Renfo (musculation) ──────────────────────────────────────────────────────
+// Format CIRCUIT : un bloc est une liste d'exercices enchaînés, l'ensemble étant
+// répété `rounds` fois. Les repos ne sont plus portés par l'exercice, ils sont
+// déterministes et définis dans strength.ts.
+//
 // Sortie modèle : chaque exercice porte un `slug` du catalogue (exercises.ts) +
-// sets / reps|duration_sec / rest_sec. Le code enrichit ensuite name /
-// description / category / equipment / unilateral depuis le catalogue.
+// reps OU duration_sec. Le code enrichit ensuite name / description / category /
+// equipment / unilateral depuis le catalogue.
 export interface StrengthExercise {
   slug: string
-  sets: number
   reps?: number | null
   duration_sec?: number | null
-  rest_sec: number
+  // Blocs HISTORIQUES uniquement (plans générés avant le format circuit) :
+  // séries et repos portés par l'exercice. Le modèle ne les émet plus.
+  sets?: number
+  rest_sec?: number
   // Champs résolus à l'enrichissement (persistance) :
   name?: string
   description?: string
@@ -76,6 +82,8 @@ export interface StrengthExercise {
 
 export interface StrengthBlock {
   theme: string
+  /** Nombre de tours du circuit. Absent = bloc historique (sets / rest_sec). */
+  rounds?: number
   exercises: StrengthExercise[]
 }
 

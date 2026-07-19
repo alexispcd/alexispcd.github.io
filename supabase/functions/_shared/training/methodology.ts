@@ -5,11 +5,14 @@ import { CATALOG_SUMMARY } from "./exercises.ts"
 
 /** Règles renfo (structure 4 blocs, catalogue, parité, progression) — partagées
  *  par TRAINING_RULES et par la régénération dédiée regenerate-renfo. */
-export const RENFO_RULES = `RENFO (renforcement musculaire)
+export const RENFO_RULES = `RENFO (renforcement musculaire) — FORMAT CIRCUIT
 - La séance renfo n'a AUCUN step. Elle porte "strength_content" :
-  { "target_duration_min": 45, "blocks": [ { "theme": string, "exercises": [ { "slug": string, "sets": number, "reps"?: number, "duration_sec"?: number, "rest_sec": number } ] } ] }
+  { "target_duration_min": 45, "blocks": [ { "theme": string, "rounds": number, "exercises": [ { "slug": string, "reps"?: number, "duration_sec"?: number } ] } ] }
+- CIRCUIT : les exercices d'un bloc s'enchaînent dans l'ordre, et le bloc ENTIER est répété "rounds" fois (tour 1 : exo A, exo B, exo C ; tour 2 : idem ; etc.).
+- "rounds" vaut 2 ou 3. N'émets NI "sets" NI "rest_sec" : les repos sont fixes et gérés par le code (20 s entre deux exercices, 30 s entre deux tours et entre deux blocs).
 - Chaque exercice est choisi EXCLUSIVEMENT par son "slug" dans le CATALOGUE ci-dessous. N'invente JAMAIS d'exercice ni de slug hors catalogue. N'émets PAS "name" ni "description" (le code les résout depuis le catalogue).
 - Un exercice porte "reps" (mode reps) OU "duration_sec" (mode duration) selon son mode au catalogue, jamais les deux.
+- Un exercice "unilat" se fait des DEUX côtés : il compte double dans la durée. Dose ses reps / sa duration_sec en conséquence.
 - STRUCTURE FIXE : EXACTEMENT 4 blocs, dans cet ordre :
   1. Échauffement : uniquement des exercices de catégorie activation_mobilite.
   2. Force : uniquement des exercices de catégorie fessiers et/ou ischios.
@@ -17,13 +20,13 @@ export const RENFO_RULES = `RENFO (renforcement musculaire)
   4. Bonus (ALTERNE d'une semaine à l'autre selon la parité de week_number) :
      - semaines IMPAIRES (1, 3, 5, ...) → uniquement proprioception et/ou pied_mollets ;
      - semaines PAIRES (2, 4, 6, ...) → uniquement haut_corps.
-- La base vise TOUJOURS ~45 min avec ces 4 blocs et 10 à 13 exercices au total (2 à 4 par bloc). N'ajoute pas de bloc, n'en retire pas.
+- Ne choisis JAMAIS le slug "excentrique_mollet" : le code l'ajoute automatiquement au bloc Force de chaque séance. Ne le compte pas dans ton total.
+- La base vise TOUJOURS ~45 min avec ces 4 blocs et 13 à 17 exercices au total (3 à 5 par bloc). Les repos étant courts, il faut plus d'exercices qu'un format en séries pour remplir la séance. N'ajoute pas de bloc, n'en retire pas.
 - ROTATION : varie les exercices d'une semaine à l'autre ; ne répète JAMAIS deux renfos consécutifs à l'identique.
-- PROGRESSION selon le bloc du plan :
-  - construction : volume modéré (séries et reps proches des valeurs de base).
-  - intensification : plus de séries, davantage d'unilatéral et de variantes exigeantes (ex. copenhague_longue, nordic_curl_assiste, souleve_terre_unipodal, squat_unipodal_chaise).
-  - affûtage : volume réduit (moins de séries), on préserve la qualité du geste.
-- Bornes strictes : sets entre 1 et 5, rest_sec entre 0 et 120.
+- PROGRESSION selon le bloc du plan (elle joue sur les TOURS, le NOMBRE d'exercices et le CHOIX des variantes, jamais sur des séries) :
+  - construction : 2 tours, exercices bilatéraux et variantes d'entrée, reps et durées proches des valeurs de base.
+  - intensification : 3 tours, blocs plus fournis, davantage d'unilatéral et de variantes exigeantes (ex. copenhague_longue, nordic_curl_assiste, souleve_terre_unipodal, squat_unipodal_chaise).
+  - affûtage : 2 tours, blocs allégés, on préserve la qualité du geste.
 
 CATALOGUE D'EXERCICES RENFO (slug · mode · equipment ; "unilat" = travaillé côté par côté) :
 ${CATALOG_SUMMARY}`
@@ -128,10 +131,10 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "strength_content": {
             "target_duration_min": 45,
             "blocks": [
-              { "theme": "Échauffement", "exercises": [ { "slug": "rotations_hanches", "sets": 1, "duration_sec": 40, "rest_sec": 15 }, { "slug": "squats_air", "sets": 1, "reps": 20, "rest_sec": 20 } ] },
-              { "theme": "Force", "exercises": [ { "slug": "pont_fessier", "sets": 3, "reps": 15, "rest_sec": 60 }, { "slug": "squat_bulgare", "sets": 3, "reps": 10, "rest_sec": 60 }, { "slug": "souleve_terre_unipodal", "sets": 3, "reps": 10, "rest_sec": 60 } ] },
-              { "theme": "Gainage", "exercises": [ { "slug": "planche", "sets": 3, "duration_sec": 60, "rest_sec": 30 }, { "slug": "planche_laterale", "sets": 3, "duration_sec": 40, "rest_sec": 30 } ] },
-              { "theme": "Proprioception et pied", "exercises": [ { "slug": "corde_imaginaire", "sets": 3, "duration_sec": 40, "rest_sec": 30 }, { "slug": "montees_mollets_unipodal", "sets": 3, "reps": 12, "rest_sec": 45 } ] }
+              { "theme": "Échauffement", "rounds": 2, "exercises": [ { "slug": "rotations_hanches", "duration_sec": 30 }, { "slug": "chat_vache", "duration_sec": 30 }, { "slug": "squats_air", "reps": 15 } ] },
+              { "theme": "Force", "rounds": 3, "exercises": [ { "slug": "pont_fessier", "reps": 15 }, { "slug": "squat_bulgare", "reps": 10 }, { "slug": "souleve_terre_unipodal", "reps": 10 }, { "slug": "fente_arriere", "reps": 10 } ] },
+              { "theme": "Gainage", "rounds": 3, "exercises": [ { "slug": "planche", "duration_sec": 45 }, { "slug": "planche_laterale", "duration_sec": 30 }, { "slug": "dead_bug", "reps": 12 } ] },
+              { "theme": "Proprioception et pied", "rounds": 2, "exercises": [ { "slug": "corde_imaginaire", "duration_sec": 40 }, { "slug": "montees_mollets_unipodal", "reps": 12 }, { "slug": "sauts_unipodaux", "reps": 10 } ] }
             ]
           }
         }

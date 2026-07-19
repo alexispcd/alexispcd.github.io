@@ -5,14 +5,16 @@
 // Module pur, sans dépendance React, testable isolément.
 //
 // La séquence s'ouvre sur un step 'prep' (sas de mise en place). Ensuite, chaque
-// série d'un exercice produit : un (ou deux, si duration unilatéral) step de
-// travail, suivi d'un step de repos de `rest_sec`. Le tout dernier repos de la
-// séance est omis (rien à récupérer après la dernière série).
+// bloc est un CIRCUIT : ses exercices s'enchaînent, séparés par un repos de
+// REST_BETWEEN_EXERCISES_SEC, et l'ensemble est répété `rounds` fois avec un
+// repos de REST_BETWEEN_ROUNDS_SEC entre les tours et entre les blocs. Un
+// exercice unilatéral produit deux steps de travail (gauche puis droite), sans
+// repos entre les côtés. Aucun repos après le tout dernier step.
+//
+// Les blocs SANS `rounds` sont historiques (plans générés avant le format
+// circuit) : ils conservent le déroulé en séries piloté par sets / rest_sec.
 
-// Miroir de renfo.js / strength.ts : coût estimé d'une répétition en secondes.
-// Sert à donner une durée à un step 'reps' (avancé manuellement) pour que la
-// durée totale reste cohérente avec l'estimateur existant.
-const PER_REP_SEC = 3
+import { PER_REP_SEC, REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC } from '../renfo.js'
 
 // Ordre des côtés pour un exercice unilatéral (gauche puis droite).
 const SIDES = ['gauche', 'droite']
@@ -32,6 +34,27 @@ const stepSeconds = (step) => {
   return (step.reps ?? 0) * PER_REP_SEC
 }
 
+/** Métadonnées d'exercice exposées au player. */
+const exerciseOf = (ex) => ({
+  name: ex?.name ?? ex?.slug ?? 'Exercice',
+  description: ex?.description ?? null,
+  equipment: ex?.equipment ?? null,
+})
+
+/**
+ * Steps de travail d'un exercice pour un passage.
+ * `splitSides` : produire deux steps gauche/droite pour un exercice unilatéral.
+ */
+const workStepsFor = (ex, meta, splitSides) => {
+  const base = ex?.duration_sec != null
+    ? { kind: 'work', advance: 'auto', duration_sec: ex.duration_sec }
+    : { kind: 'work', advance: 'manual', reps: ex?.reps ?? 0 }
+  const common = { ...base, exercise: exerciseOf(ex), ...meta }
+  return splitSides && ex?.unilateral
+    ? SIDES.map((side) => ({ ...common, side }))
+    : [{ ...common, side: null }]
+}
+
 /**
  * Construit la séquence linéaire du player.
  *
@@ -43,62 +66,61 @@ const stepSeconds = (step) => {
  */
 export const buildSequence = (blocks) => {
   const list = Array.isArray(blocks) ? blocks : []
-
-  // 1) Aplatir en "unités de série" : chaque série = ses steps de travail + le
-  //    repos qui la suit (rest_sec). Le repos est matérialisé au flatten pour
-  //    pouvoir omettre le dernier de la séance.
-  const units = []
-  for (const block of list) {
-    const theme = block?.theme ?? block?.name ?? null
-    const exos = Array.isArray(block?.exercises) ? block.exercises : []
-    for (const ex of exos) {
-      const exercise = {
-        name: ex?.name ?? ex?.slug ?? 'Exercice',
-        description: ex?.description ?? null,
-        equipment: ex?.equipment ?? null,
-      }
-      const setCount = Math.max(1, ex?.sets ?? 1)
-      const restSec = ex?.rest_sec ?? 0
-      const isDuration = ex?.duration_sec != null
-
-      for (let s = 0; s < setCount; s++) {
-        const meta = { exercise, theme, setIndex: s + 1, setCount }
-        const workSteps = []
-        if (isDuration) {
-          if (ex?.unilateral) {
-            // Deux steps enchaînés (pas de repos entre les côtés).
-            for (const side of SIDES) {
-              workSteps.push({ kind: 'work', advance: 'auto', duration_sec: ex.duration_sec, side, ...meta })
-            }
-          } else {
-            workSteps.push({ kind: 'work', advance: 'auto', duration_sec: ex.duration_sec, side: null, ...meta })
-          }
-        } else {
-          workSteps.push({ kind: 'work', advance: 'manual', reps: ex?.reps ?? 0, side: null, ...meta })
-        }
-        units.push({ workSteps, restSec, meta })
-      }
-    }
-  }
-
-  // 2) Flatten : préparation + steps de travail + repos, sauf après la toute
-  //    dernière série. Pas de préparation si la séance est vide.
   const steps = []
-  if (units.length > 0) {
-    steps.push({
-      kind: 'prep', advance: 'auto', duration_sec: PREP_SEC,
-      exercise: null, theme: null, setIndex: null, setCount: null, side: null,
-    })
+
+  // Repos en attente : il n'est matérialisé que si un step de travail le suit.
+  // C'est ce qui garantit qu'aucun repos ne traîne en fin de séance ni de bloc
+  // vide, sans avoir à nettoyer la séquence après coup.
+  let pending = null
+  const restStep = (sec, theme) => (sec > 0
+    ? {
+      kind: 'rest', advance: 'auto', duration_sec: sec, theme, side: null,
+      exercise: null, roundIndex: null, roundCount: null, setIndex: null, setCount: null,
+    }
+    : null)
+  const emit = (work) => {
+    if (pending && steps.length) steps.push(pending)
+    pending = null
+    steps.push(...work)
   }
-  units.forEach((unit, i) => {
-    for (const w of unit.workSteps) steps.push(w)
-    const isLast = i === units.length - 1
-    if (!isLast && unit.restSec > 0) {
-      steps.push({ kind: 'rest', advance: 'auto', duration_sec: unit.restSec, side: null, ...unit.meta })
+
+  list.forEach((block, bi) => {
+    const exos = Array.isArray(block?.exercises) ? block.exercises : []
+    if (!exos.length) return
+    const theme = block?.theme ?? block?.name ?? null
+    if (bi > 0) pending = restStep(REST_BETWEEN_ROUNDS_SEC, theme)
+
+    // Bloc historique : une suite d'exercices faits en N séries chacun.
+    if (block?.rounds == null) {
+      for (const ex of exos) {
+        const setCount = Math.max(1, ex?.sets ?? 1)
+        for (let s = 1; s <= setCount; s++) {
+          // Le doublage unilatéral ne portait que sur le mode duration.
+          emit(workStepsFor(ex, { theme, setIndex: s, setCount }, ex?.duration_sec != null))
+          pending = restStep(ex?.rest_sec ?? 0, theme)
+        }
+      }
+      return
+    }
+
+    const roundCount = Math.max(1, block.rounds)
+    for (let r = 1; r <= roundCount; r++) {
+      exos.forEach((ex, ei) => {
+        emit(workStepsFor(ex, { theme, roundIndex: r, roundCount }, true))
+        if (ei < exos.length - 1) pending = restStep(REST_BETWEEN_EXERCISES_SEC, theme)
+      })
+      if (r < roundCount) pending = restStep(REST_BETWEEN_ROUNDS_SEC, theme)
     }
   })
 
-  // 3) Index global + durée totale.
+  // Sas de préparation en tête, seulement si la séance a du contenu.
+  if (steps.length > 0) {
+    steps.unshift({
+      kind: 'prep', advance: 'auto', duration_sec: PREP_SEC, exercise: null, theme: null,
+      side: null, roundIndex: null, roundCount: null, setIndex: null, setCount: null,
+    })
+  }
+
   steps.forEach((step, i) => { step.index = i })
   const totalSeconds = steps.reduce((sum, step) => sum + stepSeconds(step), 0)
 

@@ -14,6 +14,7 @@ import SkipPrevious from '@mui/icons-material/SkipPrevious'
 import RestartAlt from '@mui/icons-material/RestartAlt'
 import Check from '@mui/icons-material/Check'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useBlocker } from 'react-router-dom'
 import { ZONE_STYLE, cleanText, formatGoalTime } from '../../constants'
 import { glassSx, GLASS_BACKDROP } from '../../../../styles/glass'
 import { useAppCtx } from '../../../../lib/context'
@@ -21,6 +22,17 @@ import { buildSequence } from './sequence'
 
 const ACCENT = ZONE_STYLE.renfo.main
 const SOUND_KEY = 'training:player_sound'
+
+// La coque du player est un overlay plein écran. Tout élément flottant du player
+// se rendant dans son PROPRE portail (Dialog MUI, zIndex 1300 par défaut) doit
+// repasser au-dessus, sinon il s'ouvre derrière la coque opaque et paraît inerte.
+const PLAYER_Z = 2000
+
+// Avance du bip sur la fin réelle du step : le son doit tomber AVANT la bascule
+// pour être utile. Un seul endroit à ajuster.
+const BEEP_LEAD_SEC = 1
+// Période de la boucle de décompte : assez fine pour que le bip soit à l'heure.
+const TICK_MS = 100
 
 // ── Anneau de progression SVG ────────────────────────────────────────────────
 const RING = 248
@@ -54,6 +66,13 @@ const ProgressRing = ({ fraction, remainingSec, sub, color }) => (
     </Box>
   </Box>
 )
+
+/** Avancement dans l'exercice : tours en circuit, séries sur un bloc hérité. */
+const progressLabel = (step) => {
+  if (step.roundIndex) return `Tour ${step.roundIndex}/${step.roundCount}`
+  if (step.setIndex) return `Série ${step.setIndex}/${step.setCount}`
+  return null
+}
 
 /** Libellé de l'aperçu "À suivre" pour un step donné. */
 const nextLabel = (step) => {
@@ -99,8 +118,8 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
   const anchor = useRef({ start: 0, pausedAccum: 0, pausedAt: 0 })
   const startedAtRef = useRef(0)
   const wakeRef = useRef(null)
-  // Vrai tant que l'entrée d'historique posée à l'ouverture est encore empilée.
-  const historyOwned = useRef(false)
+  // Bip déjà joué pour le step courant (un seul par step).
+  const beepedRef = useRef(false)
 
   // Horodatage de départ posé au montage (hors rendu).
   useEffect(() => { startedAtRef.current = Date.now() }, [])
@@ -116,29 +135,28 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
   const isManual = step?.advance === 'manual'
 
   // ── Geste retour : intercepté, il demande confirmation ─────────────────────
-  // Une entrée d'historique factice est empilée à l'ouverture. Le swipe retour
-  // la dépile : on la remet en place et on ouvre le dialog au lieu de laisser
-  // React Router revenir au dashboard par-dessous le player.
-  useEffect(() => {
-    window.history.pushState({ renfoPlayer: true }, '')
-    historyOwned.current = true
-    const onPop = () => {
-      if (!historyOwned.current) return // sortie volontaire : on laisse filer
-      window.history.pushState({ renfoPlayer: true }, '')
-      setConfirmQuit(true)
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
+  // useBlocker (data router) intercepte les navigations POP, donc le swipe
+  // retour iOS, sans toucher à l'historique nous-mêmes. Une fois la séance
+  // terminée on laisse passer : il n'y a plus de progression à perdre.
+  const blocker = useBlocker(!finished)
+  // Le dialog s'ouvre soit sur la croix (confirmQuit), soit sur une navigation
+  // interceptée : état dérivé, pas de synchronisation à maintenir.
+  const blocked = blocker.state === 'blocked'
+  const confirmOpen = confirmQuit || blocked
 
-  // Sortie volontaire : consomme l'entrée d'historique avant de rendre la main.
-  const leave = useCallback((done) => {
-    if (historyOwned.current) {
-      historyOwned.current = false
-      window.history.back()
-    }
-    done()
-  }, [])
+  // "Continuer" : on annule la navigation et on reste dans le player.
+  const stay = useCallback(() => {
+    setConfirmQuit(false)
+    if (blocked) blocker.reset()
+  }, [blocked, blocker])
+
+  // "Quitter" : on laisse filer la navigation bloquée (si c'est un geste retour)
+  // puis on rend la main au parent.
+  const quit = useCallback(() => {
+    setConfirmQuit(false)
+    if (blocked) blocker.proceed()
+    onClose()
+  }, [blocked, blocker, onClose])
 
   // ── Wake Lock : maintien de l'écran allumé ─────────────────────────────────
   const acquireWake = useCallback(async () => {
@@ -170,8 +188,10 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
   }, [])
 
   // Repose l'ancre temporelle (changement de step ou reset du step courant).
+  // Réarme aussi le bip : un step redémarré doit re-signaler sa fin.
   const reanchor = useCallback(() => {
     anchor.current = { start: Date.now(), pausedAccum: 0, pausedAt: paused ? Date.now() : 0 }
+    beepedRef.current = false
   }, [paused])
 
   // Réinitialise l'ancre à chaque changement de step (écriture de ref
@@ -211,14 +231,19 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
     primeStep(cursor)
   }, [reanchor, primeStep, cursor])
 
-  // ── Boucle de tick des steps auto (250 ms), signal à zéro ──────────────────
+  // ── Boucle de tick des steps auto ──────────────────────────────────────────
+  // Le bip est joué BEEP_LEAD_SEC avant la fin réelle (une seule fois par step),
+  // la bascule vers le step suivant reste déclenchée à l'échéance.
   useEffect(() => {
     if (finished || !isAuto || paused) return undefined
     const id = setInterval(() => {
       const elapsed = stepElapsedMs() / 1000
       const remaining = step.duration_sec - elapsed
-      if (remaining <= 0) {
+      if (remaining <= BEEP_LEAD_SEC && !beepedRef.current) {
+        beepedRef.current = true
         if (soundOn) beeps?.play?.(step.kind === 'work' ? 'double' : 'single')
+      }
+      if (remaining <= 0) {
         goNext()
       } else {
         setDisplay({
@@ -226,7 +251,7 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
           fraction: Math.max(0, Math.min(1, 1 - elapsed / step.duration_sec)),
         })
       }
-    }, 250)
+    }, TICK_MS)
     return () => clearInterval(id)
   }, [finished, isAuto, paused, step, stepElapsedMs, soundOn, beeps, goNext])
 
@@ -249,7 +274,7 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
 
   // ── Habillage plein écran ──────────────────────────────────────────────────
   const shell = {
-    position: 'fixed', inset: 0, zIndex: 2000,
+    position: 'fixed', inset: 0, zIndex: PLAYER_Z,
     bgcolor: 'background.default',
     display: 'flex', flexDirection: 'column',
     pt: 'max(12px, env(safe-area-inset-top, 0px))',
@@ -282,13 +307,13 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
           </Box>
 
           <Button
-            fullWidth variant="contained" onClick={() => leave(onValidate)}
+            fullWidth variant="contained" onClick={onValidate}
             sx={{ mt: 4, height: 52, borderRadius: '26px', textTransform: 'none', fontWeight: 700, fontSize: '1rem', boxShadow: 'none', bgcolor: ACCENT, '&:hover': { bgcolor: ACCENT } }}
           >
             Valider la séance
           </Button>
           <Button
-            fullWidth variant="text" onClick={() => leave(onClose)}
+            fullWidth variant="text" onClick={onClose}
             sx={{ mt: 1, height: 46, borderRadius: '23px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
           >
             Fermer
@@ -359,7 +384,7 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
                     ? 'En place pour le premier exercice'
                     : isRest
                       ? (next ? `Avant : ${next.exercise?.name}` : 'Dernière récupération')
-                      : [`Série ${step.setIndex}/${step.setCount}`, step.side && `Côté ${step.side}`].filter(Boolean).join(' · ')}
+                      : [progressLabel(step), step.side && `Côté ${step.side}`].filter(Boolean).join(' · ')}
                 </Typography>
               )}
 
@@ -443,8 +468,11 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
       </Box>
 
       <Dialog
-        open={confirmQuit}
-        onClose={() => setConfirmQuit(false)}
+        open={confirmOpen}
+        onClose={stay}
+        // Le Dialog se rend dans son propre portail : sans ce zIndex il s'ouvre
+        // derrière la coque opaque du player.
+        sx={{ zIndex: PLAYER_Z + 100 }}
         slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Quitter la séance ?</DialogTitle>
@@ -452,8 +480,8 @@ const RenfoPlayer = ({ blocks, beeps, onClose, onValidate }) => {
           <DialogContentText>La progression sera perdue.</DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmQuit(false)} color="inherit">Continuer</Button>
-          <Button onClick={() => leave(onClose)} variant="contained" sx={{ bgcolor: ACCENT, '&:hover': { bgcolor: ACCENT } }}>Quitter</Button>
+          <Button onClick={stay} color="inherit">Continuer</Button>
+          <Button onClick={quit} variant="contained" sx={{ bgcolor: ACCENT, '&:hover': { bgcolor: ACCENT } }}>Quitter</Button>
         </DialogActions>
       </Dialog>
     </Box>,

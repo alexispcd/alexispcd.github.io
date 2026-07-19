@@ -311,7 +311,9 @@ export const EXERCISES: Exercise[] = [
     name: "Mollet excentrique",
     description: "Monte sur deux pointes, transfère sur une jambe et descends très lentement le talon sous le niveau du pied.",
     category: "pied_mollets", equipment: "none", mode: "reps", unilateral: true,
-    sets: 3, reps: 12, rest_sec: 40,
+    // Injecté d'office dans le bloc Force par strength.ts (withMandatoryCalf) :
+    // le modèle ne le choisit jamais. Dosage bas, le geste est lent.
+    sets: 3, reps: 10, rest_sec: 40,
   },
   {
     slug: "arche_pied",

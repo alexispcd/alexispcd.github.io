@@ -86,15 +86,24 @@ function validateSteps(s: PlanSession, tag: string, errors: string[]): void {
 }
 
 // ── Renfo (catalogue + structure 4 blocs) ─────────────────────────────────────
-const RENFO_MIN_EXERCISES = 10
-const RENFO_MAX_EXERCISES = 13
-const RENFO_BASE_MIN_MIN = 40
-const RENFO_BASE_MAX_MIN = 50
+//
+// Ces bornes portent sur la SORTIE MODÈLE, pas sur la séance finale. Elles sont
+// volontairement décalées d'un cran vers le bas parce que le code injecte ensuite
+// le mollet excentrique dans le bloc Force (strength.ts, withMandatoryCalf) :
+// +1 exercice, et jusqu'à +4 min (10 reps × 3 s × 2 côtés + 20 s de repos, sur un
+// bloc à 3 tours). On valide donc 12-16 exercices / 36-46 min pour une séance
+// finale de 13-17 exercices / 40-50 min. Valider APRÈS injection ferait remonter
+// des erreurs sur du contenu que le modèle n'a pas produit : illisible en debug.
+const RENFO_MIN_EXERCISES = 12
+const RENFO_MAX_EXERCISES = 16
+const RENFO_BASE_MIN_MIN = 36
+const RENFO_BASE_MAX_MIN = 46
+const RENFO_ROUNDS = [2, 3]
 
 /**
  * Valide le strength_content d'une séance renfo (sortie modèle, base ~45 min) :
- * exactement 4 blocs dans l'ordre, slugs du catalogue, catégories cohérentes par
- * bloc, bornes (sets 1-5, rest 0-120), 10 à 13 exercices, durée estimée 40-50 min.
+ * exactement 4 blocs dans l'ordre, "rounds" à 2 ou 3, slugs du catalogue,
+ * catégories cohérentes par bloc, reps XOR duration_sec, et les bornes ci-dessus.
  */
 export function validateStrengthContent(content: unknown, tag: string, errors: string[]): void {
   if (!content || typeof content !== "object") {
@@ -116,6 +125,11 @@ export function validateStrengthContent(content: unknown, tag: string, errors: s
       return
     }
     totalExos += exos.length
+
+    const rounds = (bU as { rounds?: unknown }).rounds
+    if (!RENFO_ROUNDS.includes(rounds as number)) {
+      errors.push(`${btag} : "rounds" doit valoir ${RENFO_ROUNDS.join(" ou ")} (nombre de tours du circuit)`)
+    }
 
     const cats: ExerciseCategory[] = []
     exos.forEach((exU, ei) => {
@@ -142,14 +156,6 @@ export function validateStrengthContent(content: unknown, tag: string, errors: s
       }
       if (hasDur && (typeof ex.duration_sec !== "number" || (ex.duration_sec as number) <= 0)) {
         errors.push(`${etag} (${ex.slug}) : duration_sec invalide`)
-      }
-      const sets = ex.sets
-      if (typeof sets !== "number" || !Number.isInteger(sets) || sets < 1 || sets > 5) {
-        errors.push(`${etag} (${ex.slug}) : sets doit être un entier entre 1 et 5`)
-      }
-      const rest = ex.rest_sec
-      if (typeof rest !== "number" || rest < 0 || rest > 120) {
-        errors.push(`${etag} (${ex.slug}) : rest_sec doit être entre 0 et 120`)
       }
     })
 
