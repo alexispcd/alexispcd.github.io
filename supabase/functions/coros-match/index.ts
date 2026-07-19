@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { anthropicWithCoros } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
-import { dayTs, mondayOf, sundayOf } from "../_shared/training/weeks.ts"
+import { dayTs, mondayOf, sundayOf, todayISO } from "../_shared/training/weeks.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -14,7 +14,6 @@ const TZ = "Europe/Paris"
 const RUNNING_SPORT_CODE = 100
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
-const todayISO = () => new Date().toISOString().split("T")[0]
 
 /** yyyy-MM-dd → yyyyMMdd (format Coros). */
 const toCompact = (iso: string) => iso.replace(/-/g, "")

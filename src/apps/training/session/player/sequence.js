@@ -4,9 +4,10 @@
 //
 // Module pur, sans dépendance React, testable isolément.
 //
-// Chaque série d'un exercice produit : un (ou deux, si duration unilatéral) step
-// de travail, suivi d'un step de repos de `rest_sec`. Le tout dernier repos de
-// la séance est omis (rien à récupérer après la dernière série).
+// La séquence s'ouvre sur un step 'prep' (sas de mise en place). Ensuite, chaque
+// série d'un exercice produit : un (ou deux, si duration unilatéral) step de
+// travail, suivi d'un step de repos de `rest_sec`. Le tout dernier repos de la
+// séance est omis (rien à récupérer après la dernière série).
 
 // Miroir de renfo.js / strength.ts : coût estimé d'une répétition en secondes.
 // Sert à donner une durée à un step 'reps' (avancé manuellement) pour que la
@@ -16,8 +17,17 @@ const PER_REP_SEC = 3
 // Ordre des côtés pour un exercice unilatéral (gauche puis droite).
 const SIDES = ['gauche', 'droite']
 
-/** Durée (s) d'un step : repos/duration = décompte ; reps = estimation. */
+// Sas de mise en place en tête de séance : le temps de poser le téléphone et de
+// se placer avant le premier exercice.
+const PREP_SEC = 10
+
+/**
+ * Durée (s) d'un step : repos/duration = décompte ; reps = estimation.
+ * Le sas de préparation est exclu pour que le total reste comparable à
+ * l'estimateur de renfo.js, qui ne connaît que le travail et les repos.
+ */
 const stepSeconds = (step) => {
+  if (step.kind === 'prep') return 0
   if (step.advance === 'auto') return step.duration_sec ?? 0
   return (step.reps ?? 0) * PER_REP_SEC
 }
@@ -71,8 +81,15 @@ export const buildSequence = (blocks) => {
     }
   }
 
-  // 2) Flatten : steps de travail + repos, sauf après la toute dernière série.
+  // 2) Flatten : préparation + steps de travail + repos, sauf après la toute
+  //    dernière série. Pas de préparation si la séance est vide.
   const steps = []
+  if (units.length > 0) {
+    steps.push({
+      kind: 'prep', advance: 'auto', duration_sec: PREP_SEC,
+      exercise: null, theme: null, setIndex: null, setCount: null, side: null,
+    })
+  }
   units.forEach((unit, i) => {
     for (const w of unit.workSteps) steps.push(w)
     const isLast = i === units.length - 1

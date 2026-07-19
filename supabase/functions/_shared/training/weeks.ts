@@ -1,10 +1,26 @@
 // Découpage calendaire des semaines d'entraînement (aligné lundi→dimanche) et
 // plages de jours par zone (méthodo). Module pur de dates, partagé par
-// generate-plan / regenerate-plan / coros-match / validate.
+// generate-plan / regenerate-plan / regenerate-renfo / coros-match / validate.
 //
 // Une séance appartient à une SEMAINE + une ZONE (plage de jours), plus à un
 // jour précis. La scheduled_date reste renseignée (tri, fenêtre coros-match)
 // mais elle est indicative : elle doit simplement tomber dans la plage de sa zone.
+
+// Fuseau de référence de l'utilisateur. Les Edge Functions tournent en UTC :
+// dériver "aujourd'hui" d'un toISOString() renvoie la veille entre minuit et 02h
+// à Paris (UTC+1/+2), ce qui décale toutes les comparaisons de dates d'un jour.
+const USER_TZ = "Europe/Paris"
+// en-CA formate en yyyy-MM-dd, le format calendaire utilisé partout ici.
+const USER_DATE_FMT = new Intl.DateTimeFormat("en-CA", { timeZone: USER_TZ })
+
+/**
+ * Date calendaire du jour (yyyy-MM-dd) dans le fuseau de l'utilisateur.
+ * À utiliser pour TOUTE comparaison de dates calendaires : jamais
+ * `new Date().toISOString()`.
+ */
+export function todayISO(): string {
+  return USER_DATE_FMT.format(new Date())
+}
 
 /** yyyy-MM-dd → timestamp UTC minuit, ou NaN. */
 export function dayTs(d: unknown): number {

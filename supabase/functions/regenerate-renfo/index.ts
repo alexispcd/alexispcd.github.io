@@ -8,6 +8,7 @@ import {
   bonusKindForWeek, detectBonusKind, EXERCISE_INDEX, type ExerciseCategory,
 } from "../_shared/training/exercises.ts"
 import type { StrengthBlock, StrengthContent } from "../_shared/training/types.ts"
+import { todayISO } from "../_shared/training/weeks.ts"
 import {
   buildRenfoSystemPrompt, buildRenfoUserPrompt,
   type PastRenfo, type RenfoTarget,
@@ -22,7 +23,6 @@ const MODEL = "claude-sonnet-4-6"
 const MAX_TOKENS = 8000
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
-const todayISO = () => new Date().toISOString().split("T")[0]
 
 interface RenfoOut {
   id: string

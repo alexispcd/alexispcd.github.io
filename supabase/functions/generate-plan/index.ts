@@ -9,7 +9,7 @@ import { anthropicSimple } from "../_shared/anthropic.ts"
 import { validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
-import { computeWeekBounds, dayTs, type WeekBounds } from "../_shared/training/weeks.ts"
+import { computeWeekBounds, dayTs, todayISO, type WeekBounds } from "../_shared/training/weeks.ts"
 import type { GeneratedPlan, GenerateInput } from "./types.ts"
 
 const CORS = {
@@ -28,7 +28,6 @@ const MAX_TOKENS = 8000
 const TASK_TIMEOUT_MS = 120_000
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
-const todayISO = () => new Date().toISOString().split("T")[0]
 
 /** Date de début effective : start_date fournie (>= aujourd'hui) sinon aujourd'hui. */
 function planStartDate(input: GenerateInput, todayStr: string): string {
@@ -64,7 +63,7 @@ function validateInput(input: unknown): string | null {
   const r = i.race
   if (!r || typeof r !== "object") return "race requis"
   if (!r.name) return "race.name requis"
-  if (!r.date || Number.isNaN(new Date(r.date).getTime())) return "race.date invalide"
+  if (!r.date || Number.isNaN(dayTs(r.date))) return "race.date invalide"
   if (typeof r.distance_m !== "number" || r.distance_m <= 0) return "race.distance_m invalide"
 
   const f = i.fitness_snapshot
@@ -72,9 +71,9 @@ function validateInput(input: unknown): string | null {
   if (f.source !== "coros" && f.source !== "manual") return "fitness_snapshot.source invalide"
   if (typeof f.vma_kmh !== "number" || f.vma_kmh <= 0) return "fitness_snapshot.vma_kmh invalide"
 
+  // Comparaisons sur la date calendaire seule (dayTs), jamais sur un instant.
   const todayStr = todayISO()
-  const today = new Date(todayStr).getTime()
-  if (new Date(r.date).getTime() < today) return "race.date est dans le passé"
+  if (dayTs(r.date) < dayTs(todayStr)) return "race.date est dans le passé"
 
   if (i.start_date != null) {
     if (Number.isNaN(dayTs(i.start_date))) return "start_date invalide"

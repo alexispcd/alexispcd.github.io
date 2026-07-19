@@ -1,6 +1,6 @@
 import { Box, TextField, Typography } from '@mui/material'
 import { SectionLabel } from '../WizardParts'
-import { nextMondayISO } from '../draft'
+import { nextMondayISO, todayISODate } from '../draft'
 
 // Presets de distance (mètres). 'custom' → champ libre en mètres.
 const PRESETS = [
@@ -16,8 +16,6 @@ const START_OPTIONS = [
   { label: 'Lundi prochain', value: 'monday' },
   { label: 'Personnalisée', value: 'custom' },
 ]
-
-const todayISO = () => new Date().toISOString().split('T')[0]
 
 const Choice = ({ on, onClick, children }) => (
   <Box
@@ -58,7 +56,7 @@ const StepRace = ({ draft, patch }) => (
       type="date"
       value={draft.date}
       onChange={(e) => patch({ date: e.target.value })}
-      slotProps={{ htmlInput: { min: todayISO() } }}
+      slotProps={{ htmlInput: { min: todayISODate() } }}
     />
 
     <SectionLabel>Départ de l'entraînement</SectionLabel>
@@ -76,7 +74,7 @@ const StepRace = ({ draft, patch }) => (
         value={draft.startCustom}
         onChange={(e) => patch({ startCustom: e.target.value })}
         sx={{ mt: 1.25 }}
-        slotProps={{ htmlInput: { min: todayISO(), max: draft.date || undefined } }}
+        slotProps={{ htmlInput: { min: todayISODate(), max: draft.date || undefined } }}
       />
     )}
     {draft.startChoice === 'monday' && (

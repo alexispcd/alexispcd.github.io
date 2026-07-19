@@ -7,12 +7,30 @@ import { buildSequence } from './sequence.js'
 
 const kinds = (steps) => steps.map((s) => s.kind)
 
+// La séquence s'ouvre toujours sur le sas de préparation : les assertions de
+// forme portent sur la suite.
+const afterPrep = (steps) => steps.slice(1)
+
+test('préparation : step auto de 10 s en tête, hors durée totale', () => {
+  const { steps, totalSeconds } = buildSequence([
+    { theme: 'Gainage', exercises: [{ name: 'Planche', duration_sec: 45, sets: 1, rest_sec: 30 }] },
+  ])
+  const [prep] = steps
+  assert.equal(prep.kind, 'prep')
+  assert.equal(prep.advance, 'auto')
+  assert.equal(prep.duration_sec, 10)
+  assert.equal(prep.exercise, null)
+  assert.equal(prep.index, 0)
+  // Le sas n'entre pas dans l'estimation (alignée sur l'estimateur renfo.js).
+  assert.equal(totalSeconds, 45)
+})
+
 test('exercice reps : un step travail manuel par série + repos entre les séries', () => {
   const { steps } = buildSequence([
     { theme: 'Gainage', exercises: [{ name: 'Squats', reps: 12, sets: 3, rest_sec: 30 }] },
   ])
-  // work, rest, work, rest, work (dernier repos omis).
-  assert.deepEqual(kinds(steps), ['work', 'rest', 'work', 'rest', 'work'])
+  // prep, puis work, rest, work, rest, work (dernier repos omis).
+  assert.deepEqual(kinds(steps), ['prep', 'work', 'rest', 'work', 'rest', 'work'])
   const work = steps.filter((s) => s.kind === 'work')
   assert.equal(work.length, 3)
   work.forEach((w, i) => {
@@ -30,8 +48,8 @@ test('exercice duration : step travail auto avec décompte', () => {
   const { steps } = buildSequence([
     { theme: 'Gainage', exercises: [{ name: 'Planche', duration_sec: 45, sets: 2, rest_sec: 20 }] },
   ])
-  assert.deepEqual(kinds(steps), ['work', 'rest', 'work'])
-  const [w1, rest, w2] = steps
+  assert.deepEqual(kinds(steps), ['prep', 'work', 'rest', 'work'])
+  const [w1, rest, w2] = afterPrep(steps)
   assert.equal(w1.advance, 'auto')
   assert.equal(w1.duration_sec, 45)
   assert.equal(w1.side, null)
@@ -46,24 +64,24 @@ test('unilatéral : la duration double en deux steps gauche puis droite, sans re
     { theme: 'Fessiers', exercises: [{ name: 'Fentes', duration_sec: 30, sets: 2, rest_sec: 15, unilateral: true }] },
   ])
   // (gauche, droite, repos) × 2, dernier repos omis.
-  assert.deepEqual(kinds(steps), ['work', 'work', 'rest', 'work', 'work'])
+  assert.deepEqual(kinds(steps), ['prep', 'work', 'work', 'rest', 'work', 'work'])
   assert.deepEqual(steps.filter((s) => s.kind === 'work').map((s) => s.side), [
     'gauche', 'droite', 'gauche', 'droite',
   ])
   // Pas de repos entre les deux côtés d'une même série.
-  assert.equal(steps[0].kind, 'work')
   assert.equal(steps[1].kind, 'work')
+  assert.equal(steps[2].kind, 'work')
   // Les deux côtés partagent le même numéro de série.
-  assert.equal(steps[0].setIndex, 1)
   assert.equal(steps[1].setIndex, 1)
+  assert.equal(steps[2].setIndex, 1)
 })
 
 test('reps unilatéral : pas de doublage (spec limite le doublage à duration)', () => {
   const { steps } = buildSequence([
     { theme: 'Fessiers', exercises: [{ name: 'Step-up', reps: 10, sets: 1, rest_sec: 0, unilateral: true }] },
   ])
-  assert.deepEqual(kinds(steps), ['work'])
-  assert.equal(steps[0].side, null)
+  assert.deepEqual(kinds(steps), ['prep', 'work'])
+  assert.equal(steps[1].side, null)
 })
 
 test('le tout dernier repos de la séance est omis, y compris entre exercices', () => {
@@ -77,7 +95,7 @@ test('le tout dernier repos de la séance est omis, y compris entre exercices', 
     },
   ])
   // work(A), rest, work(B) — le repos après B (dernier) est omis.
-  assert.deepEqual(kinds(steps), ['work', 'rest', 'work'])
+  assert.deepEqual(kinds(steps), ['prep', 'work', 'rest', 'work'])
   assert.equal(steps.at(-1).exercise.name, 'B')
 })
 
@@ -85,14 +103,14 @@ test('repos nul (rest_sec 0/absent) : aucun step de repos inséré', () => {
   const { steps } = buildSequence([
     { theme: 'Bloc', exercises: [{ name: 'A', duration_sec: 30, sets: 3, rest_sec: 0 }] },
   ])
-  assert.deepEqual(kinds(steps), ['work', 'work', 'work'])
+  assert.deepEqual(kinds(steps), ['prep', 'work', 'work', 'work'])
 })
 
 test('index global continu sur toute la séquence', () => {
   const { steps } = buildSequence([
     { theme: 'Bloc', exercises: [{ name: 'A', reps: 10, sets: 2, rest_sec: 15 }] },
   ])
-  assert.deepEqual(steps.map((s) => s.index), [0, 1, 2])
+  assert.deepEqual(steps.map((s) => s.index), [0, 1, 2, 3])
 })
 
 test('durée totale : travail (reps × 3s, duration) + repos', () => {

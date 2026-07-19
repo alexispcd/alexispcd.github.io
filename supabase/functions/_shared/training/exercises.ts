@@ -245,19 +245,22 @@ export const EXERCISES: Exercise[] = [
   },
 
   // ── Proprioception ────────────────────────────────────────────────────────
+  // Pas d'équilibre unipodal statique : peu de transfert vers la course et
+  // pénible à dérouler dans le player. La proprioception passe par des
+  // exercices dynamiques (réception, appui contrôlé, réactivité de cheville).
   {
-    slug: "equilibre_unipodal",
-    name: "Équilibre sur une jambe",
-    description: "Debout sur une jambe, genou légèrement fléchi, stabilise le pied et le bassin. Regard fixe devant toi.",
-    category: "proprioception", equipment: "none", mode: "duration", unilateral: true,
-    sets: 2, duration_sec: 45, rest_sec: 20,
+    slug: "corde_imaginaire",
+    name: "Corde à sauter imaginaire",
+    description: "Sauts légers sur place, pieds joints, en poussant depuis les chevilles. Reste sur l'avant du pied, contact au sol bref.",
+    category: "proprioception", equipment: "none", mode: "duration", unilateral: false,
+    sets: 3, duration_sec: 40, rest_sec: 30,
   },
   {
-    slug: "equilibre_yeux_fermes",
-    name: "Équilibre une jambe yeux fermés",
-    description: "Sur une jambe, ferme les yeux et cherche la stabilité par petits ajustements du pied. Plus exigeant pour l'équilibre.",
-    category: "proprioception", equipment: "none", mode: "duration", unilateral: true,
-    sets: 2, duration_sec: 30, rest_sec: 25,
+    slug: "marche_pointes",
+    name: "Marche sur pointes",
+    description: "Marche sur place ou en aller-retour sur la pointe des pieds, talons hauts et bassin gainé. Pas courts et réguliers.",
+    category: "proprioception", equipment: "none", mode: "duration", unilateral: false,
+    sets: 2, duration_sec: 45, rest_sec: 30,
   },
   {
     slug: "equilibre_reach",

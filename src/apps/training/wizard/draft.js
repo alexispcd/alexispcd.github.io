@@ -6,10 +6,13 @@ export const resolveDistanceM = (d) =>
     ? Number(d.distanceCustomM) || 0
     : (d.distancePreset ?? 0)
 
+// Date CALENDAIRE locale. toISOString() convertirait minuit local en UTC et
+// reculerait d'un jour à l'est de Greenwich (Europe/Paris) : aujourd'hui serait
+// envoyé comme hier et rejeté par generate-plan.
 const toISO = (date) => {
   const x = new Date(date)
-  x.setHours(0, 0, 0, 0)
-  return x.toISOString().split('T')[0]
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`
 }
 
 /** Date d'aujourd'hui (ISO, minuit local). */

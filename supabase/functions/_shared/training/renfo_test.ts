@@ -30,7 +30,7 @@ const oddBase = (): StrengthBlock[] => [
   block("Échauffement", ["rotations_hanches", "chat_vache", "squats_air"]),
   block("Force", ["pont_fessier", "squat_bulgare", "souleve_terre_unipodal", "hip_thrust_chaise"]),
   block("Gainage", ["planche", "planche_laterale", "dead_bug"]),
-  block("Bonus", ["equilibre_unipodal", "montees_mollets_unipodal", "excentrique_mollet"]),
+  block("Bonus", ["corde_imaginaire", "montees_mollets_unipodal", "excentrique_mollet"]),
 ]
 // Base valide semaine PAIRE (bonus haut du corps).
 const evenBase = (): StrengthBlock[] => [
@@ -196,7 +196,7 @@ Deno.test("validation : reps ET duration_sec ensemble", () => {
 })
 Deno.test("validation : bloc bonus mélangé refusé", () => {
   const b = oddBase()
-  b[3].exercises = [ref("equilibre_unipodal"), ref("pompes")] as never
+  b[3].exercises = [ref("corde_imaginaire"), ref("pompes")] as never
   assert(errs({ blocks: b }).some((e) => e.includes("bonus")))
 })
 Deno.test("validation : total d'exercices hors bornes", () => {

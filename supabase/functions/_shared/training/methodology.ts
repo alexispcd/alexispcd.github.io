@@ -131,7 +131,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
               { "theme": "Échauffement", "exercises": [ { "slug": "rotations_hanches", "sets": 1, "duration_sec": 40, "rest_sec": 15 }, { "slug": "squats_air", "sets": 1, "reps": 20, "rest_sec": 20 } ] },
               { "theme": "Force", "exercises": [ { "slug": "pont_fessier", "sets": 3, "reps": 15, "rest_sec": 60 }, { "slug": "squat_bulgare", "sets": 3, "reps": 10, "rest_sec": 60 }, { "slug": "souleve_terre_unipodal", "sets": 3, "reps": 10, "rest_sec": 60 } ] },
               { "theme": "Gainage", "exercises": [ { "slug": "planche", "sets": 3, "duration_sec": 60, "rest_sec": 30 }, { "slug": "planche_laterale", "sets": 3, "duration_sec": 40, "rest_sec": 30 } ] },
-              { "theme": "Proprioception et pied", "exercises": [ { "slug": "equilibre_unipodal", "sets": 2, "duration_sec": 45, "rest_sec": 20 }, { "slug": "montees_mollets_unipodal", "sets": 3, "reps": 12, "rest_sec": 45 } ] }
+              { "theme": "Proprioception et pied", "exercises": [ { "slug": "corde_imaginaire", "sets": 3, "duration_sec": 40, "rest_sec": 30 }, { "slug": "montees_mollets_unipodal", "sets": 3, "reps": 12, "rest_sec": 45 } ] }
             ]
           }
         }

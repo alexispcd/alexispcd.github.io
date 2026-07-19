@@ -6,7 +6,7 @@ import { buildPlanSystemPrompt, buildRetryPrompt } from "../_shared/training/met
 import { validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
-import { computeWeekBounds, dayTs, type WeekBounds } from "../_shared/training/weeks.ts"
+import { computeWeekBounds, dayTs, todayISO, type WeekBounds } from "../_shared/training/weeks.ts"
 import type { GeneratedPlan } from "../_shared/training/types.ts"
 import { buildRegenChunkPrompt, formatHistory } from "./prompt.ts"
 
@@ -21,7 +21,6 @@ const MAX_TOKENS = 8000
 const TASK_TIMEOUT_MS = 120_000
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
-const todayISO = () => new Date().toISOString().split("T")[0]
 
 async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()

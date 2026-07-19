@@ -36,6 +36,7 @@ import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 import RpeForm from './RpeForm'
 import RenfoPlayer from './player/RenfoPlayer'
+import { createBeeps } from './player/beeps'
 import { emptyFeedback, toFeedbackPayload } from './feedback'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
@@ -78,7 +79,7 @@ const SessionPage = () => {
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
 
-  const [player, setPlayer] = useState(null) // { audioCtx } quand le player est ouvert
+  const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
   const flash = (message, severity = 'error') => setSnack({ message, severity })
   const backToDashboard = () => navigate(`/training/plan/${planId}`)
@@ -133,16 +134,15 @@ const SessionPage = () => {
     setRenfoFeedbackOpen(true)
   }
 
-  // Player renfo : l'AudioContext est créé DANS le geste utilisateur (contrainte
-  // iOS) puis confié au player, qui le referme à sa fermeture.
+  // Player renfo : les bips sont créés et débloqués DANS le geste utilisateur
+  // (contrainte iOS) puis confiés au player, qui les libère à sa fermeture.
   const startPlayer = () => {
-    let audioCtx
+    let beeps
     try {
-      const Ctor = window.AudioContext ?? window.webkitAudioContext
-      audioCtx = Ctor ? new Ctor() : null
-      audioCtx?.resume?.().catch(() => {})
-    } catch { audioCtx = null }
-    setPlayer({ audioCtx })
+      beeps = createBeeps()
+      beeps.unlock()
+    } catch { beeps = null }
+    setPlayer({ beeps })
   }
 
   const closePlayer = () => setPlayer(null)
@@ -498,7 +498,7 @@ const SessionPage = () => {
       {player && (
         <RenfoPlayer
           blocks={session.strength_content?.blocks}
-          audioCtx={player.audioCtx}
+          beeps={player.beeps}
           onClose={closePlayer}
           onValidate={validateFromPlayer}
         />

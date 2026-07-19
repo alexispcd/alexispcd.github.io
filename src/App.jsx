@@ -17,7 +17,7 @@ import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 
 const AppLayout = () => {
-  const { dark, setDark, user, headerActions } = useAppCtx()
+  const { dark, setDark, user, headerActions, overlay } = useAppCtx()
   const matches = useMatches()
   const lastMatch = matches.at(-1)
   const handle = lastMatch?.handle ?? {}
@@ -38,16 +38,21 @@ const AppLayout = () => {
       <Box sx={{ height: '100%', overflow: 'hidden' }}>
         <Outlet />
       </Box>
-      <AppHeader
-        toolName={handle.title ?? null}
-        actions={headerActions}
-        showBack={showBack}
-        onBack={handleBack}
-        dark={dark}
-        setDark={setDark}
-        user={user}
-        sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
-      />
+      {/* Masqué pendant qu'un overlay plein écran (player renfo) occupe l'écran :
+          le header flotte au-dessus de tout et son bouton retour se superpose aux
+          contrôles de l'overlay. */}
+      {!overlay && (
+        <AppHeader
+          toolName={handle.title ?? null}
+          actions={headerActions}
+          showBack={showBack}
+          onBack={handleBack}
+          dark={dark}
+          setDark={setDark}
+          user={user}
+          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
+        />
+      )}
     </Box>
   )
 }
@@ -72,6 +77,8 @@ const App = () => {
   const [user, setUser] = useState(null)
   const [dark, setDark] = useDarkMode(user)
   const [headerActions, setHeaderActions] = useState([])
+  // Vrai quand un overlay plein écran est monté : le header applicatif s'efface.
+  const [overlay, setOverlay] = useState(false)
   const theme = useMemo(() => createTheme(dark), [dark])
 
   useEffect(() => {
@@ -85,7 +92,7 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user, headerActions, setHeaderActions }}>
+      <AppCtx.Provider value={{ dark, setDark, user, headerActions, setHeaderActions, overlay, setOverlay }}>
         <AuthGate>
           <RouterProvider router={router} />
         </AuthGate>
