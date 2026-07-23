@@ -117,15 +117,34 @@ async function handleRequest(req: Request): Promise<Response> {
   )
 
   // 2. Corps
+  //    coros_activity_ids : liste ordonnée de labelId Coros (1 à 3). Compat
+  //    descendante : si le tableau est absent mais coros_activity_id présent, on
+  //    le traite comme un tableau d'un seul élément. Aucun des deux = complétion
+  //    sans Coros (renfo ou course non liée).
   let sessionId: string
-  let corosActivityId: string | null
+  let corosActivityIds: string[] | null
   let feedback: Feedback | null
   try {
     const body = await req.json()
     sessionId = body.session_id
-    corosActivityId = body.coros_activity_id ?? null
     feedback = parseFeedback(body.feedback)
     if (!sessionId) throw new Error("session_id requis")
+
+    const rawIds = body.coros_activity_ids
+    if (rawIds != null) {
+      if (!Array.isArray(rawIds)) throw new Error("coros_activity_ids doit être un tableau")
+      // Garde-fou CPU : chaque activité coûte un appel MCP séquentiel.
+      if (rawIds.length === 0) throw new Error("coros_activity_ids ne peut pas être vide")
+      if (rawIds.length > 3) throw new Error("coros_activity_ids limité à 3 activités")
+      if (!rawIds.every((x: unknown) => typeof x === "string" && x.length > 0)) {
+        throw new Error("coros_activity_ids doit contenir des identifiants non vides")
+      }
+      corosActivityIds = rawIds as string[]
+    } else if (body.coros_activity_id) {
+      corosActivityIds = [body.coros_activity_id as string]
+    } else {
+      corosActivityIds = null
+    }
   } catch (err) {
     return json(400, { error: "Corps invalide", detail: String(err) })
   }
@@ -147,7 +166,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // 4. Cas sans Coros (renfo ou course non liée) : pas de laps à comparer.
   //    On persiste le ressenti et, s'il est présent, un conseil fondé dessus.
-  if (!corosActivityId) {
+  if (!corosActivityIds) {
     return await manualComplete(supabaseAdmin, sessionId, session.type, feedback, feedbackFields)
   }
 
@@ -173,22 +192,45 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(503, { error: "Coros authentication required", detail })
   }
 
-  // 7. UN appel MCP : queryActivityLapData uniquement. Les laps bruts sont
-  //    parsés en code (le modèle n'est jamais la source des valeurs numériques).
-  const lapsResult = await fetchLaps(corosToken, corosActivityId, steps.length)
-  if ("failure" in lapsResult) {
-    // Données inexploitables : on n'écrit RIEN, la séance reste "planned".
-    return json(422, { error: "Données Coros inexploitables", detail: lapsResult.failure })
+  // 7. Un appel MCP (queryActivityLapData) PAR activité, en SÉQUENTIEL pour rester
+  //    sous la limite CPU Supabase. Les laps bruts sont parsés en code (le modèle
+  //    n'est jamais la source des valeurs numériques). Si une seule activité
+  //    échoue, on n'écrit RIEN : pas de complétion partielle.
+  const fetched: Array<{ id: string; laps: Lap[]; kmLaps: Lap[] | null; startTimestamp: number | null }> = []
+  for (const id of corosActivityIds) {
+    const lapsResult = await fetchLaps(corosToken, id, steps.length)
+    if ("failure" in lapsResult) {
+      // Données inexploitables : la séance reste "planned", on nomme l'activité fautive.
+      return json(422, { error: "Données Coros inexploitables", detail: `Activité ${id} : ${lapsResult.failure}` })
+    }
+    fetched.push({ id, ...lapsResult })
   }
-  const laps = lapsResult.laps
+
+  // 7b. Ordonner les activités par startTimestamp croissant AVANT concaténation :
+  //     l'ordre d'enchaînement des laps ne doit pas dépendre de l'ordre d'envoi du
+  //     client. Si un startTimestamp manque, on conserve l'ordre reçu et on logge.
+  if (fetched.length > 1) {
+    if (fetched.every((f) => f.startTimestamp != null)) {
+      fetched.sort((a, b) => (a.startTimestamp as number) - (b.startTimestamp as number))
+    } else {
+      console.warn("[complete-session] startTimestamp indisponible sur au moins une activité, ordre d'envoi conservé")
+    }
+  }
+
+  const orderedIds = fetched.map((f) => f.id)
+  // Concaténation des laps bout à bout dans l'ordre chronologique.
+  const laps = fetched.flatMap((f) => f.laps)
 
   // 8. Matching + comparaison (100% en code)
   const { actualLaps, comparisons } = matchStepsToLaps(steps, laps)
 
   // Laps auto-km : même forme que actual_laps (lap_index, avg_pace_sec, avg_hr…)
   // mais sans rattachement à un step. Purement visuel côté client.
-  const kmLaps = lapsResult.kmLaps
-    ? lapsResult.kmLaps.map((l, i) => ({ lap_index: i, step_index: null, ...l }))
+  // Avec PLUSIEURS activités on écrit null : les groupes auto-kilomètre repartent
+  // de zéro à chaque activité, leur concaténation produirait des splits faux.
+  const single = fetched.length === 1 ? fetched[0] : null
+  const kmLaps = single?.kmLaps
+    ? single.kmLaps.map((l, i) => ({ lap_index: i, step_index: null, ...l }))
     : null
 
   // 9. Analyse IA (mode simple, pas de MCP). L'échec ne bloque pas la complétion.
@@ -197,17 +239,20 @@ async function handleRequest(req: Request): Promise<Response> {
     session.title,
     steps,
     comparisons,
-    lapsResult.kmLaps,
+    single?.kmLaps ?? null,
     feedback,
+    fetched.length,
   )
 
   const analysis = { verdict, advice, comparisons }
 
-  // 10. Mise à jour de la séance
+  // 10. Mise à jour de la séance. On persiste la liste ordonnée et, pour la compat,
+  //     coros_activity_id = premier identifiant.
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from("training_sessions")
     .update({
-      coros_activity_id: corosActivityId,
+      coros_activity_id: orderedIds[0],
+      coros_activity_ids: orderedIds,
       actual_laps: actualLaps,
       km_laps: kmLaps,
       analysis,
@@ -284,7 +329,24 @@ async function adviceFromFeedback(type: string, feedback: Feedback): Promise<str
 const PACE_MIN_SEC = 120
 const PACE_MAX_SEC = 900
 
-type LapsResult = { laps: Lap[]; kmLaps: Lap[] | null } | { failure: string }
+type LapsResult =
+  | { laps: Lap[]; kmLaps: Lap[] | null; startTimestamp: number | null }
+  | { failure: string }
+
+/**
+ * Cherche l'horodatage de début de l'activité dans la réponse Coros, en testant
+ * les noms de champ plausibles. Sert uniquement à ordonner plusieurs activités
+ * entre elles (l'unité importe peu tant qu'elle est homogène). null si absent.
+ */
+function extractStartTimestamp(parsed: unknown): number | null {
+  const rec = parsed as Record<string, unknown> | null
+  if (!rec) return null
+  for (const key of ["startTimestamp", "startTime", "startTimeStamp", "startTimeMillis"]) {
+    const v = rec[key]
+    if (typeof v === "number" && Number.isFinite(v)) return v
+  }
+  return null
+}
 
 /**
  * Récupère les laps via le connecteur MCP (queryActivityLapData) puis les parse
@@ -334,6 +396,8 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number)
     }
   }
 
+  const startTimestamp = extractStartTimestamp(parsed)
+
   const lapGroups = (parsed as Record<string, unknown> | null)?.lapGroups
   if (!Array.isArray(lapGroups)) {
     return { failure: "Schéma Coros inattendu (lapGroups absent)" }
@@ -364,7 +428,7 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number)
       .map(mapLap)
     if (mapped.length > 0) kmLaps = mapped
   }
-  return { laps, kmLaps }
+  return { laps, kmLaps, startTimestamp }
 }
 
 /** Groupe auto-kilomètre Coros : lapDistance en centièmes de mètre = 100000 (1 km). */
@@ -503,6 +567,7 @@ async function analyze(
   comparisons: Comparison[],
   kmLaps: Lap[] | null,
   feedback: Feedback | null,
+  activityCount: number,
 ): Promise<AnalysisOut> {
   const cmpByStep = new Map<number, Comparison>()
   for (const c of comparisons) cmpByStep.set(c.step_index, c)
@@ -533,9 +598,19 @@ async function analyze(
 
   const kmLines = kmSplitLines(steps, kmLaps)
 
+  // Plusieurs activités Coros concaténées : une coupure d'allure entre deux
+  // activités est normale (la montre a été relancée), le conseil ne doit pas s'en
+  // étonner ni la traiter comme une baisse de régime.
+  const multiActivityNote = activityCount > 1
+    ? `Note : cette séance concatène ${activityCount} activités Coros distinctes ` +
+      "(la montre a été relancée en cours de sortie). Une coupure d'allure à la " +
+      "jonction entre deux activités est attendue, ne la signale pas comme un problème."
+    : ""
+
   const userPrompt = [
     `Séance : ${title} (type ${type})`,
     `Steps comparés : ${comparisons.length} — dans la cible : ${nOk}, en écart : ${nEcart}.`,
+    ...(multiActivityNote ? [multiActivityNote] : []),
     "Détail :",
     ...lines,
     ...(kmLines.length ? ["", "Splits par km :", ...kmLines] : []),

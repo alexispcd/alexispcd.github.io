@@ -21,6 +21,7 @@ const toCompact = (iso: string) => iso.replace(/-/g, "")
 interface RawRecord {
   labelId?: string
   date?: string
+  startTimestamp?: number | null
   distance_m?: number
   duration_sec?: number
   avg_hr?: number | null
@@ -110,6 +111,7 @@ async function handleRequest(req: Request): Promise<Response> {
       records: [{
         labelId: "identifiant labelId de l'activité (string)",
         date: "date de l'activité au format yyyy-MM-dd",
+        startTimestamp: "horodatage de début de l'activité en MILLISECONDES (nombre) ou null",
         distance_m: "distance totale en MÈTRES (nombre)",
         duration_sec: "durée totale en SECONDES (nombre)",
         avg_hr: "FC moyenne en bpm (nombre) ou null si absente",
@@ -154,6 +156,7 @@ async function handleRequest(req: Request): Promise<Response> {
       return {
         labelId: r.labelId!,
         date: r.date ?? null,
+        startTimestamp: typeof r.startTimestamp === "number" ? r.startTimestamp : null,
         distance_m,
         duration_sec,
         avg_pace_sec,

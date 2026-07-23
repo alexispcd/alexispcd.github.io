@@ -4,12 +4,16 @@ import {
   Dialog, DialogContent, DialogActions,
 } from '@mui/material'
 import DirectionsRun from '@mui/icons-material/DirectionsRun'
-import CheckCircle from '@mui/icons-material/CheckCircle'
+import CheckBox from '@mui/icons-material/CheckBox'
+import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { corosMatch, completeSession } from '../../../lib/training'
 import { formatKm, formatGoalTime, formatPace } from '../constants'
 import RpeForm from './RpeForm'
 import { emptyFeedback, toFeedbackPayload } from './feedback'
+
+// Cohérent avec le garde-fou serveur (3 activités max par complétion).
+const MAX_ACTIVITIES = 3
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : '·'
@@ -21,16 +25,17 @@ const candidateSub = (c) => [
 ].filter(Boolean).join(' · ')
 
 /**
- * Flux "Valider & lier Coros" : recherche des activités candidates, sélection,
- * puis complétion (import laps + analyse). onDone reçoit la séance mise à jour.
+ * Flux "Valider & lier Coros" : recherche des activités candidates, sélection
+ * (une ou plusieurs, jusqu'à 3), puis complétion (import laps concaténés +
+ * analyse). onDone reçoit la séance mise à jour.
  */
 const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   const [phase, setPhase] = useState('matching') // matching | choose | feedback | completing | done
   const [candidates, setCandidates] = useState([])
-  const [selected, setSelected] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
   const [error, setError] = useState(null)
   const [withCoros, setWithCoros] = useState(true) // pour le message de complétion
-  const [pendingLabel, setPendingLabel] = useState(null) // activité choisie, en attente du ressenti
+  const [pendingLabels, setPendingLabels] = useState(null) // activités choisies, en attente du ressenti
   const [feedback, setFeedback] = useState(emptyFeedback())
 
   useEffect(() => {
@@ -38,16 +43,17 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     let cancelled = false
     setPhase('matching')
     setCandidates([])
-    setSelected(null)
+    setSelectedIds([])
     setError(null)
-    setPendingLabel(null)
+    setPendingLabels(null)
     setFeedback(emptyFeedback())
     corosMatch(sessionId)
       .then(({ candidates: list }) => {
         if (cancelled) return
         const arr = list ?? []
         setCandidates(arr)
-        setSelected(arr[0]?.labelId ?? null)
+        // Présélection du premier candidat (le plus proche de la date).
+        setSelectedIds(arr[0]?.labelId ? [arr[0].labelId] : [])
         setError(arr.length ? null : 'Aucune activité Coros trouvée autour de cette date.')
         setPhase('choose')
       })
@@ -59,20 +65,29 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     return () => { cancelled = true }
   }, [open, sessionId])
 
-  // Étape 1 : l'activité (ou son absence) est choisie → on passe au ressenti.
-  const goToFeedback = (labelId) => {
-    setPendingLabel(labelId)
+  // Coche / décoche un candidat, dans la limite de MAX_ACTIVITIES.
+  const toggle = (labelId) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(labelId)) return prev.filter((id) => id !== labelId)
+      if (prev.length >= MAX_ACTIVITIES) return prev
+      return [...prev, labelId]
+    })
+  }
+
+  // Étape 1 : la ou les activités (ou leur absence) sont choisies → ressenti.
+  const goToFeedback = (labels) => {
+    setPendingLabels(labels)
     setError(null)
     setPhase('feedback')
   }
 
   // Étape 2 : envoi effectif avec ou sans ressenti.
   const runComplete = async (fb) => {
-    setWithCoros(Boolean(pendingLabel))
+    setWithCoros(Boolean(pendingLabels?.length))
     setPhase('completing')
     setError(null)
     try {
-      const { session } = await completeSession(sessionId, pendingLabel, fb)
+      const { session } = await completeSession(sessionId, pendingLabels, fb)
       onDone(session)
     } catch (e) {
       setError(e.message || 'La validation a échoué.')
@@ -81,6 +96,11 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   }
 
   const busy = phase === 'matching' || phase === 'completing'
+
+  // Récapitulatif quand au moins deux activités sont sélectionnées.
+  const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.labelId))
+  const totalDistance = selectedCandidates.reduce((sum, c) => sum + (c.distance_m || 0), 0)
+  const totalDuration = selectedCandidates.reduce((sum, c) => sum + (c.duration_sec || 0), 0)
 
   return (
     <Dialog
@@ -112,20 +132,24 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
           <>
             <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Lier une activité Coros</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Choisis la séance correspondante pour importer les laps et l'analyse.
+              Choisis la ou les activités correspondantes. Sélectionnes-en plusieurs si
+              la séance a été enregistrée en morceaux.
             </Typography>
 
             {error && <Alert severity="info" sx={{ mb: 2 }}>{error}</Alert>}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {candidates.map((c) => {
-                const on = selected === c.labelId
+                const on = selectedIds.includes(c.labelId)
+                const disabled = !on && selectedIds.length >= MAX_ACTIVITIES
+                const CheckIcon = on ? CheckBox : CheckBoxOutlineBlank
                 return (
                   <Box
                     key={c.labelId}
-                    onClick={() => setSelected(c.labelId)}
+                    onClick={() => !disabled && toggle(c.labelId)}
                     sx={{
-                      display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5,
+                      cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.5 : 1,
                       borderRadius: 3, border: '1px solid',
                       borderColor: on ? 'primary.main' : 'divider',
                       bgcolor: on ? 'primary.light' : 'transparent',
@@ -140,11 +164,25 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
                         {candidateSub(c)}
                       </Typography>
                     </Box>
-                    {on && <CheckCircle sx={{ color: 'primary.main', fontSize: 20 }} />}
+                    <CheckIcon sx={{ color: on ? 'primary.main' : 'text.disabled', fontSize: 22 }} />
                   </Box>
                 )
               })}
             </Box>
+
+            {selectedIds.length >= 2 && (
+              <Box sx={{
+                mt: 2, px: 1.75, py: 1.5, borderRadius: '14px',
+                border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover',
+              }}>
+                <Typography variant="body2" fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {selectedIds.length} activités · {formatKm(totalDistance) ?? '0'} km · {formatGoalTime(totalDuration) ?? '·'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  Les laps seront enchaînés dans l'ordre chronologique.
+                </Typography>
+              </Box>
+            )}
           </>
         )}
 
@@ -166,7 +204,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
           <Box sx={{ flex: 1 }} />
           <Button onClick={() => goToFeedback(null)} color="inherit">Valider sans Coros</Button>
           {candidates.length > 0 && (
-            <Button onClick={() => goToFeedback(selected)} variant="contained" disabled={!selected}>
+            <Button onClick={() => goToFeedback(selectedIds)} variant="contained" disabled={!selectedIds.length}>
               Continuer
             </Button>
           )}
