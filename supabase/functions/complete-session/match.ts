@@ -28,11 +28,29 @@ export interface ActualLap {
 
 export interface Comparison {
   step_index: number
-  lap_index: number
+  lap_index: number // index du premier lap du groupe (agrégé ou non)
+  lap_count: number // nombre de laps agrégés dans ce step (1 hors agrégation)
   planned_pace: number | null
   actual_pace: number | null
   delta_sec: number | null
   status: "ok" | "proche" | "ecart" | "free"
+}
+
+/**
+ * Seuils de rejet des laps parasites : artefacts de montre (pause GPS, appui
+ * accidentel sur le bouton lap). Un lap sous 50 m OU sous 15 s est écarté avant
+ * tout appariement et n'est jamais persisté.
+ */
+const MIN_LAP_DISTANCE_M = 50
+const MIN_LAP_DURATION_SEC = 15
+
+/** Écarte les laps parasites (trop courts en distance ou en durée). */
+export function filterLaps(laps: Lap[]): Lap[] {
+  return laps.filter((l) => {
+    if (l.distance_m == null || l.distance_m < MIN_LAP_DISTANCE_M) return false
+    if (l.duration_sec == null || l.duration_sec < MIN_LAP_DURATION_SEC) return false
+    return true
+  })
 }
 
 function expectedMetric(step: Step): { expected: number | null; kind: "distance" | "duration" } {
@@ -46,26 +64,41 @@ function relError(expected: number | null, actual: number | null): number {
   return Math.abs(actual - expected) / expected
 }
 
+/** Types de step pouvant absorber plusieurs laps consécutifs (voir alignStepsToLaps). */
+const AGGREGATABLE_TYPES = new Set(["warmup", "cooldown", "run"])
+
+interface Assignment {
+  start: number // index du premier lap du groupe, -1 si aucun
+  count: number // nombre de laps consommés (1 hors agrégation, 0 si aucun)
+}
+
+/** Métrique primaire d'un lap selon le type d'attente du step. */
+function lapMetric(lap: Lap, kind: "distance" | "duration"): number | null {
+  return kind === "distance" ? lap.distance_m : lap.duration_sec
+}
+
 /**
- * Aligne chaque step sur un lap. Retourne, pour chaque step, l'index du lap
- * assigné (ou -1 si aucun).
+ * Aligne chaque step sur un ou plusieurs laps consécutifs. Retourne, pour chaque
+ * step, l'index du premier lap et le nombre de laps consommés (0 si aucun).
  *
  * - Nombre égal → alignement 1:1 par index (workout programmé sur la montre).
  * - Nombre différent → glouton monotone : on parcourt les steps dans l'ordre et,
- *   pour chacun, on choisit parmi les laps encore disponibles (dans une fenêtre
- *   bornée par le surplus de laps restants) celui dont la métrique primaire
- *   (distance si le step est en distance, sinon durée) colle le mieux. Les laps
- *   sautés deviennent unmatched ; s'il manque des laps, les derniers steps
- *   restent sans réalisé.
+ *   pour chacun, on choisit comme lap de départ, parmi les laps encore disponibles
+ *   (fenêtre bornée par le surplus de laps restants), celui dont la métrique
+ *   primaire (distance si le step est en distance, sinon durée) colle le mieux.
+ * - Agrégation : uniquement pour warmup/cooldown/run (jamais interval/recovery,
+ *   déjà découpés lap par lap par la montre), on étend le groupe aux laps suivants
+ *   tant que l'erreur relative sur la métrique primaire s'améliore strictement,
+ *   sans jamais laisser moins de laps que de steps restants.
  */
-function alignStepsToLaps(steps: Step[], laps: Lap[]): number[] {
+function alignStepsToLaps(steps: Step[], laps: Lap[]): Assignment[] {
   const S = steps.length
   const L = laps.length
-  const stepToLap = new Array<number>(S).fill(-1)
+  const result: Assignment[] = steps.map(() => ({ start: -1, count: 0 }))
 
   if (S === L) {
-    for (let i = 0; i < S; i++) stepToLap[i] = i
-    return stepToLap
+    for (let i = 0; i < S; i++) result[i] = { start: i, count: 1 }
+    return result
   }
 
   let p = 0
@@ -77,20 +110,43 @@ function alignStepsToLaps(steps: Step[], laps: Lap[]): number[] {
     const maxSkip = Math.max(0, remainingLaps - remainingSteps)
     const { expected, kind } = expectedMetric(steps[si])
 
+    // 1. Lap de départ : meilleur lap unique dans la fenêtre de saut autorisée.
     let bestJ = p
     let bestCost = Infinity
     for (let j = p; j <= p + maxSkip && j < L; j++) {
-      const actual = kind === "distance" ? laps[j].distance_m : laps[j].duration_sec
-      const cost = relError(expected, actual)
+      const cost = relError(expected, lapMetric(laps[j], kind))
       if (cost < bestCost) {
         bestCost = cost
         bestJ = j
       }
     }
-    stepToLap[si] = bestJ
-    p = bestJ + 1
+
+    // 2. Agrégation des laps suivants, pour les seuls types agrégeables.
+    let count = 1
+    if (AGGREGATABLE_TYPES.has(steps[si].step_type)) {
+      let aggMetric = lapMetric(laps[bestJ], kind) ?? 0
+      let curErr = relError(expected, aggMetric)
+      while (bestJ + count < L) {
+        // Contrainte dure : ne jamais affamer les steps suivants.
+        const remainingStepsAfter = S - (si + 1)
+        const remainingLapsAfter = L - (bestJ + count + 1)
+        if (remainingLapsAfter < remainingStepsAfter) break
+
+        const next = lapMetric(laps[bestJ + count], kind)
+        if (next == null) break
+        const newErr = relError(expected, aggMetric + next)
+        if (newErr >= curErr) break // s'arrête dès que l'erreur cesse de diminuer
+
+        aggMetric += next
+        curErr = newErr
+        count++
+      }
+    }
+
+    result[si] = { start: bestJ, count }
+    p = bestJ + count
   }
-  return stepToLap
+  return result
 }
 
 function statusFor(delta: number, tolerance: number): Comparison["status"] {
@@ -105,12 +161,58 @@ export interface MatchResult {
   comparisons: Comparison[]
 }
 
-export function matchStepsToLaps(steps: Step[], laps: Lap[]): MatchResult {
-  const stepToLap = alignStepsToLaps(steps, laps)
+/**
+ * Agrège un groupe de laps consécutifs. Distance et durée sont sommées, l'allure
+ * est recalculée sur les totaux (JAMAIS une moyenne d'allures) et la FC est une
+ * moyenne pondérée par la durée. Un groupe d'un seul lap est renvoyé tel quel.
+ */
+function aggregateLaps(group: Lap[]): Lap {
+  if (group.length === 1) return group[0]
 
+  let dist = 0
+  let hasDist = false
+  let dur = 0
+  let hasDur = false
+  let hrWeighted = 0
+  let hrDur = 0
+  for (const l of group) {
+    if (l.distance_m != null) {
+      dist += l.distance_m
+      hasDist = true
+    }
+    if (l.duration_sec != null) {
+      dur += l.duration_sec
+      hasDur = true
+    }
+    if (l.avg_hr != null && l.duration_sec != null) {
+      hrWeighted += l.avg_hr * l.duration_sec
+      hrDur += l.duration_sec
+    }
+  }
+
+  const distance_m = hasDist ? dist : null
+  const duration_sec = hasDur ? dur : null
+  const avg_pace_sec = distance_m != null && distance_m > 0 && duration_sec != null && duration_sec > 0
+    ? Math.round(duration_sec / (distance_m / 1000))
+    : null
+  const avg_hr = hrDur > 0 ? Math.round(hrWeighted / hrDur) : null
+  return { distance_m, duration_sec, avg_pace_sec, avg_hr }
+}
+
+export function matchStepsToLaps(steps: Step[], rawLaps: Lap[]): MatchResult {
+  // Filtrage des laps parasites AVANT tout appariement : les laps écartés ne sont
+  // ni indexés ni persistés, ce qui garde lap_index cohérent entre actual_laps et
+  // comparisons.
+  const laps = filterLaps(rawLaps)
+
+  const assignments = alignStepsToLaps(steps, laps)
+
+  // lap_index → step_index. Pour un groupe agrégé, TOUS les laps du groupe portent
+  // le step_index (pas seulement le premier).
   const lapToStep = new Array<number | null>(laps.length).fill(null)
-  stepToLap.forEach((lapIdx, stepIdx) => {
-    if (lapIdx >= 0) lapToStep[lapIdx] = stepIdx
+  assignments.forEach(({ start, count }, stepIdx) => {
+    if (start < 0) return
+    for (let k = 0; k < count; k++) lapToStep[start + k] = stepIdx
   })
 
   const actualLaps: ActualLap[] = laps.map((lap, i) => ({
@@ -123,33 +225,35 @@ export function matchStepsToLaps(steps: Step[], laps: Lap[]): MatchResult {
   }))
 
   const comparisons: Comparison[] = []
-  stepToLap.forEach((lapIdx, stepIdx) => {
-    if (lapIdx < 0) return // step sans lap : pas de comparaison
+  assignments.forEach(({ start, count }, stepIdx) => {
+    if (start < 0) return // step sans lap : pas de comparaison
     const step = steps[stepIdx]
-    const lap = laps[lapIdx]
+    const agg = aggregateLaps(laps.slice(start, start + count))
     const target = step.target_pace_sec
 
     // Récup / step sans allure cible → 'free'
     if (target == null) {
       comparisons.push({
         step_index: stepIdx,
-        lap_index: lapIdx,
+        lap_index: start,
+        lap_count: count,
         planned_pace: null,
-        actual_pace: lap.avg_pace_sec,
+        actual_pace: agg.avg_pace_sec,
         delta_sec: null,
         status: "free",
       })
       return
     }
-    if (lap.avg_pace_sec == null) return // pas d'allure réelle mesurée
+    if (agg.avg_pace_sec == null) return // pas d'allure réelle mesurée
 
-    const delta = lap.avg_pace_sec - target
+    const delta = agg.avg_pace_sec - target
     const tol = step.pace_tolerance_sec ?? 5
     comparisons.push({
       step_index: stepIdx,
-      lap_index: lapIdx,
+      lap_index: start,
+      lap_count: count,
       planned_pace: target,
-      actual_pace: lap.avg_pace_sec,
+      actual_pace: agg.avg_pace_sec,
       delta_sec: delta,
       status: statusFor(delta, tol),
     })

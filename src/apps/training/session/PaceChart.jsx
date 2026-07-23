@@ -159,7 +159,6 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
   }
 
   const compByStep = new Map(comparisons.map((c) => [c.step_index, c]))
-  const compByLap = new Map(comparisons.map((c) => [c.lap_index, c]))
 
   // ── Tip sous le graphe ───────────────────────────────────────────────────
   let tip
@@ -291,7 +290,9 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
               {matched.length > 1 && <path d={path} fill="none" stroke={C.line} strokeWidth="1.5" />}
               {actualLaps.map((l, i) => {
                 if (l.avg_pace_sec == null) return null
-                const c = compByLap.get(i)
+                // Couleur = statut du step du lap (un step agrégé colore tous ses
+                // laps de la même façon), pas une relation lap↔comparaison 1:1.
+                const c = l.step_index != null ? compByStep.get(l.step_index) : undefined
                 const col = statusColor(c?.status)
                 const unmatched = l.step_index == null
                 return (

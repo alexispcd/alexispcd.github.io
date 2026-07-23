@@ -264,14 +264,15 @@ export const corosMatch = (sessionId) => callFunction('coros-match', { session_i
 
 /**
  * Complète une séance (avec ou sans activité Coros). → { session }
- * corosActivityIds = liste ordonnée de labelId Coros (1 à 3), ou null si aucune
- * activité (renfo, délier). Les laps des activités sont concaténés côté serveur.
- * feedback = { rpe, pain_areas, feedback_note } ou null (ressenti post-séance).
+ * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou
+ * null si aucune activité (renfo, délier). Le serveur les trie par start_timestamp
+ * croissant puis concatène leurs laps. feedback = { rpe, pain_areas,
+ * feedback_note } ou null (ressenti post-séance).
  */
-export const completeSession = (sessionId, corosActivityIds = null, feedback = null) =>
+export const completeSession = (sessionId, corosActivities = null, feedback = null) =>
   callFunction('complete-session', {
     session_id: sessionId,
-    coros_activity_ids: corosActivityIds,
+    coros_activities: corosActivities,
     feedback,
   })
 

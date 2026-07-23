@@ -87,6 +87,60 @@ function feedbackPromptBlock(fb: Feedback | null): string {
   return ["", "Ressenti athlète :", ...parts.map((p) => `- ${p}`)].join("\n")
 }
 
+// ── Activités Coros sélectionnées ─────────────────────────────────────────────
+/** Une activité Coros à lier, avec son horodatage de début (ms) si connu. */
+interface SelectedActivity {
+  id: string
+  start_timestamp: number | null
+}
+
+// Garde-fou CPU : chaque activité coûte un appel MCP séquentiel.
+const MAX_ACTIVITIES = 3
+
+/**
+ * Extrait la liste ordonnée d'activités Coros du corps de requête. Renvoie null
+ * si aucune activité n'est fournie (complétion sans Coros). Lève si le format est
+ * invalide (message renvoyé en 400 par l'appelant).
+ */
+function parseSelectedActivities(body: Record<string, unknown>): SelectedActivity[] | null {
+  const validateCount = (n: number) => {
+    if (n === 0) throw new Error("liste d'activités vide")
+    if (n > MAX_ACTIVITIES) throw new Error(`limité à ${MAX_ACTIVITIES} activités`)
+  }
+
+  // Forme courante : [{ id, start_timestamp }]
+  const raw = body.coros_activities
+  if (raw != null) {
+    if (!Array.isArray(raw)) throw new Error("coros_activities doit être un tableau")
+    validateCount(raw.length)
+    return raw.map((item) => {
+      const rec = (item ?? {}) as Record<string, unknown>
+      const id = rec.id
+      if (typeof id !== "string" || !id) throw new Error("coros_activities : chaque activité doit avoir un id non vide")
+      const ts = rec.start_timestamp
+      return { id, start_timestamp: typeof ts === "number" && Number.isFinite(ts) ? ts : null }
+    })
+  }
+
+  // Compat : coros_activity_ids = ["id", ...] (sans horodatage)
+  const rawIds = body.coros_activity_ids
+  if (rawIds != null) {
+    if (!Array.isArray(rawIds)) throw new Error("coros_activity_ids doit être un tableau")
+    validateCount(rawIds.length)
+    if (!rawIds.every((x: unknown) => typeof x === "string" && x.length > 0)) {
+      throw new Error("coros_activity_ids doit contenir des identifiants non vides")
+    }
+    return (rawIds as string[]).map((id) => ({ id, start_timestamp: null }))
+  }
+
+  // Compat : coros_activity_id = "id" (une seule activité)
+  if (typeof body.coros_activity_id === "string" && body.coros_activity_id) {
+    return [{ id: body.coros_activity_id, start_timestamp: null }]
+  }
+
+  return null
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
   try {
@@ -117,34 +171,21 @@ async function handleRequest(req: Request): Promise<Response> {
   )
 
   // 2. Corps
-  //    coros_activity_ids : liste ordonnée de labelId Coros (1 à 3). Compat
-  //    descendante : si le tableau est absent mais coros_activity_id présent, on
-  //    le traite comme un tableau d'un seul élément. Aucun des deux = complétion
-  //    sans Coros (renfo ou course non liée).
+  //    Formes acceptées pour les activités Coros, par ordre de priorité :
+  //      - coros_activities : [{ id, start_timestamp }]  (forme courante, permet
+  //        le tri chronologique côté serveur)
+  //      - coros_activity_ids : ["id", ...]              (compat : sans horodatage)
+  //      - coros_activity_id : "id"                       (compat : une activité)
+  //    Aucune des trois = complétion sans Coros (renfo ou course non liée).
   let sessionId: string
-  let corosActivityIds: string[] | null
+  let selected: SelectedActivity[] | null
   let feedback: Feedback | null
   try {
     const body = await req.json()
     sessionId = body.session_id
     feedback = parseFeedback(body.feedback)
     if (!sessionId) throw new Error("session_id requis")
-
-    const rawIds = body.coros_activity_ids
-    if (rawIds != null) {
-      if (!Array.isArray(rawIds)) throw new Error("coros_activity_ids doit être un tableau")
-      // Garde-fou CPU : chaque activité coûte un appel MCP séquentiel.
-      if (rawIds.length === 0) throw new Error("coros_activity_ids ne peut pas être vide")
-      if (rawIds.length > 3) throw new Error("coros_activity_ids limité à 3 activités")
-      if (!rawIds.every((x: unknown) => typeof x === "string" && x.length > 0)) {
-        throw new Error("coros_activity_ids doit contenir des identifiants non vides")
-      }
-      corosActivityIds = rawIds as string[]
-    } else if (body.coros_activity_id) {
-      corosActivityIds = [body.coros_activity_id as string]
-    } else {
-      corosActivityIds = null
-    }
+    selected = parseSelectedActivities(body)
   } catch (err) {
     return json(400, { error: "Corps invalide", detail: String(err) })
   }
@@ -166,8 +207,21 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // 4. Cas sans Coros (renfo ou course non liée) : pas de laps à comparer.
   //    On persiste le ressenti et, s'il est présent, un conseil fondé dessus.
-  if (!corosActivityIds) {
+  if (!selected) {
     return await manualComplete(supabaseAdmin, sessionId, session.type, feedback, feedbackFields)
+  }
+
+  // 4b. Ordre chronologique garanti AVANT toute concaténation : on trie les
+  //     activités par start_timestamp croissant. Une seule activité : rien à
+  //     trier. Plusieurs sans horodatage : on refuse plutôt que de deviner.
+  if (selected.length > 1) {
+    if (!selected.every((a) => a.start_timestamp != null)) {
+      return json(400, {
+        error: "Horodatages manquants",
+        detail: "Plusieurs activités sélectionnées sans start_timestamp : impossible de garantir l'ordre chronologique.",
+      })
+    }
+    selected = [...selected].sort((a, b) => (a.start_timestamp as number) - (b.start_timestamp as number))
   }
 
   // 5. Renfo : pas de matching Coros possible.
@@ -193,28 +247,18 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   // 7. Un appel MCP (queryActivityLapData) PAR activité, en SÉQUENTIEL pour rester
-  //    sous la limite CPU Supabase. Les laps bruts sont parsés en code (le modèle
-  //    n'est jamais la source des valeurs numériques). Si une seule activité
-  //    échoue, on n'écrit RIEN : pas de complétion partielle.
-  const fetched: Array<{ id: string; laps: Lap[]; kmLaps: Lap[] | null; startTimestamp: number | null }> = []
-  for (const id of corosActivityIds) {
-    const lapsResult = await fetchLaps(corosToken, id, steps.length)
+  //    sous la limite CPU Supabase, dans l'ordre chronologique déjà établi. Les
+  //    laps bruts sont parsés en code (le modèle n'est jamais la source des
+  //    valeurs numériques). Si une seule activité échoue, on n'écrit RIEN : pas de
+  //    complétion partielle.
+  const fetched: Array<{ id: string; laps: Lap[]; kmLaps: Lap[] | null }> = []
+  for (const activity of selected) {
+    const lapsResult = await fetchLaps(corosToken, activity.id, steps.length)
     if ("failure" in lapsResult) {
       // Données inexploitables : la séance reste "planned", on nomme l'activité fautive.
-      return json(422, { error: "Données Coros inexploitables", detail: `Activité ${id} : ${lapsResult.failure}` })
+      return json(422, { error: "Données Coros inexploitables", detail: `Activité ${activity.id} : ${lapsResult.failure}` })
     }
-    fetched.push({ id, ...lapsResult })
-  }
-
-  // 7b. Ordonner les activités par startTimestamp croissant AVANT concaténation :
-  //     l'ordre d'enchaînement des laps ne doit pas dépendre de l'ordre d'envoi du
-  //     client. Si un startTimestamp manque, on conserve l'ordre reçu et on logge.
-  if (fetched.length > 1) {
-    if (fetched.every((f) => f.startTimestamp != null)) {
-      fetched.sort((a, b) => (a.startTimestamp as number) - (b.startTimestamp as number))
-    } else {
-      console.warn("[complete-session] startTimestamp indisponible sur au moins une activité, ordre d'envoi conservé")
-    }
+    fetched.push({ id: activity.id, ...lapsResult })
   }
 
   const orderedIds = fetched.map((f) => f.id)
@@ -330,23 +374,8 @@ const PACE_MIN_SEC = 120
 const PACE_MAX_SEC = 900
 
 type LapsResult =
-  | { laps: Lap[]; kmLaps: Lap[] | null; startTimestamp: number | null }
+  | { laps: Lap[]; kmLaps: Lap[] | null }
   | { failure: string }
-
-/**
- * Cherche l'horodatage de début de l'activité dans la réponse Coros, en testant
- * les noms de champ plausibles. Sert uniquement à ordonner plusieurs activités
- * entre elles (l'unité importe peu tant qu'elle est homogène). null si absent.
- */
-function extractStartTimestamp(parsed: unknown): number | null {
-  const rec = parsed as Record<string, unknown> | null
-  if (!rec) return null
-  for (const key of ["startTimestamp", "startTime", "startTimeStamp", "startTimeMillis"]) {
-    const v = rec[key]
-    if (typeof v === "number" && Number.isFinite(v)) return v
-  }
-  return null
-}
 
 /**
  * Récupère les laps via le connecteur MCP (queryActivityLapData) puis les parse
@@ -396,8 +425,6 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number)
     }
   }
 
-  const startTimestamp = extractStartTimestamp(parsed)
-
   const lapGroups = (parsed as Record<string, unknown> | null)?.lapGroups
   if (!Array.isArray(lapGroups)) {
     return { failure: "Schéma Coros inattendu (lapGroups absent)" }
@@ -428,7 +455,7 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number)
       .map(mapLap)
     if (mapped.length > 0) kmLaps = mapped
   }
-  return { laps, kmLaps, startTimestamp }
+  return { laps, kmLaps }
 }
 
 /** Groupe auto-kilomètre Coros : lapDistance en centièmes de mètre = 100000 (1 km). */
@@ -450,6 +477,8 @@ const lapIndexOf = (lap: Record<string, unknown>): number =>
  * Choisit le groupe de laps parmi lapGroups[].laps. Un seul groupe non vide : on
  * le prend. Plusieurs : on prend celui dont le nombre de laps est le plus proche
  * de stepCount (départage par le premier), et on logge la liste des groupes.
+ * Le groupe de type -1 (activité entière résumée en un seul lap) est toujours
+ * écarté : il ne peut jamais être le bon découpage.
  */
 function pickLapGroup(lapGroups: unknown[], stepCount: number): unknown[] | null {
   const groups = lapGroups
@@ -461,7 +490,7 @@ function pickLapGroup(lapGroups: unknown[], stepCount: number): unknown[] | null
         lapDistance: (g as Record<string, unknown> | null)?.lapDistance,
       }
     })
-    .filter((g) => g.laps.length > 0)
+    .filter((g) => g.laps.length > 0 && g.type !== -1)
 
   if (groups.length === 0) return null
   if (groups.length === 1) return groups[0].laps

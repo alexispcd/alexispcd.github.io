@@ -35,7 +35,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   const [selectedIds, setSelectedIds] = useState([])
   const [error, setError] = useState(null)
   const [withCoros, setWithCoros] = useState(true) // pour le message de complétion
-  const [pendingLabels, setPendingLabels] = useState(null) // activités choisies, en attente du ressenti
+  const [pendingActivities, setPendingActivities] = useState(null) // activités choisies [{ id, start_timestamp }], en attente du ressenti
   const [feedback, setFeedback] = useState(emptyFeedback())
 
   useEffect(() => {
@@ -45,7 +45,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     setCandidates([])
     setSelectedIds([])
     setError(null)
-    setPendingLabels(null)
+    setPendingActivities(null)
     setFeedback(emptyFeedback())
     corosMatch(sessionId)
       .then(({ candidates: list }) => {
@@ -75,19 +75,19 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   }
 
   // Étape 1 : la ou les activités (ou leur absence) sont choisies → ressenti.
-  const goToFeedback = (labels) => {
-    setPendingLabels(labels)
+  const goToFeedback = (activities) => {
+    setPendingActivities(activities)
     setError(null)
     setPhase('feedback')
   }
 
   // Étape 2 : envoi effectif avec ou sans ressenti.
   const runComplete = async (fb) => {
-    setWithCoros(Boolean(pendingLabels?.length))
+    setWithCoros(Boolean(pendingActivities?.length))
     setPhase('completing')
     setError(null)
     try {
-      const { session } = await completeSession(sessionId, pendingLabels, fb)
+      const { session } = await completeSession(sessionId, pendingActivities, fb)
       onDone(session)
     } catch (e) {
       setError(e.message || 'La validation a échoué.')
@@ -101,6 +101,11 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.labelId))
   const totalDistance = selectedCandidates.reduce((sum, c) => sum + (c.distance_m || 0), 0)
   const totalDuration = selectedCandidates.reduce((sum, c) => sum + (c.duration_sec || 0), 0)
+  // Charge utile serveur : id + start_timestamp (le serveur trie chronologiquement).
+  const selectedActivities = selectedCandidates.map((c) => ({
+    id: c.labelId,
+    start_timestamp: typeof c.startTimestamp === 'number' ? c.startTimestamp : null,
+  }))
 
   return (
     <Dialog
@@ -204,7 +209,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
           <Box sx={{ flex: 1 }} />
           <Button onClick={() => goToFeedback(null)} color="inherit">Valider sans Coros</Button>
           {candidates.length > 0 && (
-            <Button onClick={() => goToFeedback(selectedIds)} variant="contained" disabled={!selectedIds.length}>
+            <Button onClick={() => goToFeedback(selectedActivities)} variant="contained" disabled={!selectedIds.length}>
               Continuer
             </Button>
           )}
