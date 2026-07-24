@@ -36,8 +36,14 @@ const AppLayout = () => {
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
       {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu de
-          page descend donc de l'inset haut, en accord avec le header qui porte le meme inset. */}
-      <Box sx={{ height: '100%', overflow: 'hidden', pt: 'env(safe-area-inset-top, 0px)' }}>
+          page descend de l'inset haut (header) et reserve l'inset bas pour ne pas finir
+          sous l'indicateur d'accueil. Chaque page scrolle dans son propre conteneur en
+          height 100% : ce padding raccourcit d'autant leur zone utile. */}
+      <Box sx={{
+        height: '100%', overflow: 'hidden',
+        pt: 'env(safe-area-inset-top, 0px)',
+        pb: 'env(safe-area-inset-bottom, 0px)',
+      }}>
         <Outlet />
       </Box>
       {/* Bande peinte sous l'heure iOS. Sous le z-index des Dialog (1300) : le backdrop la recouvre. */}
@@ -45,6 +51,16 @@ const AppLayout = () => {
         position: 'fixed', top: 0, left: 0, right: 0,
         height: 'env(safe-area-inset-top, 0px)',
         bgcolor: (t) => t.palette.statusBar,
+        zIndex: 1200,
+        pointerEvents: 'none',
+      }} />
+      {/* Symetrique en bas, sur la zone de l'indicateur d'accueil. Couleur homeIndicator
+          (= background.default) : la bande se fond dans la page au repos, et comme elle
+          partage la couleur du contenu, le backdrop d'une modale l'assombrit a l'identique. */}
+      <Box sx={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        height: 'env(safe-area-inset-bottom, 0px)',
+        bgcolor: (t) => t.palette.homeIndicator,
         zIndex: 1200,
         pointerEvents: 'none',
       }} />

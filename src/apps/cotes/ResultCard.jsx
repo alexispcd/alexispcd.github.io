@@ -49,7 +49,9 @@ const ResultCard = ({ results, activeIdx, setActiveIdx }) => {
     <Box sx={{
       position: 'absolute',
       left: 8, right: 8,
-      bottom: 'calc(116px + env(safe-area-inset-bottom, 0px))',
+      // Carte absolue dans le conteneur Cotes, deja raccourci de l'inset bas par le
+      // padding de contenu (App.jsx). L'inset est donc gere en amont, pas ici.
+      bottom: '116px',
       zIndex: 1000,
       display: 'flex',
       alignItems: 'center',
