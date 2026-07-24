@@ -15,7 +15,7 @@ export default defineConfig({
         name: 'Le Cairn',
         short_name: 'Cairn',
         description: 'Mes outils perso',
-        theme_color: '#3d6b51',
+        theme_color: '#1D9E75',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

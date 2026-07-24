@@ -16,6 +16,10 @@ export function useDarkMode(user) {
   useEffect(() => {
     document.body.classList.toggle('dark', dark)
     localStorage.setItem('cairn-theme', dark ? 'dark' : 'light')
+    // theme-color dynamique pour Chrome et Android (iOS est couvert par black-translucent).
+    // Les deux metas media reçoivent la meme valeur : le thème applicatif prime sur le systeme.
+    const color = dark ? '#0f0f12' : '#1D9E75'
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', color))
   }, [dark])
 
   // Reconciliation : une fois l'utilisateur connu, Supabase prend le dessus

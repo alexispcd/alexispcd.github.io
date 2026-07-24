@@ -35,9 +35,19 @@ const AppLayout = () => {
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
-      <Box sx={{ height: '100%', overflow: 'hidden' }}>
+      {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu de
+          page descend donc de l'inset haut, en accord avec le header qui porte le meme inset. */}
+      <Box sx={{ height: '100%', overflow: 'hidden', pt: 'env(safe-area-inset-top, 0px)' }}>
         <Outlet />
       </Box>
+      {/* Bande peinte sous l'heure iOS. Sous le z-index des Dialog (1300) : le backdrop la recouvre. */}
+      <Box sx={{
+        position: 'fixed', top: 0, left: 0, right: 0,
+        height: 'env(safe-area-inset-top, 0px)',
+        bgcolor: (t) => t.palette.statusBar,
+        zIndex: 1200,
+        pointerEvents: 'none',
+      }} />
       {/* Masqué pendant qu'un overlay plein écran (player renfo) occupe l'écran :
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
@@ -50,7 +60,9 @@ const AppLayout = () => {
           dark={dark}
           setDark={setDark}
           user={user}
-          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1301 }}
+          // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
+          // pt : le header porte l'inset haut et ne passe plus sous l'heure (py:1.5 = 12px conservés).
+          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         />
       )}
     </Box>
