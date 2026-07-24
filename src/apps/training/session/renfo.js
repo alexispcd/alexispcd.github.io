@@ -18,9 +18,9 @@ export const RENFO_DURATIONS = [30, 40, 45]
 // ── Heuristique d'estimation (identique au backend) ──────────────────────────
 export const PER_REP_SEC = 3
 /** Repos entre deux exercices d'un même tour. */
-export const REST_BETWEEN_EXERCISES_SEC = 20
+export const REST_BETWEEN_EXERCISES_SEC = 15
 /** Repos entre deux tours, et entre deux blocs. */
-export const REST_BETWEEN_ROUNDS_SEC = 30
+export const REST_BETWEEN_ROUNDS_SEC = 20
 
 /** Planchers du trim : en deçà, un circuit n'en est plus un. */
 const MIN_EXERCISES_PER_BLOCK = 2

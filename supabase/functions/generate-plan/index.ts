@@ -6,7 +6,11 @@ import {
   formatPriorWeeks, type PriorWeek,
 } from "./prompt.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
-import { validatePlan } from "../_shared/training/validate.ts"
+import { isStrengthSession, validatePlan } from "../_shared/training/validate.ts"
+import {
+  baseDurationHint, finalDurationWarning, finalizeStrengthContent,
+} from "../_shared/training/strength.ts"
+import type { StrengthBlock, StrengthContent } from "../_shared/training/types.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
 import { computeWeekBounds, dayTs, todayISO, type WeekBounds } from "../_shared/training/weeks.ts"
@@ -112,6 +116,36 @@ async function generateAndParse(
   }
 }
 
+/**
+ * Niveau 2 (SOUPLE) : indices de durée des renfos du chunk dont la base modèle
+ * sort de la bande large. Déclenchent un retry ciblé sans jamais bloquer.
+ */
+function collectRenfoDurationHints(plan: GeneratedPlan): string[] {
+  const hints: string[] = []
+  for (const w of plan.weeks ?? []) {
+    for (const s of w.sessions ?? []) {
+      if (!isStrengthSession(s)) continue
+      const blocks = (s.strength_content as { blocks?: StrengthBlock[] } | null)?.blocks
+      if (!Array.isArray(blocks)) continue
+      const hint = baseDurationHint(blocks, `semaine ${w.week_number} renfo`)
+      if (hint) hints.push(hint)
+    }
+  }
+  return hints
+}
+
+/** Niveau 3 (DUR) : garde-fou logué sur la séance finale (après finalize). */
+function logFinalRenfoDurations(planId: string, plan: GeneratedPlan): void {
+  for (const w of plan.weeks ?? []) {
+    for (const s of w.sessions ?? []) {
+      if (!isStrengthSession(s)) continue
+      const finalized: StrengthContent = finalizeStrengthContent(s.strength_content as never)
+      const warn = finalDurationWarning(finalized)
+      if (warn) console.warn(`[generate-plan] ${planId} semaine ${w.week_number} renfo : ${warn}`)
+    }
+  }
+}
+
 /** Semaines déjà persistées (contexte de continuité pour le chunk suivant). */
 async function fetchPriorWeeks(admin: SupabaseClient, planId: string): Promise<PriorWeek[]> {
   const { data } = await admin
@@ -206,23 +240,30 @@ async function runChunkAndChain(
         generateAndParse(system, [{ role: "user", content: userPrompt }]))
       finalizeWeeks(chunk)
 
+      // Niveau 1 (structure, DUR) : bloque. Niveau 2 (durée renfo, SOUPLE) :
+      // déclenche le même retry mais n'est jamais bloquant (règle de sortie).
       let errors = validatePlan(chunk, loStr, raceDateStr, start, boundsByWeek)
-      if (errors.length) {
-        console.warn(`[generate-plan] ${planId} chunk ${start}-${end} invalide (essai 1) :`, errors.slice(0, 8))
+      let hints = collectRenfoDurationHints(chunk)
+      if (errors.length || hints.length) {
+        console.warn(`[generate-plan] ${planId} chunk ${start}-${end} à corriger (essai 1) :`, [...errors, ...hints].slice(0, 8))
         chunk = await timed(planId, `sonnet chunk ${start}-${end} retry`, () =>
           generateAndParse(system, [
             { role: "user", content: userPrompt },
             { role: "assistant", content: JSON.stringify(chunk) },
-            { role: "user", content: buildRetryPrompt(errors) },
+            { role: "user", content: buildRetryPrompt([...errors, ...hints]) },
           ]))
         finalizeWeeks(chunk)
         errors = validatePlan(chunk, loStr, raceDateStr, start, boundsByWeek)
+        hints = collectRenfoDurationHints(chunk)
       }
       if (errors.length) {
         console.error(`[generate-plan] ${planId} chunk ${start}-${end} invalide après retry :`, errors.slice(0, 8))
         await setError(`Chunk ${start}-${end} invalide : ${errors.slice(0, 6).join(" | ")}`)
         return
       }
+      // Durée renfo encore hors bande : acceptée, le trim la ramène à la persistance.
+      if (hints.length) console.warn(`[generate-plan] ${planId} chunk ${start}-${end} durée renfo hors bande (acceptée) :`, hints.slice(0, 8))
+      logFinalRenfoDurations(planId, chunk)
 
       await timed(planId, `persist chunk ${start}-${end}`, () =>
         persistPlan(admin, planId, userId, expandPlan(chunk)))

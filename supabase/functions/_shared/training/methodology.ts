@@ -9,10 +9,10 @@ export const RENFO_RULES = `RENFO (renforcement musculaire) — FORMAT CIRCUIT
 - La séance renfo n'a AUCUN step. Elle porte "strength_content" :
   { "target_duration_min": 45, "blocks": [ { "theme": string, "rounds": number, "exercises": [ { "slug": string, "reps"?: number, "duration_sec"?: number } ] } ] }
 - CIRCUIT : les exercices d'un bloc s'enchaînent dans l'ordre, et le bloc ENTIER est répété "rounds" fois (tour 1 : exo A, exo B, exo C ; tour 2 : idem ; etc.).
-- "rounds" vaut 2 ou 3. N'émets NI "sets" NI "rest_sec" : les repos sont fixes et gérés par le code (20 s entre deux exercices, 30 s entre deux tours et entre deux blocs).
+- "rounds" vaut 2 ou 3. N'émets NI "sets" NI "rest_sec" : les repos sont fixes et gérés par le code (15 s entre deux exercices, 20 s entre deux tours et entre deux blocs).
 - Chaque exercice est choisi EXCLUSIVEMENT par son "slug" dans le CATALOGUE ci-dessous. N'invente JAMAIS d'exercice ni de slug hors catalogue. N'émets PAS "name" ni "description" (le code les résout depuis le catalogue).
-- Un exercice porte "reps" (mode reps) OU "duration_sec" (mode duration) selon son mode au catalogue, jamais les deux.
-- Un exercice "unilat" se fait des DEUX côtés : il compte double dans la durée. Dose ses reps / sa duration_sec en conséquence.
+- Un exercice porte "reps" (mode reps) OU "duration_sec" (mode duration) selon son mode au catalogue, jamais les deux. Le catalogue donne un dosage de référence (ref) : reste proche, module légèrement selon le bloc du plan.
+- Un exercice "unilat" se fait des DEUX côtés : il compte double dans la durée. Le dosage de référence est PAR CÔTÉ. Dose ses reps / sa duration_sec en conséquence.
 - STRUCTURE FIXE : EXACTEMENT 4 blocs, dans cet ordre :
   1. Échauffement : uniquement des exercices de catégorie activation_mobilite.
   2. Force : uniquement des exercices de catégorie fessiers et/ou ischios.
@@ -20,15 +20,23 @@ export const RENFO_RULES = `RENFO (renforcement musculaire) — FORMAT CIRCUIT
   4. Bonus (ALTERNE d'une semaine à l'autre selon la parité de week_number) :
      - semaines IMPAIRES (1, 3, 5, ...) → uniquement proprioception et/ou pied_mollets ;
      - semaines PAIRES (2, 4, 6, ...) → uniquement haut_corps.
-- Ne choisis JAMAIS le slug "excentrique_mollet" : le code l'ajoute automatiquement au bloc Force de chaque séance. Ne le compte pas dans ton total.
-- La base vise TOUJOURS ~45 min avec ces 4 blocs et 13 à 17 exercices au total (3 à 5 par bloc). Les repos étant courts, il faut plus d'exercices qu'un format en séries pour remplir la séance. N'ajoute pas de bloc, n'en retire pas.
+- MOLLET IMPOSÉ : ne choisis JAMAIS le slug "excentrique_mollet". Le code l'ajoute automatiquement au bloc Force de CHAQUE séance (+1 exercice dans ce bloc). Mets donc UN exercice de moins dans le bloc Force que le nombre visé par bloc, et ne le compte pas.
+- NOMBRE D'EXERCICES : la séance FINALE (mollet du code inclus) doit avoir 3 à 5 exercices par bloc et 12 à 20 au total. Concrètement, tu émets 2 à 4 exercices dans le bloc Force (le code le complète à 3 à 5) et 3 à 5 dans chacun des trois autres blocs. N'ajoute pas de bloc, n'en retire pas.
+- COUPLAGE tours / exercices (nominal) :
+  - 2 tours → vise 5 exercices par bloc (donc 4 émis dans le bloc Force) ;
+  - 3 tours → vise 3 exercices par bloc (donc 2 émis dans le bloc Force) ;
+  - en intensification, tu peux monter à 4 exercices par bloc à 3 tours.
 - ROTATION : varie les exercices d'une semaine à l'autre ; ne répète JAMAIS deux renfos consécutifs à l'identique.
 - PROGRESSION selon le bloc du plan (elle joue sur les TOURS, le NOMBRE d'exercices et le CHOIX des variantes, jamais sur des séries) :
-  - construction : 2 tours, exercices bilatéraux et variantes d'entrée, reps et durées proches des valeurs de base.
+  - construction : 2 tours, exercices bilatéraux et variantes d'entrée, reps et durées proches des valeurs de référence.
   - intensification : 3 tours, blocs plus fournis, davantage d'unilatéral et de variantes exigeantes (ex. copenhague_longue, nordic_curl_assiste, souleve_terre_unipodal, squat_unipodal_chaise).
   - affûtage : 2 tours, blocs allégés, on préserve la qualité du geste.
+- ESTIMATION DE DURÉE (aide au dosage, PAS une garantie ; le code reste l'autorité) :
+  - durée d'un bloc = tours × (n × travail_moyen + (n - 1) × 15) + (tours - 1) × 20, avec n le nombre d'exercices du bloc et travail_moyen ~45 s par exercice et par tour ;
+  - durée totale = somme des 4 blocs + 3 × 20.
+  Vise une base d'environ 40 à 48 min ; le code ajuste ensuite la séance jouée à 40 min.
 
-CATALOGUE D'EXERCICES RENFO (slug · mode · equipment ; "unilat" = travaillé côté par côté) :
+CATALOGUE D'EXERCICES RENFO (slug · mode · equipment · dosage de référence ; "unilat" = travaillé côté par côté, dosage par côté) :
 ${CATALOG_SUMMARY}`
 
 /** Règles de coaching réutilisables (méthodologie + allures + steps + renfo),

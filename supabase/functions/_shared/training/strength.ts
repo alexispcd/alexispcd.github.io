@@ -14,12 +14,27 @@ import type { StrengthBlock, StrengthContent, StrengthExercise } from "./types.t
 // ── Heuristique d'estimation (secondes) ───────────────────────────────────────
 const PER_REP_SEC = 3 // ~3 s par répétition
 
-/** Repos entre deux exercices d'un même tour. */
-export const REST_BETWEEN_EXERCISES_SEC = 20
+/** Repos entre deux exercices d'un même tour. Plancher métier : jamais sous 15 s. */
+export const REST_BETWEEN_EXERCISES_SEC = 15
 /** Repos entre deux tours, et entre deux blocs. */
-export const REST_BETWEEN_ROUNDS_SEC = 30
+export const REST_BETWEEN_ROUNDS_SEC = 20
 
 export const DEFAULT_TARGET_MIN = 40
+
+// ── Bandes de contrôle de durée (voir validate.ts pour la structure) ──────────
+// L'estimateur est sensible : on sépare une bande LARGE (soft) sur la base issue
+// du modèle, d'une bande ÉTROITE (hard) sur la séance finale après trim.
+
+/** Niveau 2 (SOUPLE) : bande acceptable de la base modèle, avant trim. Hors bande
+ *  → retry ciblé, jamais de blocage. */
+export const RENFO_BASE_SOFT_MIN_MIN = 32
+export const RENFO_BASE_SOFT_MAX_MIN = 58
+
+/** Niveau 3 (DUR) : bande de la séance FINALE (après finalizeStrengthContent),
+ *  pour une cible de 40 min. Simple garde-fou : la règle de sortie accepte tout
+ *  de même la séance trimmée si un retry a déjà échoué. */
+export const RENFO_FINAL_MIN_MIN = 38
+export const RENFO_FINAL_MAX_MIN = 44
 
 /** Planchers du trim : en deçà, un circuit n'en est plus un. */
 const MIN_EXERCISES_PER_BLOCK = 2
@@ -184,7 +199,8 @@ export function enrichBlocks(blocks: StrengthBlock[] | undefined | null): Streng
 // ── Mollet excentrique obligatoire ────────────────────────────────────────────
 /** Dosage volontairement bas : travail excentrique lent, et coût maîtrisé. */
 const MANDATORY_CALF_REPS = 10
-const FORCE_BLOCK_INDEX = 1
+/** Index du bloc Force (0-basé), où le mollet excentrique est injecté. */
+export const FORCE_BLOCK_INDEX = 1
 
 /**
  * Garantit la présence du mollet excentrique dans le bloc Force.
@@ -225,4 +241,32 @@ export function finalizeStrengthContent(
     base_blocks: base,
     blocks: trimToTarget(base, target),
   }
+}
+
+// ── Contrôles de durée (niveaux 2 et 3) ───────────────────────────────────────
+
+/**
+ * Niveau 2 (SOUPLE) sur la base issue du modèle, AVANT trim. Retourne un message
+ * de retry chiffré si la durée estimée sort de la bande large, sinon null. Ne
+ * bloque JAMAIS : le message sert seulement à guider un unique retry.
+ */
+export function baseDurationHint(blocks: StrengthBlock[] | undefined | null, tag: string): string | null {
+  const est = estimateStrengthDuration(blocks)
+  if (est >= RENFO_BASE_SOFT_MIN_MIN && est <= RENFO_BASE_SOFT_MAX_MIN) return null
+  const advice = est > RENFO_BASE_SOFT_MAX_MIN
+    ? "réduis le nombre d'exercices par bloc"
+    : "ajoute un exercice par bloc"
+  return `${tag} : durée estimée ${est} min, cible ${DEFAULT_TARGET_MIN} min, ${advice}`
+}
+
+/**
+ * Niveau 3 (DUR) sur la séance FINALE, après finalizeStrengthContent. Retourne un
+ * message si la durée jouée sort de la bande étroite, sinon null. L'appelant loge
+ * l'avertissement mais applique la règle de sortie : la séance trimmée est
+ * conservée (une séance imparfaite vaut mieux qu'un plan impossible à générer).
+ */
+export function finalDurationWarning(content: StrengthContent | null | undefined): string | null {
+  const est = estimateStrengthDuration(content?.blocks)
+  if (est >= RENFO_FINAL_MIN_MIN && est <= RENFO_FINAL_MAX_MIN) return null
+  return `séance finale ${est} min hors bande cible (${RENFO_FINAL_MIN_MIN} à ${RENFO_FINAL_MAX_MIN} min)`
 }

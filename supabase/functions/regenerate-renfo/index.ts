@@ -3,7 +3,9 @@ import { createClient } from "@supabase/supabase-js"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { validateStrengthContent } from "../_shared/training/validate.ts"
-import { finalizeStrengthContent } from "../_shared/training/strength.ts"
+import {
+  baseDurationHint, finalDurationWarning, finalizeStrengthContent,
+} from "../_shared/training/strength.ts"
 import {
   bonusKindForWeek, detectBonusKind, EXERCISE_INDEX, type ExerciseCategory,
 } from "../_shared/training/exercises.ts"
@@ -48,7 +50,11 @@ async function callModel(system: string, messages: Array<{ role: "user" | "assis
   return parsed.sessions ?? []
 }
 
-/** Valide chaque séance régénérée : structure renfo + parité du bloc bonus. */
+/**
+ * Valide chaque séance régénérée : STRUCTURE renfo (niveau 1, DUR) + parité du
+ * bloc bonus. Seules ces erreurs bloquent la régénération. La durée est traitée à
+ * part, en soft (voir durationHints).
+ */
 function validateOut(out: RenfoOut[], byId: Map<string, RenfoTarget>): string[] {
   const errors: string[] = []
   for (const o of out) {
@@ -74,6 +80,24 @@ function validateOut(out: RenfoOut[], byId: Map<string, RenfoTarget>): string[] 
     }
   }
   return errors
+}
+
+/**
+ * Niveau 2 (SOUPLE) : indices de durée de la base modèle, hors bande large. Ils
+ * déclenchent un retry ciblé mais ne bloquent jamais (règle de sortie : on garde
+ * la séance trimmée si le retry échoue).
+ */
+function durationHints(out: RenfoOut[], byId: Map<string, RenfoTarget>): string[] {
+  const hints: string[] = []
+  for (const o of out) {
+    const cur = byId.get(o.id)
+    if (!cur) continue
+    const blocks = (o.strength_content as { blocks?: StrengthBlock[] } | null)?.blocks
+    if (!Array.isArray(blocks)) continue
+    const hint = baseDurationHint(blocks, `séance ${o.id} (semaine ${cur.week_number})`)
+    if (hint) hints.push(hint)
+  }
+  return hints
 }
 
 async function handleRequest(req: Request): Promise<Response> {
@@ -164,31 +188,45 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   out = out.filter((o) => byId.has(o.id))
+  // Niveau 1 (structure, DUR) : seul blocage. Niveau 2 (durée, SOUPLE) : déclenche
+  // le même retry mais ne bloque pas. On retry si l'un des deux a matière.
   let errors = validateOut(out, byId)
-  if (errors.length) {
+  let hints = durationHints(out, byId)
+  if (errors.length || hints.length) {
+    const corrections = [
+      ...errors.map((e) => `- ${e}`),
+      ...hints.map((h) => `- ${h}`),
+    ]
     try {
       out = await callModel(system, [
         { role: "user", content: userPrompt },
         { role: "assistant", content: JSON.stringify({ sessions: out }) },
         {
           role: "user",
-          content: "Le JSON est invalide. Corrige STRICTEMENT selon ces erreurs et renvoie TOUTES les séances :\n" +
-            errors.slice(0, 20).map((e) => `- ${e}`).join("\n"),
+          content: "Le JSON doit être corrigé. Applique STRICTEMENT ces points et renvoie TOUTES les séances :\n" +
+            corrections.slice(0, 20).join("\n"),
         },
       ])
       out = out.filter((o) => byId.has(o.id))
       errors = validateOut(out, byId)
+      hints = durationHints(out, byId)
     } catch (err) {
       return json(502, { error: "Erreur IA renfo (retry)", detail: err instanceof Error ? err.message : String(err) })
     }
   }
+  // Seules les erreurs de STRUCTURE bloquent. Une durée encore hors bande après
+  // retry est acceptée : le trim la ramène, une séance imparfaite reste jouable.
   if (errors.length) return json(422, { error: "Régénération renfo invalide", details: errors.slice(0, 10) })
+  if (hints.length) console.warn("[regenerate-renfo] durée hors bande après retry (acceptée) :", hints.slice(0, 8))
   if (out.length === 0) return json(200, { updated: 0, sessions: [] })
 
   // 7. Enrichissement + persistance (uniquement le strength_content, statut inchangé).
   const changedIds: string[] = []
   for (const o of out) {
     const finalized: StrengthContent = finalizeStrengthContent(o.strength_content as never)
+    // Niveau 3 (durée finale, DUR) : simple garde-fou logué, jamais bloquant.
+    const warn = finalDurationWarning(finalized)
+    if (warn) console.warn(`[regenerate-renfo] ${o.id} : ${warn}`)
     const { error: updErr } = await supabaseAdmin
       .from("training_sessions")
       .update({ strength_content: finalized })

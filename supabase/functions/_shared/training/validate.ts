@@ -4,7 +4,7 @@ import { dayOfWeek, dayTs, type WeekBounds, type Zone, zoneRangeForWeek } from "
 import {
   BLOCK_CATEGORIES, detectBonusKind, EXERCISE_INDEX, type ExerciseCategory, isExerciseSlug,
 } from "./exercises.ts"
-import { estimateStrengthDuration } from "./strength.ts"
+import { FORCE_BLOCK_INDEX, MANDATORY_CALF_SLUG } from "./strength.ts"
 
 // dayTs reste exposé depuis ce module (importé par d'autres fonctions Edge).
 export { dayTs }
@@ -85,25 +85,30 @@ function validateSteps(s: PlanSession, tag: string, errors: string[]): void {
   }
 }
 
-// ── Renfo (catalogue + structure 4 blocs) ─────────────────────────────────────
+// ── Renfo : validation de STRUCTURE (niveau 1, DUR) ───────────────────────────
 //
-// Ces bornes portent sur la SORTIE MODÈLE, pas sur la séance finale. Elles sont
-// volontairement décalées d'un cran vers le bas parce que le code injecte ensuite
-// le mollet excentrique dans le bloc Force (strength.ts, withMandatoryCalf) :
-// +1 exercice, et jusqu'à +4 min (10 reps × 3 s × 2 côtés + 20 s de repos, sur un
-// bloc à 3 tours). On valide donc 12-16 exercices / 36-46 min pour une séance
-// finale de 13-17 exercices / 40-50 min. Valider APRÈS injection ferait remonter
-// des erreurs sur du contenu que le modèle n'a pas produit : illisible en debug.
+// Ce contrôle porte sur la SORTIE MODÈLE et ne concerne QUE la structure (4 blocs,
+// slugs, catégories, reps XOR duration_sec, rounds, nombre d'exercices). La durée
+// est traitée à part, en soft (voir baseDurationHint dans strength.ts), parce que
+// l'estimateur est sensible : la lier au niveau 1 rejetterait des séances jouables.
+//
+// Bornes d'exercices : elles décrivent la séance FINALE (3 à 5 par bloc, 12 à 20
+// au total), mollet excentrique inclus. Or ce mollet est injecté PAR LE CODE dans
+// le bloc Force après la sortie du modèle (strength.ts, withMandatoryCalf) : +1
+// exercice dans ce bloc. On valide donc les comptes PROJETÉS (sortie modèle + le
+// mollet à venir), pour que le prompt et le validateur parlent de la même séance.
+const RENFO_MIN_PER_BLOCK = 3
+const RENFO_MAX_PER_BLOCK = 5
 const RENFO_MIN_EXERCISES = 12
-const RENFO_MAX_EXERCISES = 16
-const RENFO_BASE_MIN_MIN = 36
-const RENFO_BASE_MAX_MIN = 46
+const RENFO_MAX_EXERCISES = 20
 const RENFO_ROUNDS = [2, 3]
 
 /**
- * Valide le strength_content d'une séance renfo (sortie modèle, base ~45 min) :
+ * Valide la STRUCTURE du strength_content d'une séance renfo (sortie modèle) :
  * exactement 4 blocs dans l'ordre, "rounds" à 2 ou 3, slugs du catalogue,
- * catégories cohérentes par bloc, reps XOR duration_sec, et les bornes ci-dessus.
+ * catégories cohérentes par bloc, reps XOR duration_sec, et les bornes d'exercices
+ * de la séance finale (mollet excentrique injecté par le code pris en compte).
+ * NE contrôle PAS la durée (niveau 2 soft, géré par les fonctions Edge).
  */
 export function validateStrengthContent(content: unknown, tag: string, errors: string[]): void {
   if (!content || typeof content !== "object") {
@@ -116,7 +121,13 @@ export function validateStrengthContent(content: unknown, tag: string, errors: s
     return
   }
 
-  let totalExos = 0
+  // Le mollet excentrique n'est ajouté au bloc Force que s'il n'est pas déjà là
+  // (miroir de withMandatoryCalf). On projette les comptes en conséquence.
+  const calfPresent = blocks.some((bU) =>
+    Array.isArray((bU as { exercises?: unknown }).exercises) &&
+    ((bU as { exercises: Array<{ slug?: unknown }> }).exercises).some((e) => e?.slug === MANDATORY_CALF_SLUG))
+
+  let projectedTotal = 0
   blocks.forEach((bU, bi) => {
     const btag = `${tag} bloc ${bi + 1}`
     const exos = (bU as { exercises?: unknown }).exercises
@@ -124,7 +135,14 @@ export function validateStrengthContent(content: unknown, tag: string, errors: s
       errors.push(`${btag} : aucun exercice`)
       return
     }
-    totalExos += exos.length
+    // Compte projeté du bloc : +1 sur le bloc Force pour le mollet à injecter.
+    const injected = bi === FORCE_BLOCK_INDEX && !calfPresent ? 1 : 0
+    const projected = exos.length + injected
+    projectedTotal += projected
+    if (projected < RENFO_MIN_PER_BLOCK || projected > RENFO_MAX_PER_BLOCK) {
+      const suffix = injected ? " (mollet excentrique du code inclus)" : ""
+      errors.push(`${btag} : ${projected} exercices${suffix} (attendu ${RENFO_MIN_PER_BLOCK} à ${RENFO_MAX_PER_BLOCK} par bloc)`)
+    }
 
     const rounds = (bU as { rounds?: unknown }).rounds
     if (!RENFO_ROUNDS.includes(rounds as number)) {
@@ -171,13 +189,8 @@ export function validateStrengthContent(content: unknown, tag: string, errors: s
     }
   })
 
-  if (totalExos < RENFO_MIN_EXERCISES || totalExos > RENFO_MAX_EXERCISES) {
-    errors.push(`${tag} : ${totalExos} exercices au total (attendu ${RENFO_MIN_EXERCISES} à ${RENFO_MAX_EXERCISES})`)
-  }
-
-  const est = estimateStrengthDuration(blocks as never)
-  if (est < RENFO_BASE_MIN_MIN || est > RENFO_BASE_MAX_MIN) {
-    errors.push(`${tag} : durée estimée de la base ${est} min hors bornes (${RENFO_BASE_MIN_MIN} à ${RENFO_BASE_MAX_MIN} min)`)
+  if (projectedTotal < RENFO_MIN_EXERCISES || projectedTotal > RENFO_MAX_EXERCISES) {
+    errors.push(`${tag} : ${projectedTotal} exercices au total, mollet du code inclus (attendu ${RENFO_MIN_EXERCISES} à ${RENFO_MAX_EXERCISES})`)
   }
 }
 
