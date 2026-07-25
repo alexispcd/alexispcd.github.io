@@ -18,9 +18,6 @@ const theme = (dark) => {
       secondary: dark ? '#94a3b8' : '#6b7280',
     },
     divider: dark ? '#1e1e2a' : '#ebebeb',
-    // Bande peinte sous la barre de statut iOS (zone env(safe-area-inset-top)).
-    // iOS y dessine l'heure toujours en blanc, la bande doit donc rester foncée.
-    statusBar: dark ? '#0f0f12' : '#1D9E75',
   },
   typography: {
     fontFamily: 'Geist, sans-serif',

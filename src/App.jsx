@@ -45,14 +45,6 @@ const AppLayout = () => {
       }}>
         <Outlet />
       </Box>
-      {/* Bande peinte sous l'heure iOS. Sous le z-index des Dialog (1300) : le backdrop la recouvre. */}
-      <Box sx={{
-        position: 'fixed', top: 0, left: 0, right: 0,
-        height: 'env(safe-area-inset-top, 0px)',
-        bgcolor: (t) => t.palette.statusBar,
-        zIndex: 1200,
-        pointerEvents: 'none',
-      }} />
       {/* Masqué pendant qu'un overlay plein écran (player renfo) occupe l'écran :
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
