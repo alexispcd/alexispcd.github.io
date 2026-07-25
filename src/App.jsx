@@ -35,16 +35,14 @@ const AppLayout = () => {
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
-      {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu de
-          page descend de l'inset haut (header) et reserve l'inset bas pour ne pas finir
-          sous l'indicateur d'accueil. Ici pas d'aplat peint, juste de l'espacement
-          transparent : le fond de page reste visible dans l'inset, sans effet footer.
-          Chaque page scrolle dans son propre conteneur en height 100% : ce padding
-          raccourcit d'autant leur zone utile. */}
+      {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu
+          descend de l'inset haut pour le header. En bas, pas d'inset ni d'aplat : le fond
+          de page va jusqu'au bord physique (bord a bord iOS standard), et chaque page gere
+          sa propre marge basse pour degager sa derniere carte au-dessus de l'indicateur
+          d'accueil. Chaque page scrolle dans son propre conteneur en height 100%. */}
       <Box sx={{
         height: '100%', overflow: 'hidden',
         pt: 'env(safe-area-inset-top, 0px)',
-        pb: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <Outlet />
       </Box>
