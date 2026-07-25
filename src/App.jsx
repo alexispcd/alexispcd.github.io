@@ -34,7 +34,7 @@ const AppLayout = () => {
     : () => navigate(-1)
 
   return (
-    <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
+    <Box sx={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
       {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu
           descend de l'inset haut pour le header. En bas, pas d'inset ni d'aplat : le fond
           de page va jusqu'au bord physique (bord a bord iOS standard), et chaque page gere
@@ -46,10 +46,6 @@ const AppLayout = () => {
       }}>
         <Outlet />
       </Box>
-      {/* DEBUG safe-area : ligne ROUGE = bas de la zone barre de statut, ligne BLEUE = haut
-          de la zone indicateur d'accueil. A retirer une fois le diagnostic fait. */}
-      <Box sx={{ position: 'fixed', top: 'env(safe-area-inset-top, 0px)', left: 0, right: 0, height: '2px', bgcolor: 'red', zIndex: 9999, pointerEvents: 'none' }} />
-      <Box sx={{ position: 'fixed', bottom: 'env(safe-area-inset-bottom, 0px)', left: 0, right: 0, height: '2px', bgcolor: 'blue', zIndex: 9999, pointerEvents: 'none' }} />
       {/* Masqué pendant qu'un overlay plein écran (player renfo) occupe l'écran :
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
