@@ -1,7 +1,6 @@
 import { createTheme } from '@mui/material/styles'
 
 const theme = (dark) => {
-  // Fond de page, reutilise pour la bande de l'indicateur d'accueil (homeIndicator).
   const bgDefault = dark ? '#0f0f12' : '#ffffff'
   return createTheme({
   palette: {
@@ -22,9 +21,6 @@ const theme = (dark) => {
     // Bande peinte sous la barre de statut iOS (zone env(safe-area-inset-top)).
     // iOS y dessine l'heure toujours en blanc, la bande doit donc rester foncée.
     statusBar: dark ? '#0f0f12' : '#1D9E75',
-    // Bande peinte sur la zone de l'indicateur d'accueil iOS (env(safe-area-inset-bottom)).
-    // Vaut background.default : rien n'y est dessine par iOS, elle doit se fondre dans la page.
-    homeIndicator: bgDefault,
   },
   typography: {
     fontFamily: 'Geist, sans-serif',

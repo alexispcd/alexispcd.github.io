@@ -42,7 +42,6 @@ const AppLayout = () => {
       <Box sx={{
         height: '100%', overflow: 'hidden',
         pt: 'env(safe-area-inset-top, 0px)',
-        pb: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <Outlet />
       </Box>
@@ -51,16 +50,6 @@ const AppLayout = () => {
         position: 'fixed', top: 0, left: 0, right: 0,
         height: 'env(safe-area-inset-top, 0px)',
         bgcolor: (t) => t.palette.statusBar,
-        zIndex: 1200,
-        pointerEvents: 'none',
-      }} />
-      {/* Symetrique en bas, sur la zone de l'indicateur d'accueil. Couleur homeIndicator
-          (= background.default) : la bande se fond dans la page au repos, et comme elle
-          partage la couleur du contenu, le backdrop d'une modale l'assombrit a l'identique. */}
-      <Box sx={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        height: 'env(safe-area-inset-bottom, 0px)',
-        bgcolor: (t) => t.palette.homeIndicator,
         zIndex: 1200,
         pointerEvents: 'none',
       }} />
