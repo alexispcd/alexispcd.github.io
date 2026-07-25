@@ -303,7 +303,7 @@ const VeillePage = () => {
       <Box
         ref={scrollRef}
         onScroll={handleScroll}
-        sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 4, display: 'flex', flexDirection: 'column' }}
+        sx={{ flex: 1, overflowY: 'auto', px: 2, display: 'flex', flexDirection: 'column' }}
       >
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
@@ -319,7 +319,6 @@ const VeillePage = () => {
               display: 'grid',
               gridTemplateColumns: displayMode === 'mosaic' ? '1fr 1fr' : '1fr',
               gap: 1.5,
-              pb: 2,
             }}>
               {articles.map(article => (
                 <ArticleCard

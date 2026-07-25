@@ -351,7 +351,7 @@ const PlanDashboard = () => {
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', pb: 6 }}>
+      <Box sx={{ maxWidth: 640, mx: 'auto' }}>
 
         {/* En-tête plan */}
         <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>

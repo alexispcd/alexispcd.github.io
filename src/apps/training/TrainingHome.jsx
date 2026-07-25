@@ -95,7 +95,7 @@ const TrainingHome = () => {
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: 6 }}>
+      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
 
         {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
