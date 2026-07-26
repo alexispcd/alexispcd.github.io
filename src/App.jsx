@@ -43,6 +43,7 @@ const AppLayout = () => {
       <Box sx={{
         height: '100%', overflow: 'hidden',
         pt: 'env(safe-area-inset-top, 0px)',
+        bgcolor: 'red', // DEBUG : conteneur de layout (a retirer)
       }}>
         <Outlet />
       </Box>

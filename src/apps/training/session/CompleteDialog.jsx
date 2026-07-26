@@ -101,10 +101,12 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.labelId))
   const totalDistance = selectedCandidates.reduce((sum, c) => sum + (c.distance_m || 0), 0)
   const totalDuration = selectedCandidates.reduce((sum, c) => sum + (c.duration_sec || 0), 0)
-  // Charge utile serveur : id + start_timestamp (le serveur trie chronologiquement).
+  // Charge utile serveur : id + start_timestamp (le serveur trie chronologiquement)
+  // + sport_type (100 course / 102 trail), pour que queryActivityLapData vise le bon sport.
   const selectedActivities = selectedCandidates.map((c) => ({
     id: c.labelId,
     start_timestamp: typeof c.startTimestamp === 'number' ? c.startTimestamp : null,
+    sport_type: typeof c.sport_type === 'number' ? c.sport_type : null,
   }))
 
   return (

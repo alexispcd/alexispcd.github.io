@@ -11,7 +11,8 @@ const CORS = {
 }
 
 const TZ = "Europe/Paris"
-const RUNNING_SPORT_CODE = 100
+// 100 = course à pied, 102 = trail : on veut les deux comme candidats à la liaison.
+const SPORT_CODES = [100, 102]
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
 
@@ -22,6 +23,7 @@ interface RawRecord {
   labelId?: string
   date?: string
   startTimestamp?: number | null
+  sport_type?: number | null
   distance_m?: number
   duration_sec?: number
   avg_hr?: number | null
@@ -105,13 +107,14 @@ async function handleRequest(req: Request): Promise<Response> {
 
   const userMessage = [
     `Appelle querySportRecords avec startDate=${startDate}, endDate=${endDate}, limit=20, ` +
-      `sportTypeCodes=[${RUNNING_SPORT_CODE}], timezone=${TZ}.`,
+      `sportTypeCodes=[${SPORT_CODES.join(", ")}], timezone=${TZ}.`,
     "Retourne chaque activité au format :",
     JSON.stringify({
       records: [{
         labelId: "identifiant labelId de l'activité (string)",
         date: "date de l'activité au format yyyy-MM-dd",
         startTimestamp: "horodatage de début de l'activité en MILLISECONDES (nombre) ou null",
+        sport_type: "code du type de sport (nombre) : 100 = course à pied, 102 = trail",
         distance_m: "distance totale en MÈTRES (nombre)",
         duration_sec: "durée totale en SECONDES (nombre)",
         avg_hr: "FC moyenne en bpm (nombre) ou null si absente",
@@ -157,6 +160,7 @@ async function handleRequest(req: Request): Promise<Response> {
         labelId: r.labelId!,
         date: r.date ?? null,
         startTimestamp: typeof r.startTimestamp === "number" ? r.startTimestamp : null,
+        sport_type: typeof r.sport_type === "number" ? r.sport_type : null,
         distance_m,
         duration_sec,
         avg_pace_sec,

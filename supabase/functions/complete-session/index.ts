@@ -92,6 +92,8 @@ function feedbackPromptBlock(fb: Feedback | null): string {
 interface SelectedActivity {
   id: string
   start_timestamp: number | null
+  // Code type de sport Coros (100 course, 102 trail). null → défaut course.
+  sport_type: number | null
 }
 
 // Garde-fou CPU : chaque activité coûte un appel MCP séquentiel.
@@ -118,7 +120,12 @@ function parseSelectedActivities(body: Record<string, unknown>): SelectedActivit
       const id = rec.id
       if (typeof id !== "string" || !id) throw new Error("coros_activities : chaque activité doit avoir un id non vide")
       const ts = rec.start_timestamp
-      return { id, start_timestamp: typeof ts === "number" && Number.isFinite(ts) ? ts : null }
+      const st = rec.sport_type
+      return {
+        id,
+        start_timestamp: typeof ts === "number" && Number.isFinite(ts) ? ts : null,
+        sport_type: typeof st === "number" && Number.isFinite(st) ? st : null,
+      }
     })
   }
 
@@ -130,12 +137,12 @@ function parseSelectedActivities(body: Record<string, unknown>): SelectedActivit
     if (!rawIds.every((x: unknown) => typeof x === "string" && x.length > 0)) {
       throw new Error("coros_activity_ids doit contenir des identifiants non vides")
     }
-    return (rawIds as string[]).map((id) => ({ id, start_timestamp: null }))
+    return (rawIds as string[]).map((id) => ({ id, start_timestamp: null, sport_type: null }))
   }
 
   // Compat : coros_activity_id = "id" (une seule activité)
   if (typeof body.coros_activity_id === "string" && body.coros_activity_id) {
-    return [{ id: body.coros_activity_id, start_timestamp: null }]
+    return [{ id: body.coros_activity_id, start_timestamp: null, sport_type: null }]
   }
 
   return null
@@ -253,7 +260,7 @@ async function handleRequest(req: Request): Promise<Response> {
   //    complétion partielle.
   const fetched: Array<{ id: string; laps: Lap[]; kmLaps: Lap[] | null }> = []
   for (const activity of selected) {
-    const lapsResult = await fetchLaps(corosToken, activity.id, steps.length)
+    const lapsResult = await fetchLaps(corosToken, activity.id, steps.length, activity.sport_type ?? RUNNING_SPORT_CODE)
     if ("failure" in lapsResult) {
       // Données inexploitables : la séance reste "planned", on nomme l'activité fautive.
       return json(422, { error: "Données Coros inexploitables", detail: `Activité ${activity.id} : ${lapsResult.failure}` })
@@ -382,12 +389,12 @@ type LapsResult =
  * en code déterministe. Le LLM n'est qu'un déclencheur d'appel d'outil : sa
  * réponse texte est ignorée, seul le bloc mcp_tool_result est exploité.
  */
-async function fetchLaps(corosToken: string, labelId: string, stepCount: number): Promise<LapsResult> {
+async function fetchLaps(corosToken: string, labelId: string, stepCount: number, sportType: number): Promise<LapsResult> {
   const system =
     "Tu appelles l'outil MCP demandé, rien d'autre. Ta réponse texte sera ignorée : " +
     "seul l'appel d'outil compte. N'interprète pas, ne reformule pas, n'invente pas de données."
   const userMessage =
-    `Appelle queryActivityLapData avec labelId="${labelId}" et sportType=${RUNNING_SPORT_CODE}.`
+    `Appelle queryActivityLapData avec labelId="${labelId}" et sportType=${sportType}.`
 
   let data: AnthropicResponse
   try {
