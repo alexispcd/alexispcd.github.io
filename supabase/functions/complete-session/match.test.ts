@@ -1,6 +1,11 @@
 // Tests de l'appariement steps <-> laps (match.ts), en données figées, sans
-// réseau. Cas de référence : séance du 20 juillet 2026 (6x600m précédée d'un
-// footing) enregistrée en DEUX activités Coros, concaténées côté serveur.
+// réseau.
+//
+// Cas de référence : séance du 20 juillet 2026 (footing + 6x600m) enregistrée en
+// DEUX activités Coros et concaténée côté serveur. Données réelles de production
+// (séance 27e39a56-9866-421e-9052-eada688e3b2c). Ce test appelle matchStepsToLaps
+// avec la liste COMPLÈTE de laps et vérifie l'appariement de TOUS les steps, pas
+// seulement la durée agrégée, pour détecter un mauvais choix de lap de départ.
 //
 // Lancer : deno test supabase/functions/complete-session/match.test.ts
 
@@ -27,17 +32,18 @@ const step = (
   distance_m: opts.distance_m ?? null,
   duration_sec: opts.duration_sec ?? null,
 })
-const lap = (distance_m: number, duration_sec: number, avg_pace_sec: number | null, avg_hr: number | null = null): Lap => ({
+// Allure = durée / distance (recalculée comme en prod). Sert uniquement à peupler
+// avg_pace_sec des laps unitaires ; l'agrégation la recalcule sur les totaux.
+const lap = (distance_m: number, duration_sec: number, avg_hr: number | null = null): Lap => ({
   distance_m,
   duration_sec,
-  avg_pace_sec,
+  avg_pace_sec: Math.round(duration_sec / (distance_m / 1000)),
   avg_hr,
 })
 
-// ── Séance de référence : 13 steps ────────────────────────────────────────────
-// warmup 1200 s (cible 344 ±12), 6x600 m (cible 225 ±5) séparés de 5 récup 90 s
-// sans cible, puis cooldown 600 s (cible 344 ±12).
-const buildSteps = (): Step[] => {
+// 13 steps : warmup 1200 s (cible 344 ±12), 6x600 m (cible 225 ±5) séparés de 5
+// récup 90 s sans cible, puis cooldown 600 s (cible 344 ±12).
+const buildRefSteps = (): Step[] => {
   orderCounter = 0
   const s: Step[] = [step("warmup", { duration_sec: 1200, target_pace_sec: 344, pace_tolerance_sec: 12 })]
   for (let i = 0; i < 6; i++) {
@@ -48,101 +54,128 @@ const buildSteps = (): Step[] => {
   return s
 }
 
-// Activité 1 (Vannes Course, footing d'échauffement) : 4 laps auto-km, footing
-// progressif. Chaque lap est individuellement hors cible warmup, mais leur somme
-// (1204 s pour 3510 m, soit 343 s/km) tombe dans la cible.
-const activity1Laps = (): Lap[] => [
-  lap(1000, 360, 360, 140),
-  lap(1000, 345, 345, 142),
-  lap(1000, 330, 330, 145),
-  lap(510, 169, 331, 146),
+// Laps réels concaténés dans l'ordre chronologique (distance_m, duration_sec).
+// Laps 0 a 3 : footing d'échauffement. Lap 4 : artefact (107 m). Laps 5 a 15 :
+// intervalles et récup. Lap 16 : artefact (188 m). Lap 17 : cooldown enregistré
+// en un seul lap trop long.
+const buildRefLaps = (): Lap[] => [
+  lap(1000, 353), // 0
+  lap(1000, 381), // 1
+  lap(1000, 339), // 2
+  lap(390.02, 131), // 3
+  lap(107.74, 27), // 4
+  lap(600, 136), // 5  interval 1 : +2
+  lap(252.77, 90), // 6  récup 1
+  lap(600, 136), // 7  interval 2 : +2
+  lap(264.57, 90), // 8  récup 2
+  lap(600, 135), // 9  interval 3 : 0
+  lap(251.55, 90), // 10 récup 3
+  lap(600, 138), // 11 interval 4 : +5
+  lap(254.43, 90), // 12 récup 4
+  lap(600, 137), // 13 interval 5 : +3
+  lap(196.98, 90), // 14 récup 5
+  lap(600, 134), // 15 interval 6 : -2
+  lap(188.87, 90), // 16 artefact
+  lap(1517.51, 737), // 17 cooldown
 ]
 
-// Activité 2 (workout 6x600m) : intervalles et récup programmés, plus trois laps
-// parasites (21,4 m ; 16,7 m ; un lap de 7 s) et un petit lap conservé (107,7 m
-// en 27 s). Deltas visés sur les 600 m : +2, +2, 0, +5, +3, -2.
-const activity2Laps = (): Lap[] => [
-  lap(21.4, 8, null, null), // parasite : distance < 50 m
-  lap(600, 136, 227, 165), // interval 1 : +2
-  lap(250, 90, 360, 150), // récup 1
-  lap(600, 136, 227, 166), // interval 2 : +2
-  lap(250, 90, 360, 150), // récup 2
-  lap(600, 135, 225, 167), // interval 3 : 0
-  lap(250, 90, 360, 151), // récup 3
-  lap(600, 138, 230, 168), // interval 4 : +5
-  lap(250, 90, 360, 151), // récup 4
-  lap(600, 137, 228, 169), // interval 5 : +3
-  lap(250, 90, 360, 152), // récup 5
-  lap(600, 134, 223, 170), // interval 6 : -2
-  lap(16.7, 5, null, null), // parasite : distance < 50 m
-  lap(1600, 620, 388, 150), // cooldown : hors cible (+44)
-  lap(60, 7, 117, null), // parasite : durée < 15 s
-  lap(107.7, 27, 251, 140), // petit lap conservé (>= 50 m et >= 15 s)
-]
+// ── Test principal : optimisation conjointe, appariement complet ──────────────
+Deno.test("cas réel : départ conjoint, appariement complet step par step", () => {
+  const steps = buildRefSteps()
+  const laps = buildRefLaps()
+  const { actualLaps, comparisons } = matchStepsToLaps(steps, laps)
 
-const nStatus = (comparisons: { status: string }[], status: string) =>
-  comparisons.filter((c) => c.status === status).length
-
-// ── Test principal : ordre chronologique + agrégation + filtrage ──────────────
-Deno.test("séance à deux activités : ordre chronologique, 6 intervalles ok", () => {
-  const steps = buildSteps()
-  // Concaténation chronologique : footing (activité 1) puis workout (activité 2).
-  const laps = [...activity1Laps(), ...activity2Laps()]
-  const { comparisons } = matchStepsToLaps(steps, laps)
-
-  // Les 6 steps d'intervalle (step_index impairs 1,3,5,7,9,11) sont tous 'ok'.
-  const intervalSteps = [1, 3, 5, 7, 9, 11]
-  const intervalCmps = intervalSteps.map((si) => comparisons.find((c) => c.step_index === si))
-  for (const c of intervalCmps) {
-    assert(c, "comparaison d'intervalle manquante")
-    assertEquals(c!.status, "ok", `intervalle step ${c!.step_index}`)
+  const cmp = new Map(comparisons.map((c) => [c.step_index, c]))
+  const get = (si: number) => {
+    const c = cmp.get(si)
+    assert(c, `comparaison du step ${si} manquante`)
+    return c!
   }
-  assertEquals(intervalCmps.filter((c) => c!.status === "ok").length, 6, "intervalles ok")
-})
 
-Deno.test("agrégation : le warmup passe 'ok' (7/8), durée agrégée 1204 s", () => {
-  const steps = buildSteps()
-  const laps = [...activity1Laps(), ...activity2Laps()]
-  const { comparisons, actualLaps } = matchStepsToLaps(steps, laps)
+  // step 0 : warmup agrégé sur les 4 premiers laps (départ 0, PAS 1).
+  const c0 = get(0)
+  assertEquals(c0.lap_index, 0, "step0 lap de départ")
+  assertEquals(c0.lap_count, 4, "step0 nombre de laps")
+  assertEquals(c0.actual_pace, 355, "step0 allure agrégée")
+  assertEquals(c0.delta_sec, 11, "step0 delta")
+  assertEquals(c0.status, "ok", "step0 statut")
 
-  // Warmup (step 0) agrégé sur 4 laps → 'ok'.
-  const warmup = comparisons.find((c) => c.step_index === 0)
-  assert(warmup, "comparaison warmup manquante")
-  assertEquals(warmup!.status, "ok", "warmup agrégé")
-  assertEquals(warmup!.lap_count, 4, "nombre de laps agrégés au warmup")
+  // Durée + distance agrégées reconstituées depuis actual_laps.
+  const warmupLaps = actualLaps.filter((l) => l.step_index === 0)
+  assertEquals(warmupLaps.length, 4, "step0 : 4 laps portent le step_index 0")
+  assertEquals(warmupLaps.reduce((s, l) => s + (l.duration_sec ?? 0), 0), 1204, "step0 durée agrégée")
+  const dist = Math.round(warmupLaps.reduce((s, l) => s + (l.distance_m ?? 0), 0) * 100) / 100
+  assertEquals(dist, 3390.02, "step0 distance agrégée")
 
-  // 8 steps notés (warmup + 6 intervalles + cooldown), les récup sont 'free'.
+  // Intervalles : appariés 1:1 sur les 600 m, tous dans la cible.
+  // [step_index, lap_index, allure, delta]
+  const intervals: [number, number, number, number][] = [
+    [1, 5, 227, 2],
+    [3, 7, 227, 2],
+    [5, 9, 225, 0],
+    [7, 11, 230, 5],
+    [9, 13, 228, 3],
+    [11, 15, 223, -2],
+  ]
+  for (const [si, lapIdx, pace, delta] of intervals) {
+    const c = get(si)
+    assertEquals(c.lap_index, lapIdx, `step${si} lap de départ`)
+    assertEquals(c.lap_count, 1, `step${si} nombre de laps`)
+    assertEquals(c.actual_pace, pace, `step${si} allure`)
+    assertEquals(c.delta_sec, delta, `step${si} delta`)
+    assertEquals(c.status, "ok", `step${si} statut`)
+  }
+
+  // Récup : 'free', appariées 1:1.
+  for (const [si, lapIdx] of [[2, 6], [4, 8], [6, 10], [8, 12], [10, 14]]) {
+    const c = get(si)
+    assertEquals(c.lap_index, lapIdx, `step${si} lap de départ`)
+    assertEquals(c.lap_count, 1, `step${si} nombre de laps`)
+    assertEquals(c.status, "free", `step${si} statut`)
+  }
+
+  // Cooldown : lap 17 (le lap 16 est sauté), hors cible.
+  const c12 = get(12)
+  assertEquals(c12.lap_index, 17, "step12 lap de départ")
+  assertEquals(c12.lap_count, 1, "step12 nombre de laps")
+  assertEquals(c12.actual_pace, 486, "step12 allure")
+  assertEquals(c12.delta_sec, 142, "step12 delta")
+  assertEquals(c12.status, "ecart", "step12 statut")
+
+  // Total : 7 comparaisons ok sur les 8 steps ayant une cible.
   const graded = comparisons.filter((c) => c.status !== "free")
-  assertEquals(graded.length, 8, "steps notés")
-  assertEquals(nStatus(comparisons, "ok"), 7, "steps ok (warmup + 6 intervalles)")
+  assertEquals(graded.length, 8, "steps ayant une cible")
+  assertEquals(graded.filter((c) => c.status === "ok").length, 7, "steps ok")
 
-  // Durée agrégée des laps du warmup (step_index 0) = 1204 s pour 1200 prévues.
-  const warmupDuration = actualLaps
-    .filter((l) => l.step_index === 0)
-    .reduce((sum, l) => sum + (l.duration_sec ?? 0), 0)
-  assertEquals(warmupDuration, 1204, "durée agrégée du warmup")
-  // Le step_index est renseigné sur TOUS les laps du groupe, pas seulement le 1er.
-  assertEquals(actualLaps.filter((l) => l.step_index === 0).length, 4, "laps portant le step_index 0")
+  // Le lap 16 n'est apparié à aucun step (artefact sauté), c'est normal.
+  assertEquals(actualLaps[16].step_index, null, "lap 16 orphelin")
+
+  // GARDE ANTI RÉGRESSION du choix de départ : le premier step démarre au lap 0
+  // et aucun lap d'index inférieur à ce départ ne reste orphelin. Si le départ
+  // reglissait sur le lap 1 (bug corrigé), le lap 0 redeviendrait orphelin ici.
+  const firstStart = c0.lap_index
+  assertEquals(firstStart, 0, "le premier step démarre au lap 0")
+  for (let i = 0; i < firstStart; i++) {
+    assert(actualLaps[i].step_index != null, `lap ${i} (avant le premier step) ne doit pas être orphelin`)
+  }
+  assertEquals(actualLaps[0].step_index, 0, "lap 0 rattaché au warmup")
 })
 
-Deno.test("filtrage : les laps parasites sont écartés, le petit lap valide conservé", () => {
-  const raw = [...activity1Laps(), ...activity2Laps()]
+// ── Filtrage des laps parasites (correctif 2, non modifié) ────────────────────
+Deno.test("filtrage : laps parasites écartés, petit lap valide conservé", () => {
+  const raw: Lap[] = [
+    lap(21.4, 8), // parasite : distance < 50 m
+    lap(600, 136), // valide
+    lap(16.7, 5), // parasite : distance < 50 m
+    lap(60, 7), // parasite : durée < 15 s
+    lap(107.7, 27), // conservé : >= 50 m et >= 15 s
+  ]
   const filtered = filterLaps(raw)
-
-  const has = (dist: number, dur: number) =>
-    filtered.some((l) => l.distance_m === dist && l.duration_sec === dur)
-
-  assert(!has(21.4, 8), "le lap de 21,4 m doit être écarté")
-  assert(!has(16.7, 5), "le lap de 16,7 m doit être écarté")
-  assert(!has(60, 7), "le lap de 7 s doit être écarté")
-  assert(has(107.7, 27), "le lap de 107,7 m en 27 s doit être conservé")
-
-  // Cohérence : les laps écartés n'apparaissent pas non plus dans actual_laps.
-  const steps = buildSteps()
-  const { actualLaps } = matchStepsToLaps(steps, raw)
-  assert(!actualLaps.some((l) => l.distance_m === 21.4), "actual_laps ne doit pas contenir le lap 21,4 m")
-  assert(!actualLaps.some((l) => l.distance_m === 16.7), "actual_laps ne doit pas contenir le lap 16,7 m")
-  assert(actualLaps.some((l) => l.distance_m === 107.7), "actual_laps doit contenir le lap 107,7 m")
+  assertEquals(filtered.length, 2, "2 laps conservés")
+  assert(!filtered.some((l) => l.distance_m === 21.4), "le lap de 21,4 m doit être écarté")
+  assert(!filtered.some((l) => l.distance_m === 16.7), "le lap de 16,7 m doit être écarté")
+  assert(!filtered.some((l) => l.duration_sec === 7), "le lap de 7 s doit être écarté")
+  assert(filtered.some((l) => l.distance_m === 107.7), "le lap de 107,7 m en 27 s doit être conservé")
 })
 
 // ── Non régression : séance à une seule activité, appariement 1:1 inchangé ─────
@@ -157,11 +190,11 @@ Deno.test("non régression : une seule activité, appariement 1:1 préservé", (
   ]
   // Workout enregistré exactement comme programmé : autant de laps que de steps.
   const laps: Lap[] = [
-    lap(1765, 600, 340, 138),
-    lap(600, 135, 225, 165),
-    lap(250, 90, 360, 148),
-    lap(600, 135, 225, 166),
-    lap(880, 300, 341, 150),
+    lap(1765, 600),
+    lap(600, 135),
+    lap(250, 90),
+    lap(600, 135),
+    lap(880, 300),
   ]
   const { actualLaps, comparisons } = matchStepsToLaps(steps, laps)
 
@@ -172,8 +205,9 @@ Deno.test("non régression : une seule activité, appariement 1:1 préservé", (
   for (const c of comparisons) {
     assertEquals(c.lap_count, 1, `step ${c.step_index} non agrégé`)
   }
-  assertEquals(comparisons.find((c) => c.step_index === 0)!.status, "ok", "warmup")
-  assertEquals(comparisons.find((c) => c.step_index === 4)!.status, "ok", "cooldown")
-  assertEquals(nStatus(comparisons, "ok"), 4, "steps ok (warmup + 2 intervalles + cooldown)")
-  assertEquals(nStatus(comparisons, "free"), 1, "récup libre")
+  const cmp = new Map(comparisons.map((c) => [c.step_index, c]))
+  assertEquals(cmp.get(0)!.status, "ok", "warmup")
+  assertEquals(cmp.get(4)!.status, "ok", "cooldown")
+  assertEquals(comparisons.filter((c) => c.status === "ok").length, 4, "steps ok")
+  assertEquals(comparisons.filter((c) => c.status === "free").length, 1, "récup libre")
 })

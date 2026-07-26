@@ -109,42 +109,50 @@ function alignStepsToLaps(steps: Step[], laps: Lap[]): Assignment[] {
 
     const maxSkip = Math.max(0, remainingLaps - remainingSteps)
     const { expected, kind } = expectedMetric(steps[si])
+    const aggregatable = AGGREGATABLE_TYPES.has(steps[si].step_type)
+    const remainingStepsAfter = S - (si + 1)
 
-    // 1. Lap de départ : meilleur lap unique dans la fenêtre de saut autorisée.
+    // Optimisation CONJOINTE du couple (lap de départ, nombre de laps) pour les
+    // steps agrégeables : le lap de départ n'est PAS figé sur son erreur en lap
+    // unique. Pour chaque départ candidat de la fenêtre de saut, on évalue la
+    // meilleure erreur atteignable en étendant l'agrégation (extension tant que
+    // l'erreur s'améliore strictement, arrêt sinon, contrainte "laps restants >=
+    // steps restants"), puis on retient le couple qui minimise l'erreur.
+    // Départage : plus petit départ, puis plus petit nombre de laps, obtenus
+    // naturellement par un remplacement STRICT en parcourant les départs par ordre
+    // croissant. Les steps non agrégeables gardent leur sélection au meilleur lap
+    // unique (nombre de laps figé à 1).
     let bestJ = p
-    let bestCost = Infinity
+    let bestCount = 1
+    let bestErr = Infinity
     for (let j = p; j <= p + maxSkip && j < L; j++) {
-      const cost = relError(expected, lapMetric(laps[j], kind))
-      if (cost < bestCost) {
-        bestCost = cost
+      let aggMetric = lapMetric(laps[j], kind) ?? 0
+      let err = relError(expected, aggMetric)
+      let count = 1
+
+      if (aggregatable) {
+        while (j + count < L) {
+          // Contrainte dure : ne jamais affamer les steps suivants.
+          if (L - (j + count + 1) < remainingStepsAfter) break
+          const next = lapMetric(laps[j + count], kind)
+          if (next == null) break
+          const newErr = relError(expected, aggMetric + next)
+          if (newErr >= err) break // s'arrête dès que l'erreur cesse de diminuer
+          aggMetric += next
+          err = newErr
+          count++
+        }
+      }
+
+      if (err < bestErr) {
+        bestErr = err
         bestJ = j
+        bestCount = count
       }
     }
 
-    // 2. Agrégation des laps suivants, pour les seuls types agrégeables.
-    let count = 1
-    if (AGGREGATABLE_TYPES.has(steps[si].step_type)) {
-      let aggMetric = lapMetric(laps[bestJ], kind) ?? 0
-      let curErr = relError(expected, aggMetric)
-      while (bestJ + count < L) {
-        // Contrainte dure : ne jamais affamer les steps suivants.
-        const remainingStepsAfter = S - (si + 1)
-        const remainingLapsAfter = L - (bestJ + count + 1)
-        if (remainingLapsAfter < remainingStepsAfter) break
-
-        const next = lapMetric(laps[bestJ + count], kind)
-        if (next == null) break
-        const newErr = relError(expected, aggMetric + next)
-        if (newErr >= curErr) break // s'arrête dès que l'erreur cesse de diminuer
-
-        aggMetric += next
-        curErr = newErr
-        count++
-      }
-    }
-
-    result[si] = { start: bestJ, count }
-    p = bestJ + count
+    result[si] = { start: bestJ, count: bestCount }
+    p = bestJ + bestCount
   }
   return result
 }
