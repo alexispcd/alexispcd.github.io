@@ -5,19 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>cairn</title>
-    <!-- PWA plein écran iOS : la webview passe sous la barre de statut (voir viewport-fit=cover).
-         iOS dessine alors l'heure, le réseau et la batterie toujours en blanc, d'où une bande foncée. -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Sans viewport-fit=cover, iOS encadre l'app dans la zone sûre. La barre de statut
+         suit alors theme-color (pas de apple-mobile-web-app-status-bar-style qui la forcerait
+         en blanc). theme-color est calé sur le fond de l'app pour un haut raccord dans les 2 modes. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Cairn" />
-    <!-- Repli statique avant que React ne prenne le relais (voir useDarkMode). Chrome et Android. -->
-    <meta name="theme-color" content="#1D9E75" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f0f12" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <script type="module" crossorigin src="/assets/index-atNP0KJo.js"></script>
+    <script type="module" crossorigin src="/assets/index-Cf5uMh3D.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-BnigibEF.css">
   <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
