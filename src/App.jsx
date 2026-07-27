@@ -34,7 +34,7 @@ const AppLayout = () => {
     : () => navigate(-1)
 
   return (
-    <Box sx={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+    <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
       {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu
           descend de l'inset haut pour le header. En bas, pas d'inset ni d'aplat : le fond
           de page va jusqu'au bord physique (bord a bord iOS standard), et chaque page gere
@@ -63,6 +63,13 @@ const AppLayout = () => {
           sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
         />
       )}
+      {/* DEBUG unités de viewport : chaque ligne fixe est posée à la limite basse d'une
+          unité. Celle qui touche EXACTEMENT le bord physique bas = l'unité à utiliser.
+          ROUGE=dvh, BLEU=lvh, VERT=svh, ORANGE=haut de la safe-area basse. A retirer. */}
+      <Box sx={{ position: 'fixed', left: 0, right: 0, top: 'calc(100dvh - 3px)', height: '3px', bgcolor: 'red', zIndex: 9999, pointerEvents: 'none' }} />
+      <Box sx={{ position: 'fixed', left: 0, right: 0, top: 'calc(100lvh - 3px)', height: '3px', bgcolor: 'blue', zIndex: 9999, pointerEvents: 'none' }} />
+      <Box sx={{ position: 'fixed', left: 0, right: 0, top: 'calc(100svh - 3px)', height: '3px', bgcolor: 'lime', zIndex: 9999, pointerEvents: 'none' }} />
+      <Box sx={{ position: 'fixed', left: 0, right: 0, bottom: 'env(safe-area-inset-bottom, 0px)', height: '3px', bgcolor: 'orange', zIndex: 9999, pointerEvents: 'none' }} />
     </Box>
   )
 }

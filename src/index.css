@@ -28,14 +28,6 @@
   padding: 0;
 }
 
-/* Chaîne de hauteur ancrée sur la boîte racine du document. Avec viewport-fit=cover,
-   height:100% couvre tout l'écran physique (safe-areas comprises) de façon STABLE,
-   contrairement à 100dvh qui, en PWA iOS standalone, exclut souvent la zone basse et
-   laisse une bande blanche sous l'indicateur d'accueil. */
-html, body, #root {
-  height: 100%;
-}
-
 body {
   font-family: var(--font-sans);
   background-color: var(--color-cairn-bg);
