@@ -350,7 +350,7 @@ const PlanDashboard = () => {
   const donePct = targetKm ? Math.min(100, (doneMeters / 1000 / targetKm) * 100) : 0
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
+    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto' }}>
 
         {/* En-tête plan */}
