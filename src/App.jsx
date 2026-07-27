@@ -34,7 +34,7 @@ const AppLayout = () => {
     : () => navigate(-1)
 
   return (
-    <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', overflow: 'hidden' }}>
+    <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px))', overflow: 'hidden', bgcolor: 'magenta' /* DEBUG racine (a retirer) */ }}>
       {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu
           descend de l'inset haut pour le header. En bas, pas d'inset ni d'aplat : le fond
           de page va jusqu'au bord physique (bord a bord iOS standard), et chaque page gere
