@@ -75,7 +75,24 @@ export const getPlan = async (planId) => {
     .order('week_number', { ascending: true })
   if (weeksErr) throw weeksErr
 
-  return { ...plan, weeks: weeks ?? [] }
+  // Kilométrage réel de chaque semaine = somme des distances des séances (mêmes
+  // steps que les sous-titres de séance), et non target_km (cible IA qui ne
+  // correspond pas toujours au total des séances générées).
+  const { data: sessRows, error: sessErr } = await supabase
+    .from('training_sessions')
+    .select('week_id, session_steps(distance_m, duration_sec, target_pace_sec)')
+    .eq('plan_id', planId)
+  if (sessErr) throw sessErr
+
+  const metersByWeek = {}
+  for (const row of sessRows ?? []) {
+    metersByWeek[row.week_id] = (metersByWeek[row.week_id] ?? 0) + totalMeters(row.session_steps ?? [])
+  }
+
+  return {
+    ...plan,
+    weeks: (weeks ?? []).map((w) => ({ ...w, agg_distance_m: metersByWeek[w.id] ?? 0 })),
+  }
 }
 
 /**

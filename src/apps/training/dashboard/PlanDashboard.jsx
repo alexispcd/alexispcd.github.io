@@ -332,7 +332,10 @@ const PlanDashboard = () => {
   const effWeekObj = weeks.find((w) => w.week_number === effectiveWeek)
   const nextWeekObj = weeks.find((w) => w.week_number === effectiveWeek + 1)
   const isCurrentWeek = effectiveWeek === currentWeek
-  const maxKm = weeks.reduce((m, w) => Math.max(m, w.target_km ?? 0), 0)
+  // Kilométrage d'une semaine = somme des distances de ses séances (agg_distance_m),
+  // aligné sur le total réel des séances affichées (pas la cible IA target_km).
+  const weekKm = (w) => (w.agg_distance_m ?? 0) / 1000
+  const maxKm = weeks.reduce((m, w) => Math.max(m, weekKm(w)), 0)
   const days = daysUntil(plan.race_date)
 
   // Km réalisés de la semaine sélectionnée : séances faites hors renfo, laps réels
@@ -345,7 +348,7 @@ const PlanDashboard = () => {
     }
     return sum + (s.agg_distance_m ?? 0)
   }, 0)
-  const targetKm = effWeekObj?.target_km
+  const targetKm = effWeekObj ? weekKm(effWeekObj) : null
   const doneKmLabel = doneMeters ? formatKm(doneMeters) : '0'
   const donePct = targetKm ? Math.min(100, (doneMeters / 1000 / targetKm) * 100) : 0
 
@@ -415,7 +418,7 @@ const PlanDashboard = () => {
           {weeks.map((w) => {
             const sel = w.week_number === effectiveWeek
             const blk = BLOCK_STYLE[w.block] ?? BLOCK_STYLE.construction
-            const h = maxKm ? Math.round((w.target_km ?? 0) / maxKm * 100) : 0
+            const h = maxKm ? Math.round(weekKm(w) / maxKm * 100) : 0
             return (
               <Box
                 key={w.id}
@@ -437,7 +440,7 @@ const PlanDashboard = () => {
                   <Box sx={{ width: 16, height: `${Math.max(h, 6)}%`, borderRadius: '5px 5px 2px 2px', bgcolor: blk.main, opacity: 0.85 }} />
                 </Box>
                 <Typography sx={{ fontSize: '0.56rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-                  {w.target_km ? `${Math.round(w.target_km)} km` : ''}
+                  {weekKm(w) ? `${Math.round(weekKm(w))} km` : ''}
                 </Typography>
               </Box>
             )
