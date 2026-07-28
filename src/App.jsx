@@ -12,7 +12,7 @@ import PlanDashboard from './apps/training/dashboard/PlanDashboard'
 import SessionPage from './apps/training/session/SessionPage'
 import PlanWizard from './apps/training/wizard/PlanWizard'
 import AuthGate from './components/AuthGate'
-import AppHeader from './components/AppHeader'
+import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 
@@ -51,16 +51,17 @@ const AppLayout = () => {
           contrôles de l'overlay. */}
       {!overlay && (
         <>
-          {/* Fondu haut : couleur de fond opaque sous le header qui devient transparente
-              vers le bas, pour que le contenu scrolle et disparaisse en douceur derriere
-              les pastilles du header. Derriere le header (zIndex 1200) et devant le contenu. */}
+          {/* Fondu haut : couleur de fond opaque en haut qui devient transparente vers le bas,
+              pour que le contenu scrolle et disparaisse en douceur derriere les pastilles.
+              Hauteur limitee a celle du header (le fondu se termine a son bord bas, ne deborde
+              pas dans le contenu). Derriere le header (zIndex 1200) et devant le contenu. */}
           <Box sx={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
-            height: 'calc(env(safe-area-inset-top, 0px) + 96px)',
+            height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT}px)`,
             pointerEvents: 'none',
             background: dark
-              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 55%, rgba(15,15,18,0) 100%)'
-              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 55%, rgba(255,255,255,0) 100%)',
+              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 70%, rgba(15,15,18,0) 100%)'
+              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 70%, rgba(255,255,255,0) 100%)',
           }} />
           <AppHeader
           toolName={handle.title ?? null}
