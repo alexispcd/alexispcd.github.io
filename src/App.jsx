@@ -51,17 +51,17 @@ const AppLayout = () => {
           contrôles de l'overlay. */}
       {!overlay && (
         <>
-          {/* Fondu haut : couleur de fond opaque en haut qui devient transparente vers le bas,
-              pour que le contenu scrolle et disparaisse en douceur derriere les pastilles.
-              Hauteur limitee a celle du header (le fondu se termine a son bord bas, ne deborde
-              pas dans le contenu). Derriere le header (zIndex 1200) et devant le contenu. */}
+          {/* Fondu haut : couleur de fond opaque au tout en haut qui s'estompe de facon
+              diffuse jusqu'a environ la mi-hauteur du header, pour que le contenu scrolle et
+              disparaisse en douceur derriere les pastilles. Derriere le header (zIndex 1200)
+              et devant le contenu. */}
           <Box sx={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
-            height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT}px)`,
+            height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT / 2}px)`,
             pointerEvents: 'none',
             background: dark
-              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 70%, rgba(15,15,18,0) 100%)'
-              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 70%, rgba(255,255,255,0) 100%)',
+              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 12%, rgba(15,15,18,0) 100%)'
+              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 12%, rgba(255,255,255,0) 100%)',
           }} />
           <AppHeader
           toolName={handle.title ?? null}
