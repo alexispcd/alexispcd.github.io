@@ -3,21 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>cairn</title>
-    <!-- Sans viewport-fit=cover, iOS encadre l'app dans la zone sûre. La barre de statut
-         suit alors theme-color (pas de apple-mobile-web-app-status-bar-style qui la forcerait
-         en blanc). theme-color est calé sur le fond de l'app pour un haut raccord dans les 2 modes. -->
+    <!-- viewport-fit=cover : la webview passe sous la barre de statut et l'indicateur d'accueil.
+         apple-mobile-web-app-status-bar-style black-translucent : barre de statut transparente,
+         le contenu passe dessous. Les insets sont geres globalement par le padding du body
+         (voir src/index.css). theme-color reste cale sur le fond de l'app dans les 2 modes. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Cairn" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f0f12" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <script type="module" crossorigin src="/assets/index-Cf5uMh3D.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BnigibEF.css">
+    <script type="module" crossorigin src="/assets/index-Bt9uyCYs.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-dHG0H5I6.css">
   <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
