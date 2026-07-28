@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Box, Typography, Button, CircularProgress, Alert,
-  Dialog, DialogContent, DialogActions,
+  Dialog, DialogContent, DialogActions, TextField,
 } from '@mui/material'
 import DirectionsRun from '@mui/icons-material/DirectionsRun'
 import CheckBox from '@mui/icons-material/CheckBox'
@@ -29,7 +29,7 @@ const candidateSub = (c) => [
  * (une ou plusieurs, jusqu'à 3), puis complétion (import laps concaténés +
  * analyse). onDone reçoit la séance mise à jour.
  */
-const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
+const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => {
   const [phase, setPhase] = useState('matching') // matching | choose | feedback | completing | done
   const [candidates, setCandidates] = useState([])
   const [selectedIds, setSelectedIds] = useState([])
@@ -37,6 +37,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
   const [withCoros, setWithCoros] = useState(true) // pour le message de complétion
   const [pendingActivities, setPendingActivities] = useState(null) // activités choisies [{ id, start_timestamp }], en attente du ressenti
   const [feedback, setFeedback] = useState(emptyFeedback())
+  const [manualDate, setManualDate] = useState(scheduledDate ?? '') // date de séance, chemin sans Coros
 
   useEffect(() => {
     if (!open) return
@@ -47,6 +48,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     setError(null)
     setPendingActivities(null)
     setFeedback(emptyFeedback())
+    setManualDate(scheduledDate ?? '')
     corosMatch(sessionId)
       .then(({ candidates: list }) => {
         if (cancelled) return
@@ -63,7 +65,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
         setPhase('choose')
       })
     return () => { cancelled = true }
-  }, [open, sessionId])
+  }, [open, sessionId, scheduledDate])
 
   // Coche / décoche un candidat, dans la limite de MAX_ACTIVITIES.
   const toggle = (labelId) => {
@@ -87,7 +89,7 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
     setPhase('completing')
     setError(null)
     try {
-      const { session } = await completeSession(sessionId, pendingActivities, fb)
+      const { session } = await completeSession(sessionId, pendingActivities, fb, pendingActivities ? null : manualDate)
       onDone(session)
     } catch (e) {
       setError(e.message || 'La validation a échoué.')
@@ -200,6 +202,23 @@ const CompleteDialog = ({ open, sessionId, onClose, onDone }) => {
               Optionnel, mais ça affine l'analyse et l'adaptation des prochaines séances.
             </Typography>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            {pendingActivities === null && (
+              <Box sx={{ mb: 2.5 }}>
+                <TextField
+                  type="date"
+                  size="small"
+                  fullWidth
+                  label="Date de la séance"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  inputProps={{ max: new Date().toLocaleDateString('en-CA') }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                  Sans activité Coros, précise le jour où tu as fait la séance.
+                </Typography>
+              </Box>
+            )}
             <RpeForm value={feedback} onChange={setFeedback} />
           </>
         )}

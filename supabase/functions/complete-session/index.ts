@@ -8,6 +8,7 @@ import {
   extractMcpToolResults,
 } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
+import { dayTs, todayISO } from "../_shared/training/weeks.ts"
 import { type Comparison, type Lap, matchStepsToLaps, type Step } from "./match.ts"
 
 const CORS = {
@@ -23,6 +24,40 @@ function paceStr(sec: number | null): string {
   const m = Math.floor(sec / 60)
   const s = Math.round(sec % 60)
   return `${m}:${String(s).padStart(2, "0")}/km`
+}
+
+/**
+ * completed_at porte la date REELLE de la séance, pas l'instant de validation.
+ * Priorité : timestamp Coros, puis date calendaire, puis maintenant.
+ * Une date calendaire est ancrée à 12:00 UTC : seul le jour est affiché et
+ * midi évite tout basculement de jour à la conversion de fuseau.
+ */
+function completedAtFrom(tsMs: number | null, calendarDate: unknown): string {
+  if (typeof tsMs === "number" && Number.isFinite(tsMs) && tsMs > 0) {
+    return new Date(tsMs).toISOString()
+  }
+  const ts = dayTs(calendarDate)
+  if (!Number.isNaN(ts)) return new Date(ts + 12 * 3_600_000).toISOString()
+  return new Date().toISOString()
+}
+
+/**
+ * Valide la date de séance saisie manuellement (yyyy-MM-dd). Renvoie null si
+ * absente, mal formée ou strictement postérieure à aujourd'hui : dans ces cas on
+ * ne bloque pas la complétion, on retombera sur scheduled_date. Le front borne
+ * déjà la saisie, ce garde-fou ne fait que doubler la sécurité.
+ */
+function parseCompletedDate(raw: unknown): string | null {
+  if (raw == null) return null
+  if (typeof raw !== "string" || Number.isNaN(dayTs(raw))) {
+    console.warn("[complete-session] completed_date invalide, ignorée:", raw)
+    return null
+  }
+  if (dayTs(raw) > dayTs(todayISO())) {
+    console.warn("[complete-session] completed_date future, ignorée:", raw)
+    return null
+  }
+  return raw
 }
 
 // ── Ressenti post-séance ──────────────────────────────────────────────────────
@@ -187,10 +222,12 @@ async function handleRequest(req: Request): Promise<Response> {
   let sessionId: string
   let selected: SelectedActivity[] | null
   let feedback: Feedback | null
+  let completedDate: string | null
   try {
     const body = await req.json()
     sessionId = body.session_id
     feedback = parseFeedback(body.feedback)
+    completedDate = parseCompletedDate(body.completed_date)
     if (!sessionId) throw new Error("session_id requis")
     selected = parseSelectedActivities(body)
   } catch (err) {
@@ -205,7 +242,7 @@ async function handleRequest(req: Request): Promise<Response> {
   // 3. Séance + steps ordonnés
   const { data: session, error: sessionErr } = await supabaseAdmin
     .from("training_sessions")
-    .select("id, type, title, status")
+    .select("id, type, title, status, scheduled_date")
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single()
@@ -215,7 +252,8 @@ async function handleRequest(req: Request): Promise<Response> {
   // 4. Cas sans Coros (renfo ou course non liée) : pas de laps à comparer.
   //    On persiste le ressenti et, s'il est présent, un conseil fondé dessus.
   if (!selected) {
-    return await manualComplete(supabaseAdmin, sessionId, session.type, feedback, feedbackFields)
+    const completedAt = completedAtFrom(null, completedDate ?? session.scheduled_date)
+    return await manualComplete(supabaseAdmin, sessionId, session.type, feedback, feedbackFields, completedAt)
   }
 
   // 4b. Ordre chronologique garanti AVANT toute concaténation : on trie les
@@ -308,7 +346,7 @@ async function handleRequest(req: Request): Promise<Response> {
       km_laps: kmLaps,
       analysis,
       status: "done",
-      completed_at: new Date().toISOString(),
+      completed_at: completedAtFrom(selected[0].start_timestamp, session.scheduled_date),
       ...feedbackFields,
     })
     .eq("id", sessionId)
@@ -326,6 +364,7 @@ async function manualComplete(
   type: string,
   feedback: Feedback | null,
   feedbackFields: Record<string, unknown>,
+  completedAt: string,
 ): Promise<Response> {
   // Sans laps, il n'y a pas de comparaison prévu/réalisé : le conseil se fonde
   // uniquement sur le ressenti quand il est présent (verdict laissé à null).
@@ -339,7 +378,7 @@ async function manualComplete(
     .from("training_sessions")
     .update({
       status: "done",
-      completed_at: new Date().toISOString(),
+      completed_at: completedAt,
       ...(analysis ? { analysis } : {}),
       ...feedbackFields,
     })

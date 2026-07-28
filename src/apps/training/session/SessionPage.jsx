@@ -420,6 +420,7 @@ const SessionPage = () => {
       <CompleteDialog
         open={completeOpen}
         sessionId={sessionId}
+        scheduledDate={session.scheduled_date}
         onClose={() => setCompleteOpen(false)}
         onDone={() => { setCompleteOpen(false); reload().catch((e) => flash(e.message)) }}
       />

@@ -284,13 +284,16 @@ export const corosMatch = (sessionId) => callFunction('coros-match', { session_i
  * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou
  * null si aucune activité (renfo, délier). Le serveur les trie par start_timestamp
  * croissant puis concatène leurs laps. feedback = { rpe, pain_areas,
- * feedback_note } ou null (ressenti post-séance).
+ * feedback_note } ou null (ressenti post-séance). completedDate = date réelle de
+ * la séance (yyyy-MM-dd), transmise seulement sur le chemin manuel sans Coros ;
+ * avec Coros le serveur prend le timestamp de l'activité.
  */
-export const completeSession = (sessionId, corosActivities = null, feedback = null) =>
+export const completeSession = (sessionId, corosActivities = null, feedback = null, completedDate = null) =>
   callFunction('complete-session', {
     session_id: sessionId,
     coros_activities: corosActivities,
     feedback,
+    ...(completedDate ? { completed_date: completedDate } : {}),
   })
 
 /** Bilan de forme Coros pour le wizard. */
