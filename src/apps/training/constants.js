@@ -70,6 +70,19 @@ export const ZONE_SUBLABEL = {
   renfo: null,
 }
 
+/**
+ * Intensité RENDUE d'une séance, dérivée de son type et non de sa zone.
+ * La zone reste le créneau de jours ; après une adaptation, une séance de
+ * qualité peut occuper la zone A, qui doit alors s'afficher comme telle.
+ */
+export const intensityOf = (type) => ({
+  facile: 'A',
+  fractionne: 'B',
+  tempo: 'B',
+  sortie_longue: 'C',
+  renfo: 'renfo',
+}[type] ?? 'A')
+
 // Plages de jours par zone (tirets simples, jamais de cadratin).
 export const ZONE_DAYS = {
   A: 'Lun-Mar',

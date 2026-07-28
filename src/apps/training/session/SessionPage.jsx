@@ -25,7 +25,7 @@ import {
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
-  formatKm, formatPace, formatDistance, formatDuration, formatMin,
+  intensityOf, formatKm, formatPace, formatDistance, formatDuration, formatMin,
   cleanText, shortDayLabel,
 } from '../constants'
 import {
@@ -218,7 +218,9 @@ const SessionPage = () => {
   const isAdapted = status === 'adapted'
   const canComplete = status === 'planned' || status === 'adapted'
 
-  const zoneStyle = ZONE_STYLE[zone] ?? ZONE_STYLE.A
+  // Couleur dérivée de l'intensité du type ; le chip garde ZONE_LABEL[zone] :
+  // la lettre reste le repère temporel, seule la couleur suit l'intensité.
+  const zoneStyle = ZONE_STYLE[intensityOf(type)] ?? ZONE_STYLE.A
   const statusStyle = STATUS_CHIP[status] ?? STATUS_CHIP.planned
 
   // Séance à venir : la date n'est plus affichée (placement par zone, date indicative).

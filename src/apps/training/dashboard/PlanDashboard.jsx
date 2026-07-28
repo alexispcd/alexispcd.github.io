@@ -21,7 +21,7 @@ import {
 } from '../../../lib/training'
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
-  ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS,
+  ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS, intensityOf,
   formatGoalTime, formatKm, daysUntil, currentWeekNumber, formatWeekRange,
   groupSessionsByZone, cleanText,
 } from '../constants'
@@ -579,8 +579,13 @@ const Metric = ({ value, label }) => (
  *  reliées par un filet vertical coloré. */
 const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
   const { zone, sessions, done, total } = group
-  const z = ZONE_STYLE[zone] ?? ZONE_STYLE.A
-  const sub = ZONE_SUBLABEL[zone]
+  // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
+  // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
+  // ZONE_LABEL / ZONE_DAYS restent calés sur la zone (créneau de jours).
+  const runSession = sessions.find((s) => s.type !== 'renfo')
+  const key = zone === 'renfo' || !runSession ? zone : intensityOf(runSession.type)
+  const z = ZONE_STYLE[key] ?? ZONE_STYLE.A
+  const sub = ZONE_SUBLABEL[key]
 
   return (
     <Box sx={{ mb: 2.25 }}>

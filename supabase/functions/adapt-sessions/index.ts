@@ -6,6 +6,7 @@ import { isStrengthSession, validateSessionContent } from "../_shared/training/v
 import { buildStepRows } from "../_shared/training/persist.ts"
 import { finalizeStrengthContent } from "../_shared/training/strength.ts"
 import { expandSteps } from "../_shared/training/expand.ts"
+import { addDaysISO } from "../_shared/training/weeks.ts"
 import type { CompactStep, PlanSession, PlanStep } from "../_shared/training/types.ts"
 import {
   buildAdaptSystemPrompt,
@@ -30,6 +31,7 @@ interface AdaptedOut {
   id: string
   title?: string
   rationale?: string
+  type?: string           // nouveau type si la nature de la séance change (bascule renfo interdite)
   steps?: CompactStep[]   // format compact (sortie modèle), déplié avant persistance
   strength_content?: unknown
 }
@@ -52,13 +54,6 @@ function toSessionContent(row: Record<string, unknown>): SessionContent {
   }
 }
 
-function shiftDate(dateStr: string, days: number): string {
-  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return dateStr
-  const ts = Date.UTC(+m[1], +m[2] - 1, +m[3]) + days * 86_400_000
-  return new Date(ts).toISOString().slice(0, 10)
-}
-
 async function callModel(system: string, messages: Array<{ role: "user" | "assistant"; content: string }>): Promise<AdaptedOut[]> {
   const text = await anthropicSimple({ model: MODEL, max_tokens: 8000, system, messages })
   const parsed = JSON.parse(extractJson(text)) as { adapted?: AdaptedOut[] }
@@ -74,10 +69,20 @@ function validateAdapted(adapted: AdaptedOut[], byId: Map<string, SessionContent
       errors.push(`séance ${a.id} : hors fenêtre`)
       continue
     }
+    const nextType = a.type ?? cur.type
+    // Bascule renfo <-> course interdite : les contenus sont incompatibles.
+    if (
+      a.type &&
+      isStrengthSession({ type: cur.type as PlanSession["type"], zone: cur.zone as PlanSession["zone"] }) !==
+        isStrengthSession({ type: nextType as PlanSession["type"], zone: cur.zone as PlanSession["zone"] })
+    ) {
+      errors.push(`séance ${a.id} : bascule renfo interdite`)
+      continue
+    }
     const pseudo: PlanSession = {
       scheduled_date: cur.scheduled_date,
       zone: cur.zone as PlanSession["zone"],
-      type: cur.type as PlanSession["type"],
+      type: nextType as PlanSession["type"],
       title: a.title ?? cur.title,
       steps: a.steps,
       strength_content: a.strength_content,
@@ -141,7 +146,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // Ressenti des séances complétées des 3 dernières semaines (RPE / douleurs /
   // note). Sert à moduler l'adaptation : fatigue ou douleur récurrente → réduire.
-  const historyStart = shiftDate(skipped.scheduled_date, -21)
+  const historyStart = addDaysISO(skipped.scheduled_date, -21)
   const { data: feedbackRows } = await supabaseAdmin
     .from("training_sessions")
     .select("scheduled_date, zone, type, title, rpe, pain_areas, feedback_note")
@@ -155,7 +160,7 @@ async function handleRequest(req: Request): Promise<Response> {
   ) as FeedbackHistoryRow[]
 
   // 4. Fenêtre : séances suivantes 'planned' dans [date sautée, +10 jours]
-  const windowEnd = shiftDate(skipped.scheduled_date, WINDOW_DAYS)
+  const windowEnd = addDaysISO(skipped.scheduled_date, WINDOW_DAYS)
   const { data: windowRows, error: winErr } = await supabaseAdmin
     .from("training_sessions")
     .select(SESSION_COLS)
@@ -214,12 +219,16 @@ async function handleRequest(req: Request): Promise<Response> {
   const changedIds: string[] = []
   for (const a of adapted) {
     const cur = byId.get(a.id)!
+    const nextType = a.type ?? cur.type
+    // La bascule renfo étant interdite (rejetée en validation), isRenfo est
+    // identique pour cur.type et nextType : on le calcule sur cur.
     const isRenfo = isStrengthSession({ type: cur.type as PlanSession["type"], zone: cur.zone as PlanSession["zone"] })
 
     const previousVersion = {
       title: cur.title,
       rationale: cur.rationale,
       notes: cur.notes,
+      type: cur.type,
       steps: cur.steps,
       strength_content: cur.strength_content,
     }
@@ -229,6 +238,7 @@ async function handleRequest(req: Request): Promise<Response> {
       .update({
         title: a.title ?? cur.title,
         rationale: a.rationale ?? cur.rationale,
+        type: nextType,
         strength_content: isRenfo
           ? (a.strength_content ? finalizeStrengthContent(a.strength_content as never) : cur.strength_content)
           : cur.strength_content,

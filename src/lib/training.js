@@ -194,6 +194,9 @@ export const unskipSession = async (sessionId) => {
         title: pv.title,
         rationale: pv.rationale ?? null,
         notes: pv.notes ?? null,
+        // pv.type absent des previous_version d'avant cette évolution : ne le
+        // restaure que s'il existe, sinon on laisse le type courant.
+        ...(pv.type ? { type: pv.type } : {}),
         strength_content: pv.strength_content ?? null,
         status: 'planned',
         adapted_at: null,

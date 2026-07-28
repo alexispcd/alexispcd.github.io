@@ -65,10 +65,11 @@ RÈGLES D'ADAPTATION (fenêtre glissante) :
 
 SORTIE :
 - Réponds UNIQUEMENT avec ce JSON, commence par { et termine par } :
-  { "adapted": [ { "id": "<uuid de la séance>", "title": "...", "rationale": "...", "steps": [ ...mêmes règles de steps que ci-dessus... ] } ] }
+  { "adapted": [ { "id": "<uuid de la séance>", "title": "...", "rationale": "...", "type": "<optionnel, seulement s'il change>", "steps": [ ...mêmes règles de steps que ci-dessus... ] } ] }
 - Pour une séance de renfo adaptée, remplace "steps" par "strength_content" (même format que ci-dessus).
 - Pour une séance de COURSE adaptée, renvoie TOUJOURS le tableau "steps" complet (il remplace intégralement l'existant).
-- N'inclure QUE les séances réellement modifiées. Ne modifie JAMAIS la date, la zone ni le type d'une séance.`
+- N'inclure QUE les séances réellement modifiées. Ne modifie JAMAIS la date ni la zone d'une séance : la zone est un créneau de jours, pas un niveau d'intensité, et elle ne contient qu'une séance.
+- Si tu changes la NATURE d'une séance, renvoie son nouveau "type" parmi facile, fractionne, tempo, sortie_longue. Une séance de course ne devient JAMAIS un renfo, et un renfo ne devient JAMAIS une séance de course.`
 }
 
 function describeSession(s: SessionContent): string {
