@@ -50,7 +50,19 @@ const AppLayout = () => {
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
       {!overlay && (
-        <AppHeader
+        <>
+          {/* Fondu haut : couleur de fond opaque sous le header qui devient transparente
+              vers le bas, pour que le contenu scrolle et disparaisse en douceur derriere
+              les pastilles du header. Derriere le header (zIndex 1200) et devant le contenu. */}
+          <Box sx={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
+            height: 'calc(env(safe-area-inset-top, 0px) + 96px)',
+            pointerEvents: 'none',
+            background: dark
+              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 55%, rgba(15,15,18,0) 100%)'
+              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 55%, rgba(255,255,255,0) 100%)',
+          }} />
+          <AppHeader
           toolName={handle.title ?? null}
           actions={headerActions}
           showBack={showBack}
@@ -61,7 +73,8 @@ const AppLayout = () => {
           // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
           // pt : le header porte l'inset haut et ne passe plus sous l'heure (py:1.5 = 12px conservés).
           sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
-        />
+          />
+        </>
       )}
     </Box>
   )
