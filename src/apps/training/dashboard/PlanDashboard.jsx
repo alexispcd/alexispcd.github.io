@@ -16,7 +16,7 @@ import { useAppCtx } from '../../../lib/context'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
-  skipSession, unskipSession, adaptSessions,
+  skipSession, unskipSession, adaptSessions, pushToIntervals,
   regeneratePlan, regenerateRenfo, archivePlan, deletePlan, generatePlan,
 } from '../../../lib/training'
 import {
@@ -51,6 +51,8 @@ const PlanDashboard = () => {
 
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
+  const [pushDialog, setPushDialog] = useState(null)
+  const [pushing, setPushing] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmRenfo, setConfirmRenfo] = useState(false)
   const [renfoBusy, setRenfoBusy] = useState(false)
@@ -195,6 +197,24 @@ const PlanDashboard = () => {
 
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
+
+  // Envoi vers la montre (via Intervals.icu) : confirmation au swipe, puis appel.
+  const handlePush = (session) => setPushDialog(session)
+
+  const doPush = async () => {
+    const s = pushDialog
+    setPushing(true)
+    try {
+      await pushToIntervals(s.id)
+      await reloadSessions()
+      flash('Séance envoyée vers la montre', 'success')
+    } catch (e) {
+      flash(e.message)
+    } finally {
+      setPushing(false)
+      setPushDialog(null)
+    }
+  }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
   const doRegen = async () => {
@@ -487,6 +507,7 @@ const PlanDashboard = () => {
                   readOnly={readOnly}
                   onSkip={handleSkip}
                   onOpen={handleOpen}
+                  onPush={handlePush}
                 />
               ))}
             </Box>
@@ -518,6 +539,28 @@ const PlanDashboard = () => {
           <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
           <Button onClick={handleAdapt} disabled={adapting} variant="contained">
             {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog envoi vers la montre */}
+      <Dialog
+        open={Boolean(pushDialog)}
+        onClose={() => !pushing && setPushDialog(null)}
+        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Envoyer vers la montre ?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pushing
+              ? 'Envoi en cours…'
+              : `« ${cleanText(pushDialog?.title)} » sera ajoutée à ton calendrier Intervals.icu, qui la synchronise ensuite vers la montre.`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPushDialog(null)} disabled={pushing} color="inherit">Annuler</Button>
+          <Button onClick={doPush} disabled={pushing} variant="contained">
+            {pushing ? <CircularProgress size={18} color="inherit" /> : 'Envoyer'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -577,7 +620,7 @@ const Metric = ({ value, label }) => (
 
 /** Groupe d'une zone : en-tête (pastille + plage de jours + compteur) et cartes
  *  reliées par un filet vertical coloré. */
-const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
+const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
   const { zone, sessions, done, total } = group
   // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
   // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
@@ -609,8 +652,10 @@ const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
             key={s.id}
             session={s}
             canSkip={!readOnly && s.status !== 'done'}
+            canPush={!readOnly && s.type !== 'renfo' && (s.status === 'planned' || s.status === 'adapted')}
             onSkip={onSkip}
             onOpen={onOpen}
+            onPush={onPush}
           />
         ))}
       </Box>

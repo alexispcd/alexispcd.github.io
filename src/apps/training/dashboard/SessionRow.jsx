@@ -69,7 +69,7 @@ const pillBase = {
   fontVariantNumeric: 'tabular-nums',
 }
 
-const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
+const SessionRow = ({ session, onSkip, onOpen, onPush, canSkip, canPush }) => {
   const x = useMotionValue(0)
   // Révélations d'arrière-plan pilotées par le déplacement réel.
   const skipOpacity = useTransform(x, [8, 60], [0, 1])
@@ -83,10 +83,14 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
   const realized = isDone && session.type !== 'renfo' ? realizedSubtitle(session) : null
   const verdictColor = realized ? VERDICT[session.analysis?.verdict]?.color : null
 
+  // Swipe gauche : "Envoyer" vers la montre si la séance est éligible, sinon
+  // "Ouvrir" (repli). Le tap sur la carte ouvre toujours la séance.
+  const leftAction = canPush ? 'Envoyer' : 'Ouvrir'
+
   const handleDragEnd = (_e, info) => {
     const dx = info.offset.x
     if (dx > SWIPE_THRESHOLD && canSkip) onSkip(session)
-    else if (dx < -SWIPE_THRESHOLD) onOpen(session)
+    else if (dx < -SWIPE_THRESHOLD) (canPush ? onPush : onOpen)(session)
     // Un tick avant de rouvrir le tap, pour ne pas enchaîner drag → tap.
     requestAnimationFrame(() => { draggingRef.current = false })
   }
@@ -101,7 +105,7 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
           </Typography>
         )}
         <Typography component={motion.p} style={{ opacity: openOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', ml: 'auto' }}>
-          Ouvrir
+          {leftAction}
         </Typography>
       </Box>
 

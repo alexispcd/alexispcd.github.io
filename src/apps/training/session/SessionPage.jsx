@@ -17,11 +17,12 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
 import PlayArrow from '@mui/icons-material/PlayArrow'
+import Watch from '@mui/icons-material/WatchOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getSession, skipSession, unskipSession, adaptSessions,
-  completeSession, resetSession, updateStrengthContent,
+  completeSession, resetSession, updateStrengthContent, pushToIntervals,
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
@@ -78,6 +79,7 @@ const SessionPage = () => {
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [pushing, setPushing] = useState(false)
 
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
@@ -195,6 +197,15 @@ const SessionPage = () => {
     } catch (e) { flash(e.message) } finally { setBusy(false) }
   }
 
+  const doPush = async () => {
+    setPushing(true)
+    try {
+      await pushToIntervals(sessionId)
+      await reload()
+      flash('Séance envoyée vers la montre', 'success')
+    } catch (e) { flash(e.message) } finally { setPushing(false) }
+  }
+
   // ── États de rendu ────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -217,6 +228,8 @@ const SessionPage = () => {
   const isSkipped = status === 'skipped'
   const isAdapted = status === 'adapted'
   const canComplete = status === 'planned' || status === 'adapted'
+  const canPush = !isRenfo && canComplete
+  const isPushed = Boolean(session.pushed_at)
 
   // Couleur dérivée de l'intensité du type ; le chip garde ZONE_LABEL[zone] :
   // la lettre reste le repère temporel, seule la couleur suit l'intensité.
@@ -320,6 +333,30 @@ const SessionPage = () => {
             <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
               <StepsList steps={steps} type={type} />
             </Box>
+
+            {/* Envoi vers la montre (via Intervals.icu) */}
+            {canPush && (
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={pushing ? <CircularProgress size={16} color="inherit" /> : <Watch />}
+                  onClick={doPush}
+                  disabled={pushing || busy}
+                  sx={{
+                    height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
+                    boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
+                  }}
+                >
+                  {isPushed ? 'Renvoyer vers la montre' : 'Envoyer vers la montre'}
+                </Button>
+                {isPushed && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
+                    {shortDayLabel(session.pushed_at) ? `Sur la montre · envoyé ${shortDayLabel(session.pushed_at)}` : 'Sur la montre'}
+                  </Typography>
+                )}
+              </Box>
+            )}
 
             {/* Justification */}
             {session.rationale && (
