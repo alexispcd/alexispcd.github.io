@@ -6,6 +6,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { buildWorkoutDescription } from "../_shared/training/intervals.ts"
+import { dayTs, todayISO } from "../_shared/training/weeks.ts"
 import type { PlanStep } from "../_shared/training/types.ts"
 
 const CORS = {
@@ -19,9 +20,17 @@ const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pa
 // Seule une seance a venir (planifiee ou adaptee) peut etre envoyee.
 const PUSHABLE = new Set(["planned", "adapted"])
 
-/** Datetime local pour Intervals : la date de la seance a minuit si pas d'heure. */
-function toLocalDateTime(scheduledDate: string): string {
-  return scheduledDate.includes("T") ? scheduledDate : `${scheduledDate}T00:00:00`
+/**
+ * Date d'envoi (yyyy-MM-dd) : le push_date du body s'il est valide, sinon la date
+ * du jour en Europe/Paris. Une valeur presente mais invalide est logguee (warn)
+ * et n'entraine pas d'erreur.
+ */
+function resolvePushDate(raw: unknown): string {
+  const today = todayISO()
+  if (raw == null) return today
+  if (typeof raw === "string" && !Number.isNaN(dayTs(raw))) return raw.slice(0, 10)
+  console.warn(`[push-to-intervals] push_date invalide (${JSON.stringify(raw)}), repli sur ${today}`)
+  return today
 }
 
 async function handleRequest(req: Request): Promise<Response> {
@@ -44,10 +53,12 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // 2. Corps
   let sessionId: string
+  let pushDate: string
   try {
     const body = await req.json()
     sessionId = body.session_id
     if (!sessionId) throw new Error("session_id requis")
+    pushDate = resolvePushDate(body.push_date)
   } catch (err) {
     return json(400, { error: "Corps invalide", detail: String(err) })
   }
@@ -60,7 +71,7 @@ async function handleRequest(req: Request): Promise<Response> {
   // 4. Seance + steps ordonnes
   const { data: row, error: rowErr } = await supabaseAdmin
     .from("training_sessions")
-    .select(`id, title, type, status, scheduled_date, intervals_event_id, session_steps(${STEP_COLS})`)
+    .select(`id, title, type, status, intervals_event_id, session_steps(${STEP_COLS})`)
     .eq("id", sessionId)
     .eq("user_id", user.id)
     .single()
@@ -72,9 +83,6 @@ async function handleRequest(req: Request): Promise<Response> {
   if (!PUSHABLE.has(row.status as string)) {
     return json(400, { error: "Seule une seance a venir peut etre envoyee vers la montre" })
   }
-  if (!row.scheduled_date) {
-    return json(400, { error: "La seance n'a pas de date planifiee" })
-  }
 
   const steps = ((row.session_steps ?? []) as PlanStep[])
     .slice()
@@ -82,10 +90,13 @@ async function handleRequest(req: Request): Promise<Response> {
   const description = buildWorkoutDescription(steps)
   const name = (row.title as string) || "Seance"
 
+  // start_date_local vient de push_date, jamais de scheduled_date (le plan
+  // reste inchange). Sur re-envoi (PUT), l'event existant est deplace a cette
+  // date sans creer de doublon.
   const payload = {
     category: "WORKOUT",
     type: "Run",
-    start_date_local: toLocalDateTime(row.scheduled_date as string),
+    start_date_local: `${pushDate}T00:00:00`,
     name,
     description,
     external_id: sessionId,

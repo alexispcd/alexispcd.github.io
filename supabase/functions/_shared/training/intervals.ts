@@ -2,41 +2,52 @@
 // texte de description d'un workout Intervals.icu. Aucune I/O reseau ni base :
 // uniquement des fonctions exportees et testables.
 //
-// Format cible (workout builder Intervals.icu, cf. forum "Uploading planned
-// workouts to Intervals.icu") : une ligne par step commencant par "- ", les
-// blocs repetes introduits par une ligne "Nx" suivie des steps du bloc indentes.
-// Les allures sont absolues en /km, exprimees en plage [allure - tolerance,
-// allure + tolerance]. Un step sans allure cible reste en allure libre.
+// Syntaxe (workout builder Intervals.icu, cf. forum "Workout builder syntax
+// quick guide") :
+//   - Steps hors bloc repete : lignes commencant par "- ".
+//   - Bloc repete : une ligne d'en-tete "<libelle> Nx" SANS tiret, precedee ET
+//     suivie d'une ligne vide, puis les steps du bloc en lignes "- " NON
+//     indentees (les repetitions imbriquees ne sont pas supportees).
+//   - "m" = minutes (jamais metres) ; les metres s'ecrivent "Nmtr", les km "Nkm".
+//   - Une allure cible DOIT porter le suffixe "Pace", sinon elle n'est pas
+//     reconnue et l'intensite est perdue (target retombe sur POWER).
+//   - Tout texte place avant la duree devient le libelle du step.
 
 import type { PlanStep } from "./types.ts"
 
-const INDENT = "  "
+// Libelle des blocs repetes. Le compteur "Nx" dans l'en-tete fait numeroter les
+// repetitions par Intervals.icu : "Fractionne 1/5", "Fractionne 2/5"...
+const REPEAT_LABEL = "Fractionne"
 
-/** Deux chiffres, pour les secondes d'une allure ou d'une duree. */
-const pad2 = (n: number): string => (n < 10 ? `0${n}` : `${n}`)
-
-/** Duree en secondes vers un token Intervals.icu : 1h, 10m, 45s, 5m30s. */
-export function formatDurationToken(sec: number): string {
-  const s = Math.max(0, Math.round(sec))
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const r = s % 60
-  let out = ""
-  if (h) out += `${h}h`
-  if (m) out += `${m}m`
-  if (r || !out) out += `${r}s`
-  return out
+// Libelle place devant la duree pour les steps identifiables. Les intervalles et
+// les steps de course simples restent sans libelle (comme dans la doc de ref).
+const STEP_LABEL: Partial<Record<PlanStep["step_type"], string>> = {
+  warmup: "Echauffement",
+  cooldown: "Retour au calme",
+  recovery: "Recuperation",
 }
 
-/** Distance en metres vers un token : 400m, 1km, 1.5km (zeros de fin retires). */
+/** Deux chiffres, pour les secondes d'une allure. */
+const pad2 = (n: number): string => (n < 10 ? `0${n}` : `${n}`)
+
+/**
+ * Duree en secondes vers un token Intervals.icu :
+ *   multiple de 60 -> "Nm" ; sinon "NmMs" au dela de 60 ; sinon "Ns".
+ */
+export function formatDurationToken(sec: number): string {
+  const s = Math.max(0, Math.round(sec))
+  if (s % 60 === 0) return `${s / 60}m`
+  if (s > 60) return `${Math.floor(s / 60)}m${s % 60}s`
+  return `${s}s`
+}
+
+/**
+ * Distance en metres vers un token : "Nkm" si multiple de 1000, sinon "Nmtr".
+ * Jamais de decimale.
+ */
 export function formatDistanceToken(m: number): string {
   const meters = Math.max(0, Math.round(m))
-  if (meters >= 1000) {
-    const km = meters / 1000
-    const txt = km.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")
-    return `${txt}km`
-  }
-  return `${meters}m`
+  return meters % 1000 === 0 ? `${meters / 1000}km` : `${meters}mtr`
 }
 
 /** Allure en secondes par km vers mm:ss. */
@@ -46,9 +57,9 @@ export function formatPace(paceSec: number): string {
 }
 
 /**
- * Cible d'allure absolue en /km. Avec une tolerance, on exprime une plage
- * [allure - tolerance, allure + tolerance] : la borne rapide (secondes plus
- * basses) d'abord. Sans allure cible, retourne null (allure libre).
+ * Cible d'allure absolue en /km, suffixee du mot cle "Pace". Avec une tolerance,
+ * plage [allure - tolerance, allure + tolerance] du plus rapide (secondes les
+ * plus basses) au plus lent. Sans allure cible, retourne null (allure libre).
  */
 export function paceTarget(
   paceSec: number | null | undefined,
@@ -56,9 +67,9 @@ export function paceTarget(
 ): string | null {
   if (paceSec == null) return null
   if (tolSec != null && tolSec > 0) {
-    return `${formatPace(paceSec - tolSec)}-${formatPace(paceSec + tolSec)}/km`
+    return `${formatPace(paceSec - tolSec)}-${formatPace(paceSec + tolSec)}/km Pace`
   }
-  return `${formatPace(paceSec)}/km`
+  return `${formatPace(paceSec)}/km Pace`
 }
 
 /** Borne d'un step : distance si renseignee, sinon duree. Null si aucune. */
@@ -68,11 +79,12 @@ export function sizeToken(step: PlanStep): string | null {
   return null
 }
 
-/** Ligne de step "- <taille> <allure>", allure omise si libre. */
-function stepLine(step: PlanStep, indent = ""): string {
+/** Ligne de step "- <libelle> <taille> <allure>", chaque part omise si vide. */
+function stepLine(step: PlanStep): string {
+  const label = STEP_LABEL[step.step_type] ?? ""
   const size = sizeToken(step) ?? ""
   const pace = paceTarget(step.target_pace_sec, step.pace_tolerance_sec)
-  return `${indent}- ${[size, pace].filter(Boolean).join(" ")}`.trimEnd()
+  return `- ${[label, size, pace].filter(Boolean).join(" ")}`
 }
 
 // Element regroupe : un step simple, ou un bloc repete reconstruit.
@@ -112,18 +124,25 @@ export function groupByRepeat(steps: PlanStep[]): WorkoutItem[] {
   return items
 }
 
-/** Description texte complete d'un workout, prete pour le champ description. */
+/**
+ * Description texte complete d'un workout, prete pour le champ description.
+ * Chaque bloc repete est isole par une ligne vide avant et apres (exige par la
+ * syntaxe, sinon le "Nx" se colle a la ligne precedente).
+ */
 export function buildWorkoutDescription(steps: PlanStep[] | undefined | null): string {
   const items = groupByRepeat(steps ?? [])
   const lines: string[] = []
   for (const it of items) {
     if (it.kind === "repeat") {
-      lines.push(`${it.count}x`)
-      lines.push(stepLine(it.interval, INDENT))
-      if (it.recovery) lines.push(stepLine(it.recovery, INDENT))
+      if (lines.length) lines.push("") // ligne vide avant le bloc
+      lines.push(`${REPEAT_LABEL} ${it.count}x`)
+      lines.push(stepLine(it.interval))
+      if (it.recovery) lines.push(stepLine(it.recovery))
+      lines.push("") // ligne vide apres le bloc
     } else {
       lines.push(stepLine(it.step))
     }
   }
-  return lines.join("\n")
+  // Collapse d'eventuelles lignes vides consecutives, puis retrait aux extremites.
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+/, "").replace(/\n+$/, "")
 }

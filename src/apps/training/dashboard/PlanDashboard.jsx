@@ -16,7 +16,7 @@ import { useAppCtx } from '../../../lib/context'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
-  skipSession, unskipSession, adaptSessions, pushToIntervals,
+  skipSession, unskipSession, adaptSessions,
   regeneratePlan, regenerateRenfo, archivePlan, deletePlan, generatePlan,
 } from '../../../lib/training'
 import {
@@ -26,6 +26,7 @@ import {
   groupSessionsByZone, cleanText,
 } from '../constants'
 import SessionRow from './SessionRow'
+import PushDialog from '../session/PushDialog'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
@@ -52,7 +53,6 @@ const PlanDashboard = () => {
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
   const [pushDialog, setPushDialog] = useState(null)
-  const [pushing, setPushing] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmRenfo, setConfirmRenfo] = useState(false)
   const [renfoBusy, setRenfoBusy] = useState(false)
@@ -198,22 +198,14 @@ const PlanDashboard = () => {
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
 
-  // Envoi vers la montre (via Intervals.icu) : confirmation au swipe, puis appel.
+  // Envoi vers la montre : le swipe ouvre la popup unique (PushDialog), qui
+  // porte le choix de date et l'appel. On rafraichit ensuite la liste.
   const handlePush = (session) => setPushDialog(session)
 
-  const doPush = async () => {
-    const s = pushDialog
-    setPushing(true)
-    try {
-      await pushToIntervals(s.id)
-      await reloadSessions()
-      flash('Séance envoyée vers la montre', 'success')
-    } catch (e) {
-      flash(e.message)
-    } finally {
-      setPushing(false)
-      setPushDialog(null)
-    }
+  const onPushed = () => {
+    setPushDialog(null)
+    flash('Séance envoyée vers la montre', 'success')
+    reloadSessions().catch((e) => flash(e.message))
   }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
@@ -543,27 +535,13 @@ const PlanDashboard = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog envoi vers la montre */}
-      <Dialog
+      {/* Popup unique d'envoi vers la montre (choix de date + appel) */}
+      <PushDialog
         open={Boolean(pushDialog)}
-        onClose={() => !pushing && setPushDialog(null)}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Envoyer vers la montre ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {pushing
-              ? 'Envoi en cours…'
-              : `« ${cleanText(pushDialog?.title)} » sera ajoutée à ton calendrier Intervals.icu, qui la synchronise ensuite vers la montre.`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setPushDialog(null)} disabled={pushing} color="inherit">Annuler</Button>
-          <Button onClick={doPush} disabled={pushing} variant="contained">
-            {pushing ? <CircularProgress size={18} color="inherit" /> : 'Envoyer'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        session={pushDialog}
+        onClose={() => setPushDialog(null)}
+        onDone={onPushed}
+      />
 
       {/* Dialog régénération */}
       <ConfirmDialog

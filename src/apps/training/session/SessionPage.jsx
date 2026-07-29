@@ -22,7 +22,7 @@ import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getSession, skipSession, unskipSession, adaptSessions,
-  completeSession, resetSession, updateStrengthContent, pushToIntervals,
+  completeSession, resetSession, updateStrengthContent,
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
@@ -35,6 +35,7 @@ import {
 import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
+import PushDialog from './PushDialog'
 import RpeForm from './RpeForm'
 import RenfoPlayer from './player/RenfoPlayer'
 import { createBeeps } from './player/beeps'
@@ -79,7 +80,7 @@ const SessionPage = () => {
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
-  const [pushing, setPushing] = useState(false)
+  const [pushOpen, setPushOpen] = useState(false)
 
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
@@ -197,13 +198,10 @@ const SessionPage = () => {
     } catch (e) { flash(e.message) } finally { setBusy(false) }
   }
 
-  const doPush = async () => {
-    setPushing(true)
-    try {
-      await pushToIntervals(sessionId)
-      await reload()
-      flash('Séance envoyée vers la montre', 'success')
-    } catch (e) { flash(e.message) } finally { setPushing(false) }
+  const onPushed = () => {
+    setPushOpen(false)
+    flash('Séance envoyée vers la montre', 'success')
+    reload().catch((e) => flash(e.message))
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────
@@ -340,9 +338,9 @@ const SessionPage = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  startIcon={pushing ? <CircularProgress size={16} color="inherit" /> : <Watch />}
-                  onClick={doPush}
-                  disabled={pushing || busy}
+                  startIcon={<Watch />}
+                  onClick={() => setPushOpen(true)}
+                  disabled={busy}
                   sx={{
                     height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
                     boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
@@ -462,6 +460,13 @@ const SessionPage = () => {
         scheduledDate={session.scheduled_date}
         onClose={() => setCompleteOpen(false)}
         onDone={() => { setCompleteOpen(false); reload().catch((e) => flash(e.message)) }}
+      />
+
+      <PushDialog
+        open={pushOpen}
+        session={session}
+        onClose={() => setPushOpen(false)}
+        onDone={onPushed}
       />
 
       <Dialog
