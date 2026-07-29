@@ -83,9 +83,10 @@ const SessionRow = ({ session, onSkip, onOpen, onPush, canSkip, canPush }) => {
   const realized = isDone && session.type !== 'renfo' ? realizedSubtitle(session) : null
   const verdictColor = realized ? VERDICT[session.analysis?.verdict]?.color : null
 
-  // Swipe gauche : "Envoyer" vers la montre si la séance est éligible, sinon
-  // "Ouvrir" (repli). Le tap sur la carte ouvre toujours la séance.
-  const leftAction = canPush ? 'Envoyer' : 'Ouvrir'
+  // Swipe gauche : si la séance est éligible, "Montre" (menu renvoyer/retirer)
+  // quand elle est déjà poussée, sinon "Envoyer" ; "Ouvrir" en repli. Le tap sur
+  // la carte ouvre toujours la séance.
+  const leftAction = canPush ? (session.pushed_at ? 'Montre' : 'Envoyer') : 'Ouvrir'
 
   const handleDragEnd = (_e, info) => {
     const dx = info.offset.x

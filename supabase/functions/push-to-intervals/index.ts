@@ -1,7 +1,10 @@
-// Envoie une seance de course planifiee vers Intervals.icu (category WORKOUT),
-// qui la synchronise ensuite vers la montre Coros. Declenchement manuel, une
-// seance a la fois. Auth JWT utilisateur (meme pattern qu'adapt-sessions), puis
-// client service_role pour lire et mettre a jour la seance.
+// Envoi / retrait d'une seance de course vers Intervals.icu (category WORKOUT),
+// qui synchronise ensuite vers la montre Coros. Declenchement manuel, une seance
+// a la fois. Auth JWT utilisateur (meme pattern qu'adapt-sessions), puis client
+// service_role pour lire et mettre a jour la seance.
+//
+// Le body porte un champ action optionnel : "push" (defaut) envoie ou renvoie la
+// seance, "remove" la retire de la montre.
 
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
@@ -51,13 +54,15 @@ async function handleRequest(req: Request): Promise<Response> {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
 
-  // 2. Corps
+  // 2. Corps (action "push" par defaut pour ne pas casser les appels existants)
   let sessionId: string
+  let action: "push" | "remove"
   let pushDate: string
   try {
     const body = await req.json()
     sessionId = body.session_id
     if (!sessionId) throw new Error("session_id requis")
+    action = body.action === "remove" ? "remove" : "push"
     pushDate = resolvePushDate(body.push_date)
   } catch (err) {
     return json(400, { error: "Corps invalide", detail: String(err) })
@@ -68,7 +73,13 @@ async function handleRequest(req: Request): Promise<Response> {
   const athleteId = Deno.env.get("ICU_ATHLETE_ID")
   if (!apiKey || !athleteId) return json(500, { error: "Configuration Intervals.icu manquante" })
 
-  // 4. Seance + steps ordonnes
+  const base = `https://intervals.icu/api/v1/athlete/${athleteId}`
+  const icuHeaders = {
+    "Content-Type": "application/json",
+    "Authorization": "Basic " + btoa(`API_KEY:${apiKey}`),
+  }
+
+  // 4. Seance
   const { data: row, error: rowErr } = await supabaseAdmin
     .from("training_sessions")
     .select(`id, title, type, status, intervals_event_id, session_steps(${STEP_COLS})`)
@@ -77,6 +88,36 @@ async function handleRequest(req: Request): Promise<Response> {
     .single()
   if (rowErr || !row) return json(404, { error: "Seance introuvable" })
 
+  const existingId = (row.intervals_event_id as string | null) ?? null
+
+  // ── Retrait de la montre ────────────────────────────────────────────────────
+  if (action === "remove") {
+    if (!existingId) return json(400, { error: "Cette seance n'est pas sur la montre" })
+
+    let res: Response
+    try {
+      res = await fetch(`${base}/events/${existingId}`, { method: "DELETE", headers: icuHeaders })
+    } catch (err) {
+      return json(502, { error: "Appel Intervals.icu impossible", detail: err instanceof Error ? err.message : String(err) })
+    }
+    // 404 = event deja absent cote Intervals : objectif atteint, donc succes.
+    if (!res.ok && res.status !== 404) {
+      const t = await res.text()
+      console.error(`[push-to-intervals] DELETE Intervals ${res.status}: ${t.slice(0, 500)}`)
+      return json(502, { error: `Intervals.icu a repondu ${res.status}`, detail: t.slice(0, 500) })
+    }
+
+    const { error: updErr } = await supabaseAdmin
+      .from("training_sessions")
+      .update({ intervals_event_id: null, pushed_at: null })
+      .eq("id", sessionId)
+      .eq("user_id", user.id)
+    if (updErr) return json(500, { error: "Mise a jour de la seance impossible", detail: updErr.message })
+
+    return json(200, { intervals_event_id: null, pushed_at: null })
+  }
+
+  // ── Envoi vers la montre ────────────────────────────────────────────────────
   if (row.type === "renfo") {
     return json(400, { error: "Une seance de renforcement ne s'envoie pas vers la montre" })
   }
@@ -90,32 +131,37 @@ async function handleRequest(req: Request): Promise<Response> {
   const description = buildWorkoutDescription(steps)
   const name = (row.title as string) || "Seance"
 
-  // start_date_local vient de push_date, jamais de scheduled_date (le plan
-  // reste inchange). Sur re-envoi (PUT), l'event existant est deplace a cette
-  // date sans creer de doublon.
+  // target "PACE" impose la metrique directrice cote Intervals : sans lui,
+  // l'event herite du workout_order des sport settings (POWER en tete) et la
+  // montre recoit des steps sans intensite. On ne touche pas aux sport settings.
+  // start_date_local vient de push_date, jamais de scheduled_date (plan inchange).
   const payload = {
     category: "WORKOUT",
     type: "Run",
+    target: "PACE",
     start_date_local: `${pushDate}T00:00:00`,
     name,
     description,
     external_id: sessionId,
   }
 
-  // 5. POST si nouveau, PUT si deja pousse (evite un doublon apres adaptation).
-  const base = `https://intervals.icu/api/v1/athlete/${athleteId}`
-  const existingId = (row.intervals_event_id as string | null) ?? null
-  const url = existingId ? `${base}/events/${existingId}` : `${base}/events`
-  const method = existingId ? "PUT" : "POST"
-  const auth = "Basic " + btoa(`API_KEY:${apiKey}`)
-
+  // PUT si event existant (deplacement sans doublon), POST sinon. Un PUT en 404
+  // signifie que l'event a ete supprime manuellement cote Intervals.icu : on
+  // remet l'id a null en base et on recree via un POST, une seule fois.
   let res: Response
+  let recreated = false
   try {
-    res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json", "Authorization": auth },
-      body: JSON.stringify(payload),
-    })
+    if (existingId) {
+      res = await fetch(`${base}/events/${existingId}`, { method: "PUT", headers: icuHeaders, body: JSON.stringify(payload) })
+      if (res.status === 404) {
+        console.warn(`[push-to-intervals] event Intervals.icu ${existingId} introuvable, recreation`)
+        await supabaseAdmin.from("training_sessions").update({ intervals_event_id: null }).eq("id", sessionId).eq("user_id", user.id)
+        recreated = true
+        res = await fetch(`${base}/events`, { method: "POST", headers: icuHeaders, body: JSON.stringify(payload) })
+      }
+    } else {
+      res = await fetch(`${base}/events`, { method: "POST", headers: icuHeaders, body: JSON.stringify(payload) })
+    }
   } catch (err) {
     return json(502, { error: "Appel Intervals.icu impossible", detail: err instanceof Error ? err.message : String(err) })
   }
@@ -127,15 +173,15 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(502, { error: `Intervals.icu a repondu ${res.status}`, detail: bodyText.slice(0, 500) })
   }
 
-  let eventId = existingId
+  // Apres recreation, l'ancien id ne vaut plus rien : on repart de l'id du POST.
+  let eventId = recreated ? null : existingId
   try {
     const parsed = JSON.parse(bodyText) as { id?: number | string }
     if (parsed?.id != null) eventId = String(parsed.id)
   } catch {
-    // Corps non JSON (rare) : on conserve l'id existant s'il y en a un.
+    // Corps non JSON (rare) : on conserve l'id courant s'il y en a un.
   }
 
-  // 6. Persistance sur la seance
   const pushedAt = new Date().toISOString()
   const { error: updErr } = await supabaseAdmin
     .from("training_sessions")

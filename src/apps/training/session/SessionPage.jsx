@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box, Typography, Button, CircularProgress, Alert, Snackbar, Collapse,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+  Menu, MenuItem,
 } from '@mui/material'
 import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
 import Bolt from '@mui/icons-material/BoltOutlined'
@@ -36,6 +37,7 @@ import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 import PushDialog from './PushDialog'
+import RemoveDialog from './RemoveDialog'
 import RpeForm from './RpeForm'
 import RenfoPlayer from './player/RenfoPlayer'
 import { createBeeps } from './player/beeps'
@@ -81,6 +83,8 @@ const SessionPage = () => {
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [pushOpen, setPushOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [watchAnchor, setWatchAnchor] = useState(null) // menu "sur la montre"
 
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
@@ -201,6 +205,12 @@ const SessionPage = () => {
   const onPushed = () => {
     setPushOpen(false)
     flash('Séance envoyée vers la montre', 'success')
+    reload().catch((e) => flash(e.message))
+  }
+
+  const onRemoved = () => {
+    setRemoveOpen(false)
+    flash('Séance retirée de la montre', 'success')
     reload().catch((e) => flash(e.message))
   }
 
@@ -339,20 +349,36 @@ const SessionPage = () => {
                   fullWidth
                   variant="outlined"
                   startIcon={<Watch />}
-                  onClick={() => setPushOpen(true)}
+                  endIcon={isPushed ? <ExpandMore /> : undefined}
+                  onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
                   disabled={busy}
                   sx={{
                     height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
                     boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
                   }}
                 >
-                  {isPushed ? 'Renvoyer vers la montre' : 'Envoyer vers la montre'}
+                  {isPushed ? 'Sur la montre' : 'Envoyer vers la montre'}
                 </Button>
-                {isPushed && (
+                {isPushed && shortDayLabel(session.pushed_at) && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
-                    {shortDayLabel(session.pushed_at) ? `Sur la montre · envoyé ${shortDayLabel(session.pushed_at)}` : 'Sur la montre'}
+                    {`Envoyée ${shortDayLabel(session.pushed_at)}`}
                   </Typography>
                 )}
+                <Menu
+                  anchorEl={watchAnchor}
+                  open={Boolean(watchAnchor)}
+                  onClose={() => setWatchAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                  slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
+                >
+                  <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }}>
+                    Renvoyer vers la montre
+                  </MenuItem>
+                  <MenuItem onClick={() => { setWatchAnchor(null); setRemoveOpen(true) }} sx={{ color: 'error.main' }}>
+                    Retirer de la montre
+                  </MenuItem>
+                </Menu>
               </Box>
             )}
 
@@ -467,6 +493,13 @@ const SessionPage = () => {
         session={session}
         onClose={() => setPushOpen(false)}
         onDone={onPushed}
+      />
+
+      <RemoveDialog
+        open={removeOpen}
+        session={session}
+        onClose={() => setRemoveOpen(false)}
+        onDone={onRemoved}
       />
 
       <Dialog

@@ -292,6 +292,10 @@ export const pushToIntervals = (sessionId, pushDate = null) =>
     ...(pushDate ? { push_date: pushDate } : {}),
   })
 
+/** Retire une séance déjà poussée d'Intervals.icu. → { intervals_event_id, pushed_at } */
+export const removeFromIntervals = (sessionId) =>
+  callFunction('push-to-intervals', { session_id: sessionId, action: 'remove' })
+
 /**
  * Complète une séance (avec ou sans activité Coros). → { session }
  * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou

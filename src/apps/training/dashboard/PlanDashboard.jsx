@@ -27,6 +27,7 @@ import {
 } from '../constants'
 import SessionRow from './SessionRow'
 import PushDialog from '../session/PushDialog'
+import RemoveDialog from '../session/RemoveDialog'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
@@ -53,6 +54,8 @@ const PlanDashboard = () => {
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
   const [pushDialog, setPushDialog] = useState(null)
+  const [removeDialog, setRemoveDialog] = useState(null)
+  const [watchChoice, setWatchChoice] = useState(null) // séance déjà poussée : renvoyer / retirer
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmRenfo, setConfirmRenfo] = useState(false)
   const [renfoBusy, setRenfoBusy] = useState(false)
@@ -198,13 +201,22 @@ const PlanDashboard = () => {
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
 
-  // Envoi vers la montre : le swipe ouvre la popup unique (PushDialog), qui
-  // porte le choix de date et l'appel. On rafraichit ensuite la liste.
-  const handlePush = (session) => setPushDialog(session)
+  // Swipe vers la montre : si la séance n'est pas encore poussée, on ouvre
+  // directement la popup d'envoi ; sinon un choix renvoyer / retirer.
+  const handlePush = (session) => {
+    if (session.pushed_at) setWatchChoice(session)
+    else setPushDialog(session)
+  }
 
   const onPushed = () => {
     setPushDialog(null)
     flash('Séance envoyée vers la montre', 'success')
+    reloadSessions().catch((e) => flash(e.message))
+  }
+
+  const onRemoved = () => {
+    setRemoveDialog(null)
+    flash('Séance retirée de la montre', 'success')
     reloadSessions().catch((e) => flash(e.message))
   }
 
@@ -535,12 +547,44 @@ const PlanDashboard = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Choix renvoyer / retirer pour une séance déjà poussée */}
+      <Dialog
+        open={Boolean(watchChoice)}
+        onClose={() => setWatchChoice(null)}
+        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Sur la montre</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {`« ${cleanText(watchChoice?.title)} » est déjà sur la montre. Que veux-tu faire ?`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button onClick={() => setWatchChoice(null)} color="inherit">Annuler</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={() => { setRemoveDialog(watchChoice); setWatchChoice(null) }} color="error">
+            Retirer
+          </Button>
+          <Button onClick={() => { setPushDialog(watchChoice); setWatchChoice(null) }} variant="contained">
+            Renvoyer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Popup unique d'envoi vers la montre (choix de date + appel) */}
       <PushDialog
         open={Boolean(pushDialog)}
         session={pushDialog}
         onClose={() => setPushDialog(null)}
         onDone={onPushed}
+      />
+
+      {/* Retrait de la montre */}
+      <RemoveDialog
+        open={Boolean(removeDialog)}
+        session={removeDialog}
+        onClose={() => setRemoveDialog(null)}
+        onDone={onRemoved}
       />
 
       {/* Dialog régénération */}
