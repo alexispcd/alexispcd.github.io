@@ -1,33 +1,52 @@
-// Estimation de durée, recomposition (trim) et enrichissement du contenu renfo.
+// Enrichissement du contenu renfo, contrôles de durée et finalisation.
 //
-// L'estimateur et le trim ci-dessous sont la RÉFÉRENCE : le frontend
-// (src/apps/training/session/renfo.js) en tient un miroir strict (mêmes
-// constantes, même heuristique), car il ne peut pas importer depuis
-// supabase/functions.
+// L'estimateur et le trim vivent désormais dans ./estimator.ts, source unique
+// des deux côtés (backend et frontend). Ce module les réexporte pour ses
+// consommateurs et fournit la couche qui dépend du catalogue (exercises.ts) :
+// résolution de l'unilatéralité, enrichissement, mollet obligatoire, finalize.
 
 import {
   BLOCK_THEMES, BONUS_THEME, detectBonusKind, EXERCISE_INDEX,
   type ExerciseCategory,
 } from "./exercises.ts"
 import type { StrengthBlock, StrengthContent, StrengthExercise } from "./types.ts"
+import {
+  estimateExerciseSeconds, estimateStrengthDuration, MANDATORY_CALF_SLUG,
+  REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC, trimToTarget, workSeconds,
+} from "./estimator.ts"
 
-// ── Heuristique d'estimation (secondes) ───────────────────────────────────────
-const PER_REP_SEC = 3 // ~3 s par répétition
-
-/** Repos entre deux exercices d'un même tour. Plancher métier : jamais sous 15 s. */
-export const REST_BETWEEN_EXERCISES_SEC = 15
-/** Repos entre deux tours, et entre deux blocs. */
-export const REST_BETWEEN_ROUNDS_SEC = 20
+// Source unique : réexportée telle quelle pour les consommateurs de strength.ts.
+export {
+  estimateExerciseSeconds, estimateStrengthDuration, MANDATORY_CALF_SLUG,
+  REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC, trimToTarget, workSeconds,
+}
 
 export const DEFAULT_TARGET_MIN = 40
+
+/**
+ * Résout l'unilatéralité pour l'estimateur côté serveur. Lu sur l'exercice s'il
+ * est enrichi, sinon depuis le catalogue : le backend estime la sortie BRUTE du
+ * modèle où le champ `unilateral` est absent. Doit être passé à
+ * estimateStrengthDuration et trimToTarget partout ci-dessous, sans quoi les
+ * durées serveur seraient silencieusement faussées.
+ */
+const catalogUnilateral = (ex: StrengthExercise): boolean =>
+  typeof ex.unilateral === "boolean"
+    ? ex.unilateral
+    : EXERCISE_INDEX[ex.slug]?.unilateral ?? false
 
 // ── Bandes de contrôle de durée (voir validate.ts pour la structure) ──────────
 // L'estimateur est sensible : on sépare une bande LARGE (soft) sur la base issue
 // du modèle, d'une bande ÉTROITE (hard) sur la séance finale après trim.
 
 /** Niveau 2 (SOUPLE) : bande acceptable de la base modèle, avant trim. Hors bande
- *  → retry ciblé, jamais de blocage. */
-export const RENFO_BASE_SOFT_MIN_MIN = 32
+ *  → retry ciblé, jamais de blocage.
+ *
+ *  Bande ASYMÉTRIQUE, et c'est voulu : le trim réduit mais ne rallonge JAMAIS.
+ *  Une base trop courte est donc irrécupérable et doit déclencher un retry, d'où
+ *  une borne basse calée sur RENFO_FINAL_MIN_MIN. Une base trop longue reste
+ *  toujours rattrapable par le trim, d'où une borne haute volontairement large. */
+export const RENFO_BASE_SOFT_MIN_MIN = 38
 export const RENFO_BASE_SOFT_MAX_MIN = 58
 
 /** Niveau 3 (DUR) : bande de la séance FINALE (après finalizeStrengthContent),
@@ -35,128 +54,6 @@ export const RENFO_BASE_SOFT_MAX_MIN = 58
  *  de même la séance trimmée si un retry a déjà échoué. */
 export const RENFO_FINAL_MIN_MIN = 38
 export const RENFO_FINAL_MAX_MIN = 44
-
-/** Planchers du trim : en deçà, un circuit n'en est plus un. */
-const MIN_EXERCISES_PER_BLOCK = 2
-const MIN_ROUNDS = 2
-
-/** Slug imposé par le code dans le bloc Force de chaque séance renfo. */
-export const MANDATORY_CALF_SLUG = "excentrique_mollet"
-
-/** Unilatéral : lu sur l'exercice s'il est enrichi, sinon depuis le catalogue. */
-function isUnilateral(ex: StrengthExercise): boolean {
-  if (typeof ex.unilateral === "boolean") return ex.unilateral
-  return EXERCISE_INDEX[ex.slug]?.unilateral ?? false
-}
-
-/**
- * Temps de travail d'un exercice sur UN tour, en secondes.
- * Un exercice unilatéral se fait des deux côtés, dans les deux modes.
- */
-export function workSeconds(ex: StrengthExercise): number {
-  const sides = isUnilateral(ex) ? 2 : 1
-  return ex.duration_sec != null
-    ? ex.duration_sec * sides
-    : (ex.reps ?? 0) * PER_REP_SEC * sides
-}
-
-/**
- * Durée estimée d'un exercice HISTORIQUE (toutes séries + repos inter-séries).
- * Ne concerne que les plans générés avant le format circuit : le doublage
- * unilatéral n'y portait que sur le mode duration, on conserve ce calcul tel quel.
- */
-export function estimateExerciseSeconds(ex: StrengthExercise): number {
-  const sets = ex.sets ?? 1
-  const perSet = ex.duration_sec != null
-    ? ex.duration_sec * (isUnilateral(ex) ? 2 : 1)
-    : (ex.reps ?? 0) * PER_REP_SEC
-  return sets * perSet + Math.max(0, sets - 1) * (ex.rest_sec ?? 0)
-}
-
-/** Durée d'un bloc, en secondes. */
-function blockSeconds(b: StrengthBlock): number {
-  const exos = b.exercises ?? []
-  const gaps = Math.max(0, exos.length - 1) * REST_BETWEEN_EXERCISES_SEC
-
-  // Bloc historique : séries et repos portés par chaque exercice.
-  if (b.rounds == null) {
-    return exos.reduce((t, ex) => t + estimateExerciseSeconds(ex), 0) + gaps
-  }
-
-  const rounds = Math.max(1, b.rounds)
-  const perRound = exos.reduce((t, ex) => t + workSeconds(ex), 0) + gaps
-  return rounds * perRound + (rounds - 1) * REST_BETWEEN_ROUNDS_SEC
-}
-
-/** Durée estimée de la séance renfo (blocs), en minutes. */
-export function estimateStrengthDuration(blocks: StrengthBlock[] | undefined | null): number {
-  const list = blocks ?? []
-  const total = list.reduce((t, b) => t + blockSeconds(b), 0) +
-    Math.max(0, list.length - 1) * REST_BETWEEN_ROUNDS_SEC
-  return Math.round(total / 60)
-}
-
-// ── Recomposition (trim) ──────────────────────────────────────────────────────
-const cloneBlocks = (blocks: StrengthBlock[] | undefined | null): StrengthBlock[] =>
-  (blocks ?? []).map((b) => ({ ...b, exercises: (b.exercises ?? []).map((e) => ({ ...e })) }))
-
-/**
- * Dernier exercice retirable d'un bloc, en partant de la fin. Le mollet
- * excentrique est imposé par le code (voir withMandatoryCalf) : il est injecté
- * en fin de bloc Force, donc exactement là où le trim mord en premier. Sans
- * cette exception il disparaîtrait dès le palier 40 min, qui est le défaut.
- */
-function lastRemovableIndex(exercises: StrengthExercise[]): number {
-  for (let i = exercises.length - 1; i >= 0; i--) {
-    if (exercises[i].slug !== MANDATORY_CALF_SLUG) return i
-  }
-  return -1
-}
-
-/**
- * Réduit la base vers une durée cible, de façon déterministe et idempotente
- * (toujours recalculé depuis la base, jamais expansé) :
- *   1. cible <= 30 min → on retire d'abord le bloc bonus (le 4e) entièrement ;
- *   2. on retire le dernier exercice du bloc le plus fourni, plancher à 2 ;
- *   3. tous les blocs au plancher → on retire un tour au bloc qui en a le plus,
- *      plancher à 2 tours.
- */
-export function trimToTarget(baseBlocks: StrengthBlock[], targetMin: number): StrengthBlock[] {
-  const blocks = cloneBlocks(baseBlocks)
-  let list = blocks
-  if (targetMin <= 30 && list.length > 3) list = list.slice(0, 3)
-
-  let guard = 0
-  while (estimateStrengthDuration(list) > targetMin && guard++ < 200) {
-    // 2. Bloc le plus fourni au-dessus du plancher, ayant encore un exercice
-    //    retirable (le mollet excentrique est imposé, on ne le retire jamais).
-    let bi = -1
-    let ei = -1
-    let maxExos = MIN_EXERCISES_PER_BLOCK
-    list.forEach((b, i) => {
-      const exos = b.exercises ?? []
-      if (exos.length <= maxExos) return
-      const last = lastRemovableIndex(exos)
-      if (last >= 0) { maxExos = exos.length; bi = i; ei = last }
-    })
-    if (bi >= 0) {
-      const exercises = list[bi].exercises.filter((_, i) => i !== ei)
-      list[bi] = { ...list[bi], exercises }
-      continue
-    }
-
-    // 3. Plus rien à retirer : on réduit le nombre de tours.
-    let ri = -1
-    let maxRounds = MIN_ROUNDS
-    list.forEach((b, i) => {
-      const r = b.rounds ?? 0
-      if (r > maxRounds) { maxRounds = r; ri = i }
-    })
-    if (ri < 0) break
-    list[ri] = { ...list[ri], rounds: (list[ri].rounds as number) - 1 }
-  }
-  return list
-}
 
 // ── Enrichissement ────────────────────────────────────────────────────────────
 /**
@@ -239,7 +136,7 @@ export function finalizeStrengthContent(
   return {
     target_duration_min: target,
     base_blocks: base,
-    blocks: trimToTarget(base, target),
+    blocks: trimToTarget(base, target, catalogUnilateral),
   }
 }
 
@@ -251,7 +148,7 @@ export function finalizeStrengthContent(
  * bloque JAMAIS : le message sert seulement à guider un unique retry.
  */
 export function baseDurationHint(blocks: StrengthBlock[] | undefined | null, tag: string): string | null {
-  const est = estimateStrengthDuration(blocks)
+  const est = estimateStrengthDuration(blocks, catalogUnilateral)
   if (est >= RENFO_BASE_SOFT_MIN_MIN && est <= RENFO_BASE_SOFT_MAX_MIN) return null
   const advice = est > RENFO_BASE_SOFT_MAX_MIN
     ? "réduis le nombre d'exercices par bloc"
@@ -266,7 +163,7 @@ export function baseDurationHint(blocks: StrengthBlock[] | undefined | null, tag
  * conservée (une séance imparfaite vaut mieux qu'un plan impossible à générer).
  */
 export function finalDurationWarning(content: StrengthContent | null | undefined): string | null {
-  const est = estimateStrengthDuration(content?.blocks)
+  const est = estimateStrengthDuration(content?.blocks, catalogUnilateral)
   if (est >= RENFO_FINAL_MIN_MIN && est <= RENFO_FINAL_MAX_MIN) return null
   return `séance finale ${est} min hors bande cible (${RENFO_FINAL_MIN_MIN} à ${RENFO_FINAL_MAX_MIN} min)`
 }

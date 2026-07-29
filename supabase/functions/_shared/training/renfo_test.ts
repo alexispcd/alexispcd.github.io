@@ -7,11 +7,12 @@ import {
 import {
   baseDurationHint, enrichBlocks, estimateExerciseSeconds, estimateStrengthDuration,
   finalDurationWarning, finalizeStrengthContent, MANDATORY_CALF_SLUG,
-  REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC, trimToTarget,
-  withMandatoryCalf, workSeconds,
+  RENFO_BASE_SOFT_MIN_MIN, REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC,
+  trimToTarget, withMandatoryCalf, workSeconds,
 } from "./strength.ts"
+import { estimateStrengthDuration as estFromEstimator } from "./estimator.ts"
 import { validateStrengthContent } from "./validate.ts"
-import type { StrengthBlock } from "./types.ts"
+import type { StrengthBlock, StrengthExercise } from "./types.ts"
 
 // ── Helpers de fixture ────────────────────────────────────────────────────────
 // Format circuit : l'exercice ne porte que sa charge, le bloc porte ses tours.
@@ -83,9 +84,14 @@ Deno.test("workSeconds : reps ~3s/rep, doublé si unilatéral", () => {
   assertEquals(workSeconds({ slug: "x", duration_sec: 40, unilateral: false }), 40)
   assertEquals(workSeconds({ slug: "x", duration_sec: 40, unilateral: true }), 80)
 })
-Deno.test("workSeconds : unilatéral résolu depuis le catalogue si absent", () => {
-  assertEquals(workSeconds({ slug: "planche_laterale", duration_sec: 30 }), 60)
-  assertEquals(workSeconds({ slug: "montees_mollets_unipodal", reps: 12 }), 72)
+Deno.test("workSeconds : unilatéral résolu par le résolveur injecté (catalogue)", () => {
+  const catalog = (ex: StrengthExercise): boolean =>
+    typeof ex.unilateral === "boolean" ? ex.unilateral : EXERCISE_INDEX[ex.slug]?.unilateral ?? false
+  // Avec le résolveur catalogue, un slug unilatéral sans champ `unilateral` double.
+  assertEquals(workSeconds({ slug: "planche_laterale", duration_sec: 30 }, catalog), 60)
+  assertEquals(workSeconds({ slug: "montees_mollets_unipodal", reps: 12 }, catalog), 72)
+  // Sans résolveur : comportement frontend (pas de fallback catalogue), donc bilatéral.
+  assertEquals(workSeconds({ slug: "planche_laterale", duration_sec: 30 }), 30)
 })
 Deno.test("estimateur circuit : rounds × (travail + repos inter-exos) + repos inter-tours", () => {
   // 2 exercices bilatéraux de 30 s, 3 tours :
@@ -123,10 +129,51 @@ Deno.test("niveau 2 : une base à 61 min déclenche un retry (indice non nul)", 
 Deno.test("niveau 2 : une base à 49 min ne déclenche pas de retry", () => {
   assertEquals(baseDurationHint(uniformBlocks(3, 4), "renfo"), null)
 })
-Deno.test("niveau 2 : la base modèle des fixtures reste dans la bande souple 32-58", () => {
+Deno.test("niveau 2 : la base modèle des fixtures reste dans la bande souple 38-58", () => {
   for (const base of [oddBase(), evenBase()]) {
     assertEquals(baseDurationHint(base, "renfo"), null, `base ${estimateStrengthDuration(base)} min hors bande souple`)
   }
+})
+// Base synthétique estimée à 35 min pile : dans l'ANCIENNE bande souple (32-58)
+// donc sans retry, mais sous la nouvelle borne basse 38. Le trim ne rallonge
+// jamais : cette base était irrécupérable et doit désormais déclencher un retry.
+const base35 = (): StrengthBlock[] => ([
+  {
+    theme: "T", rounds: 2, exercises: [
+      { slug: "a", duration_sec: 65, unilateral: false },
+      { slug: "b", duration_sec: 45, unilateral: false },
+      { slug: "c", duration_sec: 45, unilateral: false },
+      { slug: "d", duration_sec: 45, unilateral: false },
+      { slug: "e", duration_sec: 45, unilateral: false },
+    ],
+  },
+  ...Array.from({ length: 3 }, () => ({
+    theme: "T", rounds: 2,
+    exercises: Array.from({ length: 4 }, (_, i) => ({ slug: `x${i}`, duration_sec: 45, unilateral: false })),
+  })),
+])
+Deno.test("niveau 2 : fermeture du trou, une base à 35 min déclenche désormais un retry", () => {
+  assertEquals(estimateStrengthDuration(base35()), 35, "la fixture doit bien estimer 35 min")
+  const hint = baseDurationHint(base35(), "renfo")
+  assert(hint != null, "35 min est sous la borne basse 38 : un retry est désormais attendu")
+  assert(hint!.includes("35"), `l'indice doit chiffrer la durée : ${hint}`)
+  // Sous l'ancienne borne basse (32), 35 min ne déclenchait aucun retry.
+  assert(RENFO_BASE_SOFT_MIN_MIN > 35, "la borne basse doit avoir dépassé 35 min")
+})
+
+// ── Source unique (estimator.ts) : parité avec la réexport de strength.ts ──────
+Deno.test("source unique : estimator et la réexport de strength donnent la même durée", () => {
+  const catalog = (ex: StrengthExercise): boolean =>
+    typeof ex.unilateral === "boolean" ? ex.unilateral : EXERCISE_INDEX[ex.slug]?.unilateral ?? false
+  // Même fonction des deux côtés : parité stricte sur une base identique.
+  assertEquals(estFromEstimator(oddBase()), estimateStrengthDuration(oddBase()))
+  // Sur une base BRUTE non enrichie (exercices unilatéraux sans champ unilateral),
+  // le résolveur catalogue double leur travail : durée strictement supérieure au
+  // résolveur par défaut, qui les compte comme bilatéraux.
+  assert(
+    estFromEstimator(oddBase(), catalog) > estFromEstimator(oddBase()),
+    "le résolveur catalogue doit allonger une base brute à exercices unilatéraux",
+  )
 })
 
 // ── Niveaux 2 + 3 + règle de sortie : trim et acceptation ─────────────────────
