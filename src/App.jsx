@@ -11,6 +11,8 @@ import TrainingHome from './apps/training/TrainingHome'
 import PlanDashboard from './apps/training/dashboard/PlanDashboard'
 import SessionPage from './apps/training/session/SessionPage'
 import PlanWizard from './apps/training/wizard/PlanWizard'
+import RevisionsHome from './apps/revisions/RevisionsHome'
+import ReviewSession from './apps/revisions/ReviewSession'
 import AuthGate from './components/AuthGate'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import supabase from './lib/supabase'
@@ -93,6 +95,8 @@ const router = createBrowserRouter([
       { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
       { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/' } },
       { path: '/training/plan/:planId/session/:sessionId', element: <SessionPage />, handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
+      { path: '/revisions', element: <RevisionsHome />, handle: { title: 'Révisions', backTo: '/' } },
+      { path: '/revisions/session', element: <ReviewSession />, handle: { title: 'Révision', backTo: '/revisions' } },
     ],
   },
 ])

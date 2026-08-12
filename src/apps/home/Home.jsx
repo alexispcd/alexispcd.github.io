@@ -25,6 +25,19 @@ const categories = [
     ],
   },
   {
+    label: 'Études',
+    apps: [
+      {
+        id: 'revisions',
+        name: 'Révisions',
+        desc: 'Cartes de révision',
+        icon: 'ti-cards',
+        status: 'active',
+        href: '/revisions',
+      },
+    ],
+  },
+  {
     label: 'Dev',
     apps: [
       {
