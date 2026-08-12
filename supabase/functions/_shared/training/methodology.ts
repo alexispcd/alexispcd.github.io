@@ -69,7 +69,7 @@ STEPS (séances de course uniquement) — FORMAT COMPACT
 - Toute séance de course (facile, fractionne, tempo, sortie_longue) porte un tableau "steps" ordonné reflétant le déroulé, dans l'ordre. N'émets JAMAIS "order_index", "repeat_group" ni "repeat_index" : ils sont dérivés automatiquement.
 - Deux formes d'élément dans "steps" :
   1. Step simple : { "step_type": warmup|run|interval|recovery|cooldown, "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }. Un step est borné par distance_m OU duration_sec. "target_pace_sec" requis SAUF pour "recovery" (allure libre).
-  2. Bloc de répétitions (fractionné) : { "repeat": N (≥2), "interval": { "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }, "recovery": { ("duration_sec" OU "distance_m"), "target_pace_sec"? } }. Un seul bloc "repeat" vaut N répétitions ; NE les recopie PAS une par une. La récup n'est pas répétée après la dernière répétition (géré automatiquement).
+  2. Bloc de répétitions (fractionné) : { "repeat": N (≥2), "interval": { "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }, "recovery": { ("duration_sec" OU "distance_m"), "target_pace_sec"? } }. Un seul bloc "repeat" vaut N répétitions ; NE les recopie PAS une par une. La récup est répétée après chaque répétition, y compris la dernière (géré automatiquement).
 - Fractionné : warmup (step simple) + un bloc "repeat" + cooldown (step simple). Exemple 6x1000m = un bloc { "repeat": 6, "interval": { distance_m 1000, allure }, "recovery": { duration_sec 90 } }.
 - Facile / sortie longue : généralement un seul step simple "run" (distance_m ou duration_sec + allure).
 - Tempo : warmup + un ou plusieurs "run" au seuil (ou un bloc "repeat" si intervalles au seuil) + cooldown.

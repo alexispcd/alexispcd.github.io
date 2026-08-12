@@ -76,14 +76,15 @@ Deno.test("step de recuperation en 1m40s sans allure (libre)", () => {
 
 // ── Bloc repete + workout de reference ────────────────────────────────────────
 // Steps aplatis tels que produits par expand.ts : echauffement, 5 intervalles
-// + 4 recuperations intercalees (meme repeat_group), retour au calme.
+// + 5 recuperations intercalees (meme repeat_group, une apres chaque intervalle
+// y compris le dernier), retour au calme.
 const refSteps = (): PlanStep[] => {
   const steps: PlanStep[] = []
   let oi = 0
   steps.push(step({ order_index: oi++, step_type: "warmup", duration_sec: 1200, target_pace_sec: 344, pace_tolerance_sec: 12 }))
   for (let r = 1; r <= 5; r++) {
     steps.push(step({ order_index: oi++, step_type: "interval", repeat_group: 1, repeat_index: r, distance_m: 1000, target_pace_sec: 230, pace_tolerance_sec: 5 }))
-    if (r < 5) steps.push(step({ order_index: oi++, step_type: "recovery", repeat_group: 1, repeat_index: r, duration_sec: 100 }))
+    steps.push(step({ order_index: oi++, step_type: "recovery", repeat_group: 1, repeat_index: r, duration_sec: 100 }))
   }
   steps.push(step({ order_index: oi++, step_type: "cooldown", duration_sec: 600, target_pace_sec: 344, pace_tolerance_sec: 12 }))
   return steps

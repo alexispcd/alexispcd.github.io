@@ -1,6 +1,7 @@
 // Déplie le format COMPACT (sortie modèle) en steps aplatis conformes au schéma
 // session_steps : order_index séquentiel, repeat_group/repeat_index renseignés,
-// pas de recovery après la dernière répétition (même convention que le frontend).
+// recovery répétée après chaque répétition, y compris la dernière (la montre
+// enregistre bien un lap de récup après le dernier intervalle).
 
 import type {
   CompactStep, CompactRepeat, PlanStep,
@@ -33,8 +34,7 @@ export function expandSteps(compact: CompactStep[] | undefined | null): PlanStep
           distance_m: el.interval?.distance_m ?? null,
           duration_sec: el.interval?.duration_sec ?? null,
         })
-        // Pas de récupération après la dernière répétition.
-        if (el.recovery && i < n) {
+        if (el.recovery) {
           out.push({
             order_index: order++,
             step_type: "recovery",

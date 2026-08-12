@@ -41,23 +41,24 @@ const lap = (distance_m: number, duration_sec: number, avg_hr: number | null = n
   avg_hr,
 })
 
-// 13 steps : warmup 1200 s (cible 344 ±12), 6x600 m (cible 225 ±5) séparés de 5
-// récup 90 s sans cible, puis cooldown 600 s (cible 344 ±12).
+// 14 steps : warmup 1200 s (cible 344 ±12), 6x600 m (cible 225 ±5) chacun suivi
+// d'une récup 90 s sans cible (y compris apres le 6e intervalle), puis cooldown
+// 600 s (cible 344 ±12).
 const buildRefSteps = (): Step[] => {
   orderCounter = 0
   const s: Step[] = [step("warmup", { duration_sec: 1200, target_pace_sec: 344, pace_tolerance_sec: 12 })]
   for (let i = 0; i < 6; i++) {
     s.push(step("interval", { distance_m: 600, target_pace_sec: 225, pace_tolerance_sec: 5 }))
-    if (i < 5) s.push(step("recovery", { duration_sec: 90 }))
+    s.push(step("recovery", { duration_sec: 90 }))
   }
   s.push(step("cooldown", { duration_sec: 600, target_pace_sec: 344, pace_tolerance_sec: 12 }))
   return s
 }
 
 // Laps réels concaténés dans l'ordre chronologique (distance_m, duration_sec).
-// Laps 0 a 3 : footing d'échauffement. Lap 4 : artefact (107 m). Laps 5 a 15 :
-// intervalles et récup. Lap 16 : artefact (188 m). Lap 17 : cooldown enregistré
-// en un seul lap trop long.
+// Laps 0 a 3 : footing d'échauffement. Lap 4 : artefact (107 m). Laps 5 a 16 :
+// intervalles et récup (la récup 6 au lap 16 est bien courue). Lap 17 : cooldown
+// enregistré en un seul lap trop long.
 const buildRefLaps = (): Lap[] => [
   lap(1000, 353), // 0
   lap(1000, 381), // 1
@@ -75,7 +76,7 @@ const buildRefLaps = (): Lap[] => [
   lap(600, 137), // 13 interval 5 : +3
   lap(196.98, 90), // 14 récup 5
   lap(600, 134), // 15 interval 6 : -2
-  lap(188.87, 90), // 16 artefact
+  lap(188.87, 90), // 16 récup 6
   lap(1517.51, 737), // 17 cooldown
 ]
 
@@ -126,29 +127,32 @@ Deno.test("cas réel : départ conjoint, appariement complet step par step", () 
     assertEquals(c.status, "ok", `step${si} statut`)
   }
 
-  // Récup : 'free', appariées 1:1.
-  for (const [si, lapIdx] of [[2, 6], [4, 8], [6, 10], [8, 12], [10, 14]]) {
+  // Récup : 'free', appariées 1:1. La 6e récup (step 12) capte le lap 16, qui
+  // etait orphelin avant l'ajout de la récup finale.
+  for (const [si, lapIdx] of [[2, 6], [4, 8], [6, 10], [8, 12], [10, 14], [12, 16]]) {
     const c = get(si)
     assertEquals(c.lap_index, lapIdx, `step${si} lap de départ`)
     assertEquals(c.lap_count, 1, `step${si} nombre de laps`)
     assertEquals(c.status, "free", `step${si} statut`)
   }
 
-  // Cooldown : lap 17 (le lap 16 est sauté), hors cible.
-  const c12 = get(12)
-  assertEquals(c12.lap_index, 17, "step12 lap de départ")
-  assertEquals(c12.lap_count, 1, "step12 nombre de laps")
-  assertEquals(c12.actual_pace, 486, "step12 allure")
-  assertEquals(c12.delta_sec, 142, "step12 delta")
-  assertEquals(c12.status, "ecart", "step12 statut")
+  // Cooldown : lap 17, hors cible.
+  const c13 = get(13)
+  assertEquals(c13.lap_index, 17, "step13 lap de départ")
+  assertEquals(c13.lap_count, 1, "step13 nombre de laps")
+  assertEquals(c13.actual_pace, 486, "step13 allure")
+  assertEquals(c13.delta_sec, 142, "step13 delta")
+  assertEquals(c13.status, "ecart", "step13 statut")
 
   // Total : 7 comparaisons ok sur les 8 steps ayant une cible.
   const graded = comparisons.filter((c) => c.status !== "free")
   assertEquals(graded.length, 8, "steps ayant une cible")
   assertEquals(graded.filter((c) => c.status === "ok").length, 7, "steps ok")
 
-  // Le lap 16 n'est apparié à aucun step (artefact sauté), c'est normal.
-  assertEquals(actualLaps[16].step_index, null, "lap 16 orphelin")
+  // Le lap 4 (107 m) n'est apparié à aucun step (artefact sauté), c'est normal.
+  // Le lap 16, lui, est désormais capté par la 6e récup (step 12).
+  assertEquals(actualLaps[4].step_index, null, "lap 4 orphelin")
+  assertEquals(actualLaps[16].step_index, 12, "lap 16 rattaché à la 6e récup")
 
   // GARDE ANTI RÉGRESSION du choix de départ : le premier step démarre au lap 0
   // et aucun lap d'index inférieur à ce départ ne reste orphelin. Si le départ

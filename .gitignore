@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code : permissions locales, propres a la machine
+.claude/settings.local.json

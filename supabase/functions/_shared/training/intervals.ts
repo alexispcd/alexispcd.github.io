@@ -94,7 +94,7 @@ export type WorkoutItem =
 
 /**
  * Regroupe les steps aplatis par repeat_group (inverse de expand.ts) : un groupe
- * de N repetitions vaut N steps 'interval' + (N-1) steps 'recovery'. Le count est
+ * de N repetitions vaut N steps 'interval' + N steps 'recovery'. Le count est
  * le nombre d'intervalles ; l'allure du bloc est celle du premier intervalle, la
  * recuperation celle du premier step de recuperation du groupe.
  */
