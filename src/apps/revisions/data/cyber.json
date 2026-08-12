@@ -1,0 +1,288 @@
+{
+  "themeId": "cyber",
+  "theme": "Cybersécurité",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "cyber-3a755b",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Les critères DICT",
+      "verso": "<b>Disponibilité</b> : le service est accessible quand on en a besoin. <b>Intégrité</b> : la donnée n'a pas été altérée. <b>Confidentialité</b> : seuls les habilités y accèdent. <b>Traçabilité</b> : on peut reconstituer qui a fait quoi et quand.<br><i>Ces quatre critères s'arbitrent, ils ne s'additionnent pas. Chiffrer renforce la confidentialité et fragilise la disponibilité si l'on perd la clé. Le rôle du RSSI est de pondérer ces critères par métier, pas de tous les maximiser.</i><br><i>Ex. : un hôpital privilégie la disponibilité, un cabinet d'avocats la confidentialité, une banque l'intégrité.</i>"
+    },
+    {
+      "id": "cyber-1c3555",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Menace, vulnérabilité, risque et impact",
+      "verso": "<b>Menace</b> : ce qui peut arriver et qui le veut. <b>Vulnérabilité</b> : la faiblesse exploitable. <b>Risque</b> : la combinaison des deux, pondérée par la vraisemblance. <b>Impact</b> : la conséquence si le risque se réalise.<br><i>Formulation à retenir : le risque n'existe que si une menace rencontre une vulnérabilité sur un actif qui a de la valeur. Supprimer l'un des trois termes supprime le risque, et c'est souvent la valeur de l'actif qu'on peut réduire le plus simplement, en cessant de conserver une donnée dont on n'a plus besoin.</i>"
+    },
+    {
+      "id": "cyber-1dadd0",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Rançongiciel et extorsion multiple",
+      "verso": "Logiciel qui chiffre les données de la victime et exige une rançon. Le modèle a évolué en trois temps : <b>simple extorsion</b>, on chiffre ; <b>double extorsion</b>, on exfiltre avant de chiffrer et on menace de publier ; <b>triple extorsion</b>, on ajoute la pression sur les clients, les partenaires ou les régulateurs.<br><i>Conséquence stratégique majeure : la sauvegarde ne protège plus que de la partie chiffrement. Elle ne répond en rien à la menace de divulgation, ce qui change complètement l'arbitrage sur le paiement.</i><br><i>Modèle économique : le rançongiciel en tant que service, où des affiliés louent l'outillage et partagent le produit.</i>"
+    },
+    {
+      "id": "cyber-944393",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Hameçonnage, harponnage et fraude au président",
+      "verso": "<b>Hameçonnage</b> : message frauduleux envoyé en masse. <b>Harponnage</b> : ciblé sur une personne précise, à partir d'informations réelles la concernant. <b>Fraude au président</b> : usurpation d'un dirigeant pour obtenir un virement urgent et confidentiel.<br><b>Variantes par canal</b> : hameçonnage vocal par téléphone, par SMS, ou par code QR.<br><i>Bascule de 2024-2026 : l'usurpation par vidéo ou par voix de synthèse rend caduque la parade classique du contre-appel de vérification. Le levier reste procédural, la validation à double signature sur un canal indépendant.</i>"
+    },
+    {
+      "id": "cyber-58d4cd",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Ingénierie sociale",
+      "verso": "Manipulation d'une personne pour obtenir un accès ou une information, en exploitant des ressorts psychologiques : autorité, urgence, réciprocité, peur, désir d'être utile.<br><b>Cible privilégiée aujourd'hui</b> : le support informatique, à qui l'on demande une réinitialisation de mot de passe ou d'authentification en se faisant passer pour un collaborateur.<br><i>Point central pour l'argumentation : ce n'est pas une attaque contre une faiblesse humaine, c'est une attaque contre un processus qui n'a pas prévu la vérification d'identité. La parade est organisationnelle, pas comportementale.</i>"
+    },
+    {
+      "id": "cyber-259bea",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Menace persistante avancée",
+      "verso": "Attaquant disposant de moyens importants, souvent étatiques, qui s'introduit discrètement et reste présent des mois pour espionner ou se prépositionner, sans chercher de gain immédiat.<br><b>Différence avec la cybercriminalité</b> : le criminel cherche la rentabilité rapide, l'acteur étatique cherche la persistance et le renseignement.<br><i>Tendance relevée par l'ANSSI : le brouillage croissant entre les deux, des acteurs étatiques empruntant les outils et les modes opératoires cybercriminels pour compliquer l'attribution.</i>"
+    },
+    {
+      "id": "cyber-b63747",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Vulnérabilité, CVE, CVSS et faille du jour zéro",
+      "verso": "<b>CVE</b> : identifiant unique attribué à une vulnérabilité publiée. <b>CVSS</b> : score de gravité de 0 à 10. <b>Faille du jour zéro</b> : vulnérabilité exploitée avant qu'un correctif existe.<br><i>Nuance de pilotage : le score CVSS mesure la gravité théorique, pas le risque réel. Une faille notée 9 sur un service non exposé est moins urgente qu'une faille notée 7 activement exploitée sur un serveur en frontal. D'où le recours croissant au catalogue des vulnérabilités activement exploitées pour prioriser.</i><br><i>Le rapport Verizon 2026 fait de l'exploitation de vulnérabilités le premier vecteur d'accès initial, pour la première fois.</i>"
+    },
+    {
+      "id": "cyber-a059cf",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Défense en profondeur",
+      "verso": "Empiler des mesures indépendantes de sorte que la défaillance d'une seule ne compromette pas l'ensemble : filtrage réseau, segmentation, authentification forte, chiffrement, détection, sauvegardes, procédures.<br><i>Le principe vient de la fortification militaire : on ne mise pas sur un rempart unique, on multiplie les lignes pour ralentir et détecter.</i><br><i>Corollaire pratique : la question à poser pour tout dispositif n'est pas seulement s'il fonctionne, mais ce qui se passe le jour où il tombe.</i>"
+    },
+    {
+      "id": "cyber-9f3e0a",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Moindre privilège et séparation des tâches",
+      "verso": "<b>Moindre privilège</b> : chacun ne dispose que des droits strictement nécessaires à sa fonction, et uniquement le temps nécessaire.<br><b>Séparation des tâches</b> : une opération sensible requiert au moins deux personnes distinctes, celle qui demande n'étant pas celle qui valide.<br><i>Constat de terrain : c'est le principe le plus universellement admis et le plus mal appliqué. L'accumulation de droits au fil des mobilités internes est le vecteur silencieux de la plupart des mouvements latéraux réussis.</i><br><i>Parade concrète : la revue périodique des habilitations, et les droits d'administration accordés à la demande pour une durée limitée.</i>"
+    },
+    {
+      "id": "cyber-3fffdf",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "SOC, SIEM et SOAR",
+      "verso": "<b>SOC</b> : l'équipe qui surveille, détecte et répond aux incidents, souvent en continu.<br><b>SIEM</b> : l'outil qui collecte et corrèle les journaux de tout le SI pour faire remonter des alertes.<br><b>SOAR</b> : la couche d'orchestration qui automatise les réponses standard, isoler un poste, bloquer un compte, ouvrir un ticket.<br><i>Difficulté principale d'un SOC : le volume d'alertes et la fatigue qu'il génère. Un dispositif qui produit des milliers d'alertes par jour dont l'immense majorité sont fausses finit par masquer la vraie.</i>"
+    },
+    {
+      "id": "cyber-89c7ab",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "EDR et XDR",
+      "verso": "<b>EDR</b> : agent installé sur les postes et serveurs, qui détecte les comportements suspects plutôt que des signatures connues, et permet d'isoler la machine à distance.<br><b>XDR</b> : étend cette logique en corrélant les signaux du poste, du réseau, de la messagerie, du nuage et des identités.<br><i>Rupture par rapport à l'antivirus classique : on ne cherche plus à reconnaître un fichier malveillant connu, on cherche un enchaînement d'actions anormal. C'est ce qui permet de détecter un attaquant qui n'utilise que des outils légitimes du système.</i>"
+    },
+    {
+      "id": "cyber-b776db",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Test d'intrusion, équipe rouge et prime aux bogues",
+      "verso": "<b>Test d'intrusion</b> : évaluation ponctuelle et cadrée d'un périmètre défini, avec rapport de vulnérabilités.<br><b>Équipe rouge</b> : simulation d'attaque réaliste, sans périmètre annoncé, destinée à éprouver la détection et la réaction autant que la technique.<br><b>Prime aux bogues</b> : rémunération de chercheurs externes pour les vulnérabilités qu'ils signalent.<br><i>Ce que mesure une équipe rouge et que ne mesure pas un test d'intrusion : le délai de détection. Une organisation peut réussir tous ses tests techniques et ne jamais voir passer l'attaquant.</i>"
+    },
+    {
+      "id": "cyber-3d95a8",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Continuité et reprise d'activité",
+      "verso": "<b>Plan de continuité</b> : maintenir l'activité en mode dégradé pendant la crise. <b>Plan de reprise</b> : rétablir le service après l'interruption.<br><b>Ce qui les rend opérants</b> : des seuils de tolérance définis avec le métier, des procédures accessibles hors du SI compromis, et des exercices réguliers.<br><i>Erreur classique et coûteuse : conserver l'annuaire de crise et les procédures dans le système d'information qui vient d'être chiffré. Un plan de reprise jamais testé est une hypothèse, pas une garantie.</i>"
+    },
+    {
+      "id": "cyber-c9a33b",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Sauvegarde 3-2-1 et sauvegarde immuable",
+      "verso": "<b>Règle 3-2-1</b> : trois copies des données, sur deux supports différents, dont une hors site. Certaines déclinaisons ajoutent une copie hors ligne et une vérification de restauration.<br><b>Sauvegarde immuable</b> : copie qu'aucun administrateur, y compris légitime, ne peut modifier ni supprimer pendant une durée fixée.<br><i>Raison d'être de l'immuabilité : les attaquants par rançongiciel cherchent systématiquement les sauvegardes avant de déclencher le chiffrement. Une sauvegarde accessible depuis le domaine compromis n'est pas une sauvegarde.</i>"
+    },
+    {
+      "id": "cyber-a99045",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Chiffrement et gestion des clés",
+      "verso": "<b>Au repos</b> : les données stockées sont chiffrées. <b>En transit</b> : les échanges le sont. <b>De bout en bout</b> : seuls les correspondants peuvent déchiffrer, y compris à l'insu du fournisseur du service.<br><i>Le vrai sujet n'est pas l'algorithme mais la gestion des clés : qui les détient, où, comment on les renouvelle, ce qui se passe si on les perd. Chiffrer avec une clé détenue par le prestataire ne protège pas d'une réquisition adressée à ce prestataire.</i><br><i>Constat IBM 2026 : plus de la moitié des organisations victimes n'avaient pas chiffré leurs données sensibles.</i>"
+    },
+    {
+      "id": "cyber-e0b524",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Gestion des identités et des accès privilégiés",
+      "verso": "<b>IAM</b> : cycle de vie des identités, de l'arrivée au départ, avec attribution et retrait des droits.<br><b>PAM</b> : traitement spécifique des comptes à hauts privilèges, avec coffre-fort de secrets, élévation temporaire et enregistrement des sessions.<br><i>Point aveugle fréquent : le processus de départ. Un compte non désactivé le jour du départ est une porte ouverte sans surveillance, et la même faiblesse s'applique aux comptes de service et aux comptes des prestataires.</i><br><i>Sujet émergent : les identités des agents d'IA, qui agissent avec des droits propres et doivent être gouvernées comme des comptes à part entière.</i>"
+    },
+    {
+      "id": "cyber-8bbd13",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Risques propres à l'IA et IA fantôme",
+      "verso": "<b>Injection de requête</b> : instructions malveillantes cachées dans un contenu que le modèle traite, le détournant de sa consigne.<br><b>Empoisonnement de données</b> : corruption du corpus d'entraînement ou de la base documentaire interrogée.<br><b>IA fantôme</b> : usage d'outils d'IA non validés, avec envoi de données de l'entreprise vers des services non maîtrisés.<br><i>IBM relève en 2026 que les incidents liés à l'IA fantôme ont plus que doublé, pour atteindre une part importante des incidents de sécurité. C'est la répétition exacte du phénomène du shadow IT, à plus grande vitesse.</i>"
+    },
+    {
+      "id": "cyber-529540",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Cyberassurance",
+      "verso": "Couverture des conséquences financières d'un incident : frais de réponse, pertes d'exploitation, frais de notification, parfois rançon.<br><b>Évolution du marché</b> : les assureurs conditionnent désormais la couverture à un socle de mesures vérifiées, authentification multifacteur, sauvegardes hors ligne, détection sur les postes, plan de réponse.<br><i>Effet inattendu et intéressant à souligner : l'assurance est devenue un levier de mise à niveau plus efficace que la réglementation dans les PME, parce que le refus de couverture est immédiat et concret.</i><br><i>Débat en cours : indemniser une rançon alimente-t-il le modèle économique des attaquants.</i>"
+    },
+    {
+      "id": "cyber-cf697b",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "2010 : Stuxnet",
+      "verso": "Découverte d'un logiciel malveillant très sophistiqué conçu pour saboter des centrifugeuses d'enrichissement d'uranium en Iran, en altérant leur pilotage industriel tout en affichant des valeurs normales aux opérateurs.<br><i>Portée : première démonstration publique qu'un code peut produire une destruction physique. La cyberattaque devient un instrument de puissance étatique, et les systèmes industriels, longtemps ignorés parce que réputés isolés, entrent dans le champ de la sécurité.</i>"
+    },
+    {
+      "id": "cyber-03e99d",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2017 : WannaCry et NotPetya",
+      "verso": "Deux vagues mondiales en quelques semaines. La première exploite une vulnérabilité Windows pour laquelle un correctif existait depuis deux mois. La seconde, diffusée par la mise à jour d'un logiciel comptable ukrainien, est un outil de destruction déguisé en rançongiciel, avec des dégâts estimés à plus de dix milliards de dollars.<br><i>Portée triple : le correctif non appliqué reste la cause première ; une attaque géopolitiquement ciblée se propage sans frontières et frappe des entreprises non concernées ; et la mise à jour logicielle légitime devient un vecteur d'attaque.</i>"
+    },
+    {
+      "id": "cyber-9a77d6",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "Mai 2021 : Colonial Pipeline",
+      "verso": "L'arrêt du principal oléoduc de la côte est américaine provoque des pénuries de carburant. L'accès initial provient d'un compte de réseau privé virtuel inactif, sans authentification multifacteur, dont le mot de passe circulait dans une fuite.<br><i>Portée : un compte oublié suffit à interrompre une infrastructure nationale. L'entreprise a arrêté la distribution non parce que les systèmes industriels étaient touchés, mais parce qu'elle ne pouvait plus facturer. La dépendance du métier au SI est le vrai point de rupture.</i>"
+    },
+    {
+      "id": "cyber-5699be",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "Septembre 2023 : MGM Resorts",
+      "verso": "Des attaquants obtiennent un accès en appelant le support informatique et en usurpant l'identité d'un employé, à partir d'informations trouvées sur les réseaux sociaux professionnels. L'exploitation de plusieurs établissements est paralysée pendant des jours, pour un coût estimé à plus de cent millions de dollars.<br><i>Portée, et c'est le cas d'école du facteur humain : aucune vulnérabilité technique n'a été exploitée. Le point d'entrée est une procédure de réinitialisation qui ne vérifiait pas l'identité de l'appelant.</i>"
+    },
+    {
+      "id": "cyber-62f243",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "Juillet 2024 : la panne CrowdStrike",
+      "verso": "Une mise à jour défectueuse d'un agent de sécurité rend inopérants des millions de postes Windows dans le monde, clouant des avions au sol et interrompant des hôpitaux et des banques. Ce n'est pas une attaque, c'est une erreur de déploiement.<br><i>Portée pour un architecte : l'outil de sécurité, installé en profondeur sur tous les postes avec les plus hauts privilèges, est lui-même devenu un point de défaillance unique à l'échelle mondiale. À citer pour montrer que la résilience ne se réduit pas à la protection contre les attaquants.</i>"
+    },
+    {
+      "id": "cyber-850ab7",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2025 : Marks & Spencer",
+      "verso": "Le distributeur britannique subit une attaque conduisant à l'arrêt prolongé de la vente en ligne et à des ruptures en magasin, avec un impact sur le résultat opérationnel estimé à plusieurs centaines de millions de livres. L'accès initial est attribué à une manipulation d'un prestataire, non à une intrusion directe.<br><i>Portée : la chaîne de sous-traitance est le maillon réellement exploité, et l'impact se mesure en chiffre d'affaires perdu bien plus qu'en coût de remédiation informatique.</i>"
+    },
+    {
+      "id": "cyber-ff4e7c",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "2024-2026 : NIS 2 et la loi résilience",
+      "verso": "La directive (UE) 2022/2555 devait être transposée avant le 17 octobre 2024. La France, comme la majorité des États membres, a manqué l'échéance et fait l'objet d'une procédure d'infraction. La transposition intervient par une loi relative à la résilience des infrastructures critiques et au renforcement de la cybersécurité, qui couvre également les directives sur les entités critiques et le secteur financier.<br><i>Changement d'échelle : d'environ 500 entités concernées sous le régime précédent à de l'ordre de 15 000, avec responsabilité des dirigeants et sanctions pouvant atteindre 10 millions d'euros ou 2 % du chiffre d'affaires mondial.</i>"
+    },
+    {
+      "id": "cyber-51af74",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2026 : la bascule de l'IA dans les attaques",
+      "verso": "Le rapport IBM publié en juillet 2026 établit qu'une violation malveillante sur quatre implique désormais l'IA, en progression de 56 % sur un an, principalement par usurpation d'identité au moyen de contenus de synthèse et par maliciels générés.<br>Le rapport Verizon publié en mai 2026 relève quant à lui, pour la première fois, que l'exploitation de vulnérabilités devance l'usage d'identifiants volés comme premier vecteur d'accès initial.<br><i>Portée : l'IA ne crée pas de nouvelles catégories d'attaques, elle abaisse le coût et augmente le volume et la crédibilité des attaques existantes.</i>"
+    },
+    {
+      "id": "cyber-1ecb80",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le coût d'une violation de données en 2026",
+      "verso": "4,99 millions de dollars en moyenne mondiale, un record, et 11,5 millions aux États-Unis. Le délai moyen pour identifier et contenir une violation atteint 247 jours, soit six jours de plus que l'année précédente. La santé reste le secteur le plus coûteux pour la treizième année consécutive.<br><i>Source : IBM, Cost of a Data Breach Report 2026, publié le 29 juillet 2026, portant sur 602 organisations dans 16 pays</i>"
+    },
+    {
+      "id": "cyber-f7f7dd",
+      "type": "chiffre",
+      "angle": "technique",
+      "recto": "L'IA dans les attaques et dans la défense",
+      "verso": "Une violation malveillante sur quatre est assistée par IA, en hausse de 56 % sur un an, pour un coût moyen d'environ 6 millions de dollars, soit un million de plus que la moyenne. L'usurpation par contenus de synthèse en constitue la forme la plus fréquente.<br>À l'inverse, les organisations recourant largement à l'IA et à l'automatisation en sécurité paient environ 3,6 millions contre 5,5 millions, et détectent environ 51 jours plus tôt. Une organisation sur quatre n'a toujours pas adopté ces outils.<br><i>Source : IBM, 2026</i>"
+    },
+    {
+      "id": "cyber-c1267f",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "L'hameçonnage, premier vecteur pour la quatrième année",
+      "verso": "L'hameçonnage demeure le premier vecteur d'accès initial. L'hameçonnage vocal et par SMS intervient dans 17 % des attaques, pour un coût moyen de 5,29 millions de dollars, supérieur à la moyenne générale.<br>Par ailleurs, plus de la moitié des organisations victimes n'avaient pas chiffré leurs données sensibles, et les données personnelles de clients apparaissent dans 52 % des violations.<br><i>Source : IBM, 2026</i>"
+    },
+    {
+      "id": "cyber-c878d4",
+      "type": "chiffre",
+      "angle": "souverainete",
+      "recto": "Le panorama de la cybermenace française",
+      "verso": "3 586 événements de sécurité traités par l'ANSSI en 2025, en baisse de 18 % du fait de l'effet des Jeux olympiques l'année précédente, mais 1 366 incidents confirmés, un niveau stable par rapport aux 1 361 de 2024. Les signalements d'exfiltration de données progressent de 51 %, à 196 incidents.<br>Quatre secteurs concentrent 76 % des incidents : éducation et recherche 34 %, ministères et collectivités 24 %, santé 10 %, télécommunications 9 %.<br><i>Source : ANSSI, Panorama de la cybermenace 2025, publié le 11 mars 2026</i>"
+    },
+    {
+      "id": "cyber-feda65",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le rançongiciel et ses cibles",
+      "verso": "39 % des organisations interrogées ont subi un incident de rançongiciel, et dans 41 % de ces cas les attaquants ont menacé de divulguer publiquement les données ou de nuire à la réputation, plutôt que de se limiter au chiffrement.<br>En France, l'ANSSI relevait que 37 % des victimes connues de rançongiciel étaient des TPE, PME et ETI, devant les collectivités territoriales à 17 %.<br><i>Sources : IBM 2026 ; ANSSI, Panorama de la cybermenace</i>"
+    },
+    {
+      "id": "cyber-43c53e",
+      "type": "chiffre",
+      "angle": "souverainete",
+      "recto": "Le changement d'échelle de NIS 2",
+      "verso": "Environ 15 000 entités françaises concernées, contre de l'ordre de 500 sous le régime précédent. Sanctions pouvant atteindre 10 millions d'euros ou 2 % du chiffre d'affaires mondial, avec engagement de la responsabilité des dirigeants.<br>La France a étendu le périmètre au-delà de la directive en y intégrant les collectivités territoriales de plus de 30 000 habitants.<br><i>Sources : directive (UE) 2022/2555 ; loi française de transposition</i>"
+    },
+    {
+      "id": "cyber-1b9a84",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "ANSSI et CERT-FR",
+      "verso": "L'<b>ANSSI</b> est l'autorité nationale de cybersécurité : elle qualifie des produits et des prestataires, publie des guides d'hygiène et de recommandations, accompagne les victimes d'incidents majeurs et sera l'autorité de contrôle au titre de NIS 2.<br>Le <b>CERT-FR</b> en est le centre opérationnel : alertes, bulletins de vulnérabilité, réponse à incident, et publication du panorama annuel de la cybermenace.<br><i>Repère utile : l'agence porte une stratégie nationale de cybersécurité 2026-2030 dont la priorité affichée est la résilience de la Nation, face à une menace qualifiée de systémique.</i>"
+    },
+    {
+      "id": "cyber-bf86a9",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "NIS 2, DORA et le Cyber Resilience Act",
+      "verso": "<b>NIS 2</b> : obligations de gestion du risque et de notification pour un périmètre très élargi d'entités essentielles et importantes.<br><b>DORA</b> : résilience opérationnelle du secteur financier, avec supervision directe des prestataires informatiques critiques.<br><b>Cyber Resilience Act</b> : sécurité par conception des produits comportant des éléments numériques, avec obligation de correctifs pendant une durée définie.<br><i>Logique d'ensemble : l'Europe encadre successivement l'organisation qui subit, le secteur qui dépend, et le produit qui expose. Les trois se cumulent pour une même entreprise.</i>"
+    },
+    {
+      "id": "cyber-9fc132",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Le RSSI et la gouvernance du risque",
+      "verso": "Le RSSI définit la politique de sécurité, arbitre les risques et porte la sensibilisation. Son rattachement est révélateur : sous la DSI, il arbitre difficilement contre les projets ; rattaché à la direction générale ou à la direction des risques, il gagne en indépendance.<br><b>Évolution majeure apportée par NIS 2</b> : la responsabilité de la cybersécurité est explicitement portée par les dirigeants, ce qui déplace le sujet du niveau technique au niveau du conseil d'administration.<br><i>Difficulté propre au métier : il doit démontrer la valeur d'incidents qui ne se sont pas produits. C'est pourquoi le pilotage par le risque et par le coût évité est sa seule argumentation audible en comité de direction.</i>"
+    },
+    {
+      "id": "cyber-3292af",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "Les référentiels de référence",
+      "verso": "<b>ISO 27001</b> : norme certifiable pour un système de management de la sécurité de l'information, centrée sur l'amélioration continue.<br><b>EBIOS Risk Manager</b> : méthode française d'analyse de risque, portée par l'ANSSI, qui part des scénarios stratégiques et des parties prenantes plutôt que de l'inventaire technique.<br><b>NIST Cybersecurity Framework</b> : cinq fonctions, identifier, protéger, détecter, répondre, rétablir, devenues un langage universel.<br><b>MITRE ATT&amp;CK</b> : base de connaissances des techniques réellement observées, utilisée pour évaluer la couverture de détection.<br><i>Bonne réponse à la question du choix : ISO pour la certification, EBIOS pour l'analyse, NIST pour structurer le discours, ATT&amp;CK pour l'opérationnel.</i>"
+    },
+    {
+      "id": "cyber-35a3e4",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "L'humain est-il le maillon faible ou la dernière ligne de défense ?",
+      "verso": "<b>Thèse du maillon faible</b> : l'hameçonnage reste le premier vecteur pour la quatrième année consécutive, MGM Resorts a été compromis par un simple appel au support, et l'usurpation par voix ou vidéo de synthèse rend la vigilance individuelle de plus en plus difficile.<br><b>Thèse de la dernière ligne</b> : c'est un collaborateur qui signale l'anomalie qu'aucun outil n'a détectée ; l'erreur individuelle n'est possible que parce qu'un processus a autorisé l'action, un virement sans double validation, une réinitialisation sans vérification d'identité.<br><b>Position tenable</b> : désigner l'humain comme maillon faible est un diagnostic confortable qui dispense de corriger l'architecture. La bonne question n'est pas comment empêcher l'erreur, elle est comment concevoir un système où l'erreur d'une personne n'a pas de conséquence irréversible."
+    },
+    {
+      "id": "cyber-81d208",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Faut-il payer la rançon ?",
+      "verso": "<b>Arguments pour</b> : lorsque l'activité est arrêtée et les sauvegardes détruites, la rançon peut être inférieure au coût quotidien d'interruption, et la menace de divulgation de données personnelles engage la responsabilité de l'entreprise.<br><b>Arguments contre</b> : le paiement finance le modèle économique et désigne la victime comme solvable, avec un risque élevé de nouvelle attaque ; rien ne garantit la restitution ni la destruction des données exfiltrées ; et la position officielle française est de ne pas payer.<br><b>Position tenable</b> : le paiement n'achète pas la fin de l'incident, seulement une clé de déchiffrement. La donnée exfiltrée reste chez l'attaquant. La décision se prépare à froid, dans le plan de crise, jamais sous la pression du chronomètre. En France, l'indemnisation d'une rançon par une assurance est conditionnée au dépôt d'une plainte."
+    },
+    {
+      "id": "cyber-0e9d69",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "La sensibilisation sert-elle à quelque chose ?",
+      "verso": "<b>Pour</b> : elle est obligatoire dans la plupart des référentiels, elle crée un réflexe de signalement, et une organisation où l'on ose déclarer une erreur détecte plus vite.<br><b>Contre</b> : les campagnes de faux hameçonnage améliorent les taux mesurés sans réduire les compromissions réelles ; face à une usurpation par vidéo de synthèse, la vigilance individuelle ne suffit plus ; et une sensibilisation punitive dissuade de signaler, ce qui aggrave le risque.<br><b>Position tenable</b> : la sensibilisation est nécessaire et très insuffisante seule. Son objectif utile n'est pas d'obtenir zéro clic, objectif inatteignable, mais de réduire le délai entre le clic et le signalement. C'est un indicateur bien plus pertinent que le taux de clic."
+    },
+    {
+      "id": "cyber-93e062",
+      "type": "controverse",
+      "angle": "technique",
+      "recto": "L'IA profite-t-elle davantage aux attaquants ou aux défenseurs ?",
+      "verso": "<b>Avantage aux attaquants</b> : hausse de 56 % des violations assistées par IA en un an ; l'usurpation par contenus de synthèse annule les parades fondées sur la reconnaissance de la voix ou du visage ; le coût d'une campagne crédible s'effondre, ce qui élargit la population des attaquants capables.<br><b>Avantage aux défenseurs</b> : les organisations qui utilisent largement l'IA en sécurité paient environ deux millions de dollars de moins par violation et détectent une cinquantaine de jours plus tôt.<br><b>Position tenable</b> : l'asymétrie penche du côté de l'attaquant à court terme, parce qu'il n'a besoin de réussir qu'une fois et adopte sans contrainte de conformité, tandis qu'une organisation sur quatre n'a pas encore outillé sa défense. Mais l'écart mesuré profite aux défenseurs qui ont franchi le pas, ce qui fait du retard d'adoption le vrai facteur de risque."
+    }
+  ]
+}

@@ -1,0 +1,288 @@
+{
+  "themeId": "bigdata",
+  "theme": "Big Data",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "bigdata-41fae7",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Big Data et les 5V",
+      "verso": "Ensemble de données trop volumineuses, trop rapides ou trop hétérogènes pour être traitées par les outils classiques de base de données.<br><b>Volume</b> : l'échelle. <b>Vélocité</b> : la vitesse d'arrivée et le besoin de traitement quasi immédiat. <b>Variété</b> : texte, image, journaux techniques, capteurs, en plus des tables. <b>Véracité</b> : la fiabilité, souvent inégale. <b>Valeur</b> : ce que la donnée rapporte réellement.<br><i>Les trois premiers V datent de 2001 (Doug Laney, META Group). Les deux derniers ont été ajoutés ensuite, et ce sont ceux qui posent problème en entreprise : accumuler du volume est facile, en tirer de la valeur fiable ne l'est pas.</i>"
+    },
+    {
+      "id": "bigdata-16a08e",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Données structurées, semi-structurées, non structurées",
+      "verso": "<b>Structurées</b> : rangées en tables avec un schéma défini à l'avance. Ex. : une base clients relationnelle.<br><b>Semi-structurées</b> : porteuses de balises ou de clés mais sans schéma rigide. Ex. : JSON, XML, journaux applicatifs.<br><b>Non structurées</b> : aucun format exploitable directement. Ex. : courriels, contrats PDF, images, enregistrements d'appels.<br><i>Point décisif : la grande majorité des données produites par une entreprise sont non structurées, et c'est précisément la part historiquement inexploitée. C'est ce que l'IA générative vient débloquer.</i>"
+    },
+    {
+      "id": "bigdata-d9ee29",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Entrepôt de données (data warehouse)",
+      "verso": "Base centralisée qui rassemble des données déjà nettoyées et structurées selon un schéma défini à l'avance, optimisée pour l'analyse et le reporting plutôt que pour la saisie.<br><b>Principe</b> : schéma à l'écriture. On décide de la structure avant de charger, donc la donnée arrive propre et les requêtes sont rapides.<br><b>Limite</b> : tout nouveau besoin d'analyse impose de revoir le schéma et de recharger. Rigide face aux données non structurées.<br><i>Ex. : Snowflake, BigQuery, Teradata.</i>"
+    },
+    {
+      "id": "bigdata-a05cd0",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Lac de données (data lake) et marécage de données",
+      "verso": "Dépôt qui stocke les données dans leur format brut, sans transformation préalable, à faible coût et sans limite de type.<br><b>Principe inverse de l'entrepôt</b> : schéma à la lecture. On charge d'abord, on décide de l'interprétation au moment de l'usage.<br><b>Le risque, et il est constant</b> : sans catalogue, sans propriétaire identifié et sans qualité, le lac devient un <i>marécage</i> (data swamp) où plus personne ne sait ce qui existe ni si c'est fiable.<br><i>Argument d'oral : la différence entre un lac et un marécage n'est pas technique, elle est de gouvernance.</i>"
+    },
+    {
+      "id": "bigdata-8973cf",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Lakehouse",
+      "verso": "Architecture qui combine le stockage brut et peu coûteux du lac avec les garanties transactionnelles et les performances de l'entrepôt, grâce à une couche de format ouvert posée sur les fichiers.<br><b>Apport concret</b> : transactions fiables, gestion des versions, retour à un état antérieur des données, sur du stockage objet standard.<br><i>Ex. de formats de table : Delta Lake, Apache Iceberg, Apache Hudi. Iceberg s'est imposé comme le standard le plus neutre, adopté par des acteurs concurrents, ce qui en fait un argument contre le verrouillage fournisseur.</i>"
+    },
+    {
+      "id": "bigdata-1a7c41",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "ETL et ELT",
+      "verso": "<b>ETL</b> : extraire, transformer, puis charger. La transformation a lieu avant l'arrivée dans la cible, sur un serveur dédié. Modèle historique de l'entrepôt.<br><b>ELT</b> : extraire, charger, puis transformer. On dépose la donnée brute et on la transforme dans la cible, en profitant de sa puissance de calcul.<br><i>Ce qui a fait basculer vers l'ELT : le stockage et le calcul du nuage sont devenus assez peu chers pour qu'il soit plus rentable de tout charger puis de trier, plutôt que de trier avant de charger.</i>"
+    },
+    {
+      "id": "bigdata-2f4951",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Hadoop et MapReduce",
+      "verso": "Cadre logiciel open source apparu en 2006, qui a démocratisé le traitement distribué : les données sont réparties sur un grappe de machines ordinaires, et le calcul est envoyé vers la donnée plutôt que l'inverse.<br><b>MapReduce</b> en est le modèle de programmation : une phase de découpage parallèle (map), une phase d'agrégation (reduce).<br><i>À situer correctement à l'oral : Hadoop est aujourd'hui largement dépassé en production, mais il reste la rupture fondatrice qui a rendu le Big Data accessible sans matériel spécialisé.</i>"
+    },
+    {
+      "id": "bigdata-c4d64a",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Apache Spark",
+      "verso": "Moteur de traitement distribué qui a supplanté MapReduce en gardant les données intermédiaires en mémoire vive au lieu de les réécrire sur disque à chaque étape, avec un gain de vitesse d'un ordre de grandeur sur les traitements itératifs.<br>Il unifie dans un même outil le traitement par lot, le traitement en flux, le SQL et l'apprentissage automatique.<br><i>C'est le socle de calcul de la plupart des plateformes de données actuelles, notamment Databricks, fondé par ses créateurs.</i>"
+    },
+    {
+      "id": "bigdata-d5f30a",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "NoSQL et le théorème CAP",
+      "verso": "Familles de bases qui abandonnent le modèle relationnel pour gagner en échelle horizontale : clé-valeur (Redis), documents (MongoDB), colonnes (Cassandra), graphes (Neo4j).<br><b>Théorème CAP</b> : un système distribué ne peut garantir simultanément la cohérence des données, leur disponibilité et la tolérance au partitionnement du réseau. Comme le réseau tombe forcément un jour, le vrai choix se fait entre cohérence et disponibilité.<br><i>Traduction métier : une banque privilégiera la cohérence, un site de commerce la disponibilité. Ce n'est pas un choix technique, c'est un arbitrage de risque.</i>"
+    },
+    {
+      "id": "bigdata-a7a25b",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Traitement par lot et traitement en flux",
+      "verso": "<b>Par lot</b> (batch) : les données sont accumulées puis traitées par paquets à intervalle régulier. Simple, robuste, peu coûteux, mais avec un décalage.<br><b>En flux</b> (streaming) : chaque événement est traité à son arrivée, en quelques millisecondes ou secondes.<br><i>Ex. de flux : détection de fraude sur carte bancaire, où une réponse le lendemain n'a aucune valeur. Ex. d'outil : Apache Kafka pour le transport des événements.</i><br><i>Piège d'oral : le flux coûte nettement plus cher à exploiter. Il ne se justifie que si la décision doit être immédiate.</i>"
+    },
+    {
+      "id": "bigdata-902ad6",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Data mesh",
+      "verso": "Approche organisationnelle qui décentralise la responsabilité de la donnée : chaque domaine métier possède, produit et expose ses propres données comme un produit, avec un contrat de qualité et un responsable identifié. Une plateforme commune fournit l'outillage, une gouvernance fédérée fixe les règles transverses.<br><b>Constat de départ</b> : l'équipe data centrale devient un goulot d'étranglement, car elle ne connaît pas le métier des données qu'elle transforme.<br><i>Ce n'est pas une technologie, c'est un modèle d'organisation. C'est aussi ce qui le rend difficile à mettre en oeuvre.</i>"
+    },
+    {
+      "id": "bigdata-072284",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Traçabilité des données (data lineage)",
+      "verso": "Capacité à retracer le parcours complet d'une donnée : d'où elle vient, quelles transformations elle a subies, quels tableaux de bord et quels modèles en dépendent.<br><b>Deux usages concrets</b> : analyser l'impact avant de modifier une source, et remonter à l'origine quand un indicateur devient faux.<br><i>Enjeu réglementaire : sans traçabilité, il est impossible de répondre à une demande d'effacement au titre du RGPD, puisqu'on ignore où la donnée a été recopiée.</i>"
+    },
+    {
+      "id": "bigdata-d06729",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Gouvernance des données et data steward",
+      "verso": "Ensemble des rôles, règles et processus qui déterminent qui peut faire quoi avec quelle donnée : propriété, définitions communes, niveaux de confidentialité, durées de conservation, qualité attendue.<br><b>Data owner</b> : le responsable métier qui répond de la donnée. <b>Data steward</b> : celui qui la maintient au quotidien, arbitre les définitions et surveille la qualité.<br><i>Argument d'architecte : la gouvernance échoue quand elle est portée par la DSI seule. Sans propriétaire métier nommé, personne ne tranche sur la définition d'un client actif, et les indicateurs divergent d'une direction à l'autre.</i>"
+    },
+    {
+      "id": "bigdata-cd9753",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Qualité des données : les cinq dimensions",
+      "verso": "<b>Exactitude</b> : la donnée reflète-t-elle la réalité ? <b>Complétude</b> : les champs critiques sont-ils renseignés ? <b>Cohérence</b> : dit-elle la même chose d'un système à l'autre ? <b>Fraîcheur</b> : est-elle assez récente pour décider ? <b>Unicité</b> : y a-t-il des doublons qui faussent les agrégats ?<br><i>Elles doivent être satisfaites simultanément : une donnée peut être exacte mais obsolète, complète mais incohérente entre deux bases.</i><br><i>Gartner chiffre à 12,9 millions de dollars par an le coût moyen de la mauvaise qualité des données pour une organisation.</i>"
+    },
+    {
+      "id": "bigdata-50c0df",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Donnée personnelle, pseudonymisation, anonymisation",
+      "verso": "<b>Donnée personnelle</b> : toute information se rapportant à une personne identifiée ou identifiable, directement ou indirectement. Un identifiant technique ou une adresse IP en font partie.<br><b>Pseudonymisation</b> : remplacement des identifiants directs par un code, la table de correspondance existant toujours. La donnée reste personnelle et reste soumise au RGPD.<br><b>Anonymisation</b> : suppression irréversible de toute possibilité de réidentification. La donnée sort alors du champ du RGPD.<br><i>Piège classique en entreprise : croire qu'on a anonymisé alors qu'on a seulement pseudonymisé. Le recoupement de quelques attributs suffit souvent à réidentifier.</i>"
+    },
+    {
+      "id": "bigdata-054ae2",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Catalogue de données et métadonnées",
+      "verso": "Inventaire consultable de l'ensemble des jeux de données disponibles, décrivant pour chacun sa signification, son propriétaire, sa fraîcheur, son niveau de confidentialité et sa qualité.<br>Les <b>métadonnées</b> sont les données sur la donnée : ce qui permet de la trouver, de la comprendre et de savoir si on a le droit de l'utiliser.<br><i>Sans catalogue, une organisation redéveloppe plusieurs fois le même indicateur parce que personne ne sait qu'il existe déjà. C'est le premier chantier concret d'une démarche de gouvernance.</i>"
+    },
+    {
+      "id": "bigdata-691059",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Gestion des données de référence (MDM)",
+      "verso": "Discipline visant à établir une version unique et faisant autorité des données structurantes partagées par toute l'entreprise : clients, produits, fournisseurs, sites.<br><b>Problème traité</b> : le même client existe sous quatre identités différentes dans le CRM, la facturation, la logistique et le service après-vente, avec quatre adresses divergentes.<br><i>C'est souvent le prérequis oublié des projets Big Data : agréger des données qui ne partagent pas de référentiel commun produit des agrégats faux mais crédibles.</i>"
+    },
+    {
+      "id": "bigdata-775121",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Décisionnel, Big Data et science des données",
+      "verso": "<b>Décisionnel</b> (BI) : décrire ce qui s'est passé, à partir de données structurées et d'indicateurs définis à l'avance. Répond à « combien ».<br><b>Big Data</b> : rendre exploitables des volumes et des formats que le décisionnel ne sait pas absorber. C'est une question d'infrastructure.<br><b>Science des données</b> : expliquer et prédire, par la modélisation statistique. Répond à « pourquoi » et « que va-t-il se passer ».<br><i>Distinction utile face au jury : le Big Data n'est pas une finalité, c'est le socle qui rend possibles les deux autres.</i>"
+    },
+    {
+      "id": "bigdata-ac64f8",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2003-2004 : Google publie GFS et MapReduce",
+      "verso": "Google décrit publiquement son système de fichiers distribué puis son modèle de calcul MapReduce, conçus pour indexer le web sur des milliers de machines ordinaires plutôt que sur quelques serveurs très puissants.<br><i>Portée : ces deux articles sont l'acte fondateur technique du Big Data. Google ne livre pas le code, mais l'idée suffit à ce que la communauté open source la réimplémente.</i>"
+    },
+    {
+      "id": "bigdata-6167af",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2006 : Hadoop devient un projet Apache",
+      "verso": "Doug Cutting et Mike Cafarella implémentent les concepts publiés par Google et confient le projet à la fondation Apache. Yahoo en devient le premier grand utilisateur en production.<br><i>Portée : le traitement distribué cesse d'être réservé aux géants du web. N'importe quelle entreprise peut assembler des machines standard et traiter des téraoctets, ce qui déclenche la première vague de projets Big Data en entreprise.</i>"
+    },
+    {
+      "id": "bigdata-adfd96",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2012 : le data scientist, métier le plus séduisant du siècle",
+      "verso": "La Harvard Business Review consacre le métier de data scientist comme le plus attractif du XXIe siècle. Le Big Data quitte les directions techniques pour entrer dans le vocabulaire des comités de direction.<br><i>Portée, avec le recul de plus de dix ans : la vague a produit beaucoup de recrutements de profils très qualifiés dans des organisations dépourvues de données exploitables et de gouvernance. C'est l'erreur de séquence que l'on retrouve trait pour trait aujourd'hui avec l'IA générative.</i>"
+    },
+    {
+      "id": "bigdata-851689",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2014 : Spark supplante MapReduce",
+      "verso": "Apache Spark, né à l'université de Berkeley, devient projet de premier plan de la fondation Apache. En conservant les données en mémoire entre les étapes, il rend obsolète le modèle MapReduce sur la plupart des usages.<br><i>Portée : accélération d'un ordre de grandeur et unification du traitement par lot, du flux et de l'apprentissage dans un seul moteur. C'est ce qui a rendu l'analyse itérative praticable, donc la science des données industrialisable.</i>"
+    },
+    {
+      "id": "bigdata-951ebc",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "Mars 2018 : le scandale Cambridge Analytica",
+      "verso": "La révélation qu'une société d'analyse politique a exploité les données de dizaines de millions d'utilisateurs de Facebook, collectées via une application tierce sans consentement éclairé, déclenche une crise mondiale de confiance.<br><i>Portée : bascule de l'opinion publique et des régulateurs. La donnée personnelle cesse d'être perçue comme un actif neutre pour devenir un sujet politique. L'affaire éclate deux mois avant l'entrée en application du RGPD, ce qui en a considérablement renforcé la portée symbolique.</i>"
+    },
+    {
+      "id": "bigdata-4ba0a4",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "25 mai 2018 : le RGPD devient applicable",
+      "verso": "Le règlement général sur la protection des données instaure des principes contraignants : finalité déterminée, minimisation de la collecte, limitation de la conservation, sécurité, responsabilité démontrable, et des droits opposables pour les personnes (accès, rectification, effacement, portabilité).<br>Sanctions jusqu'à 20 millions d'euros ou 4 % du chiffre d'affaires mondial.<br><i>Portée pour un architecte : le RGPD impose de concevoir la protection dès l'origine du système, pas de l'ajouter après. C'est le principe de protection dès la conception, et il contredit frontalement la logique du lac de données qui collecte d'abord et décide ensuite.</i>"
+    },
+    {
+      "id": "bigdata-51628a",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "2022-2025 : Data Governance Act puis Data Act",
+      "verso": "L'Union bâtit un cadre de circulation des données distinct de leur protection. Le <b>Data Governance Act</b>, applicable depuis septembre 2023, organise le partage de données publiques et encadre les intermédiaires de confiance. Le <b>Data Act</b>, applicable depuis le 12 septembre 2025, donne à l'utilisateur d'un objet connecté un droit d'accès aux données qu'il génère et impose la réversibilité entre fournisseurs de nuage.<br><i>Portée : après avoir protégé la donnée personnelle avec le RGPD, l'Europe cherche à faire circuler la donnée industrielle. Les deux logiques coexistent et se contredisent parfois.</i>"
+    },
+    {
+      "id": "bigdata-f5a2d0",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2023-2026 : l'IA générative revalorise les données d'entreprise",
+      "verso": "L'essor des architectures de génération augmentée par récupération (RAG) transforme les documents internes dormants, contrats, procédures, comptes rendus, en matière directement exploitable par un assistant conversationnel.<br><i>Portée : c'est le premier usage à grande échelle des données non structurées, longtemps stockées sans être exploitées. Et c'est aussi ce qui rend soudain visible la dette de gouvernance : sans droits d'accès propres, un assistant fondé sur les documents internes expose à chacun ce qu'il n'aurait pas dû voir.</i>"
+    },
+    {
+      "id": "bigdata-c0488e",
+      "type": "chiffre",
+      "angle": "technique",
+      "recto": "Le volume mondial de données",
+      "verso": "IDC situe le volume mondial de données créées, captées, répliquées et consommées sur une trajectoire dépassant 700 zettaoctets à l'horizon 2030, avec une part croissante produite en périphérie, par des machines, et en soutien des charges d'IA qui génèrent elles-mêmes de nouvelles données.<br><i>Source : IDC Global DataSphere Forecast 2026-2030</i><br><i>Un zettaoctet vaut mille milliards de gigaoctets. L'ordre de grandeur compte plus que le chiffre exact.</i>"
+    },
+    {
+      "id": "bigdata-323a63",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le coût de la mauvaise qualité des données",
+      "verso": "12,9 millions de dollars par an en moyenne par organisation, selon Gartner. Ce coût recouvre le temps perdu à corriger, les décisions prises sur des bases fausses, les actions commerciales sans effet et les traitements à refaire.<br><i>Caractéristique de ce coût : il n'apparaît dans aucune ligne budgétaire. Il se manifeste par une productivité dégradée que l'on attribue généralement à autre chose.</i>"
+    },
+    {
+      "id": "bigdata-11c0f4",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "Le lien entre qualité des données et échec des projets d'IA",
+      "verso": "Gartner a prévu que 60 % des projets d'IA seraient abandonnés en 2026 faute de données suffisamment prêtes pour l'IA.<br><i>Argument central à tenir face au jury : l'échec des projets d'IA est très majoritairement un échec de données, pas un échec de modèle. C'est ce qui relie directement le thème Big Data au thème Intelligence artificielle.</i>"
+    },
+    {
+      "id": "bigdata-4c404c",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "L'année record de la CNIL",
+      "verso": "83 sanctions prononcées en 2025 pour un total de 486,8 millions d'euros, contre 55,2 millions en 2024. Soit 259 mesures correctrices et 143 mises en demeure sur l'année. Les sanctions les plus lourdes : Google 325 millions d'euros et Shein 150 millions, sur le consentement aux traceurs.<br><i>Source : bilan annuel CNIL 2025</i><br><i>À noter : la procédure simplifiée, plafonnée à 20 000 euros, permet désormais de sanctionner les manquements courants, et les PME représentent une part croissante des contrôles.</i>"
+    },
+    {
+      "id": "bigdata-9dee1e",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "Le bilan européen du RGPD depuis 2018",
+      "verso": "Plus de 7 milliards d'euros d'amendes cumulées prononcées en Europe depuis 2018, dont environ 1,15 milliard pour la seule année 2025. L'Irlande concentre à elle seule plus de 4 milliards, du fait de l'implantation à Dublin des sièges européens des grandes plateformes.<br>Records connus : Meta 1,2 milliard d'euros en 2023 pour des transferts vers les États-Unis, TikTok 530 millions en 2025 pour des transferts vers la Chine.<br><i>Sources : rapports d'application du RGPD, cabinet CMS et bilans nationaux</i>"
+    },
+    {
+      "id": "bigdata-838f33",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "Les sanctions françaises de début 2026 pour défaut de sécurité",
+      "verso": "42 millions d'euros pour le groupe Free (27 millions pour Free Mobile et 15 millions pour Free), à la suite d'une intrusion ayant touché les données d'environ 24 millions de contrats d'abonnés, et 5 millions d'euros pour France Travail. Motifs : mesures de sécurité insuffisantes, absence d'authentification multifacteur, droits d'accès trop larges.<br><i>Portée : le manquement sanctionné n'est plus le consentement mais la sécurité technique. Pour un architecte SI, c'est le signal que la conformité se joue désormais sur la conception du système.</i>"
+    },
+    {
+      "id": "bigdata-05a8a4",
+      "type": "acteur",
+      "angle": "securite",
+      "recto": "La CNIL et l'architecture du RGPD",
+      "verso": "Autorité française de contrôle, chargée de l'accompagnement, du contrôle et de la sanction. Elle publie des référentiels sectoriels et des recommandations qui font office de doctrine pratique.<br><b>Les obligations structurantes pour un système d'information</b> : registre des traitements, analyse d'impact pour les traitements à risque, protection dès la conception et par défaut, notification d'une violation sous 72 heures, désignation d'un délégué à la protection des données.<br><i>Évolution 2026 : la CNIL est appelée à intervenir aussi sur le règlement européen sur l'IA, ce qui superpose deux régimes de contrôle sur les mêmes traitements.</i>"
+    },
+    {
+      "id": "bigdata-38d69e",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "Data Act et Data Governance Act",
+      "verso": "<b>Data Governance Act</b> (applicable depuis septembre 2023) : cadre de réutilisation des données du secteur public, statut des intermédiaires de données et notion d'altruisme des données.<br><b>Data Act</b> (applicable depuis le 12 septembre 2025) : accès de l'utilisateur aux données produites par ses objets connectés, encadrement du partage entre entreprises, obligation de réversibilité entre fournisseurs de nuage avec interdiction totale des frais de changement au 12 janvier 2027.<br><i>Logique d'ensemble : le RGPD protège, ces deux textes font circuler. C'est la stratégie européenne de la donnée.</i>"
+    },
+    {
+      "id": "bigdata-e9703a",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "L'écosystème technique de la donnée",
+      "verso": "<b>Plateformes</b> : Databricks (issu de Spark, orienté lakehouse), Snowflake (entrepôt dans le nuage), les offres intégrées des hyperscalers (BigQuery, Redshift, Synapse).<br><b>Fondation Apache</b> : Spark, Kafka, Airflow, Iceberg. C'est elle qui garantit la neutralité des briques de base.<br><b>Transformation et qualité</b> : dbt pour la transformation versionnée, Great Expectations pour les tests de qualité.<br><i>Point d'architecture : la bataille actuelle porte sur le format de table ouvert. Adopter Iceberg plutôt qu'un format propriétaire, c'est garder la possibilité de changer de moteur sans redéplacer les données.</i>"
+    },
+    {
+      "id": "bigdata-5a5f66",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Le Chief Data Officer et le délégué à la protection des données",
+      "verso": "<b>CDO</b> : responsable de la valorisation des données, il porte la stratégie, la qualité, la gouvernance et l'acculturation. Rattachement variable, à la direction générale ou à la DSI, ce qui en dit long sur la maturité de l'organisation.<br><b>DPO</b> : délégué à la protection des données, obligatoire pour les organismes publics et pour les traitements sensibles à grande échelle. Il conseille, contrôle et dialogue avec la CNIL, en toute indépendance.<br><i>Tension à connaître et à assumer devant un jury : le premier cherche à exploiter davantage, le second à limiter. Cette tension est saine et elle doit être arbitrée, pas supprimée.</i>"
+    },
+    {
+      "id": "bigdata-7cbb86",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "Faut-il tout collecter ou collecter juste ?",
+      "verso": "<b>Pour la collecte large</b> : on ignore aujourd'hui quel usage sera pertinent demain, le stockage est devenu très bon marché, et un modèle d'apprentissage se nourrit de volume et d'historique.<br><b>Pour la minimisation</b> : le RGPD l'impose légalement, chaque donnée conservée est une donnée à sécuriser et un risque en cas de fuite, et le coût réel n'est pas le stockage mais la gouvernance et la conformité.<br><b>Position tenable</b> : le débat oppose une logique technique à une logique juridique, et le droit a tranché. La collecte doit être finalisée, mais rien n'interdit de définir des finalités larges et documentées. Le vrai levier est la durée de conservation, pas le volume instantané."
+    },
+    {
+      "id": "bigdata-37b954",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "Data mesh ou plateforme centralisée ?",
+      "verso": "<b>Pour le maillage</b> : l'équipe centrale ne comprend pas la sémantique métier des données qu'elle traite, devient un goulot d'étranglement, et personne ne se sent responsable de la qualité.<br><b>Pour la centralisation</b> : le maillage suppose une maturité data dans chaque domaine métier, que très peu d'organisations possèdent ; il multiplie les outillages et fait réapparaître les silos qu'on prétendait supprimer.<br><b>Position tenable</b> : le data mesh répond à un problème d'échelle que la plupart des entreprises n'ont pas. En dessous d'une certaine taille, une plateforme centrale avec des propriétaires métier nommés apporte l'essentiel du bénéfice sans le coût organisationnel."
+    },
+    {
+      "id": "bigdata-bfcbf2",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "L'anonymisation protège-t-elle réellement ?",
+      "verso": "<b>Pour</b> : correctement conduite, elle fait sortir la donnée du champ du RGPD et permet la recherche, l'ouverture des données publiques et le partage sans risque juridique.<br><b>Contre</b> : les travaux de réidentification montrent qu'un petit nombre d'attributs croisés suffit souvent à retrouver un individu dans un jeu prétendument anonyme ; plus on anonymise vraiment, moins la donnée conserve d'utilité analytique.<br><b>Position tenable</b> : l'anonymisation absolue et l'utilité analytique sont largement incompatibles. Les approches sérieuses ne cherchent plus l'anonymat parfait mais un risque de réidentification maîtrisé et mesuré, par exemple avec la confidentialité différentielle."
+    },
+    {
+      "id": "bigdata-66d7c1",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "La donnée est-elle vraiment le nouveau pétrole ?",
+      "verso": "<b>Pour la métaphore</b> : ressource stratégique, brute et sans valeur tant qu'elle n'est pas raffinée, à l'origine de la domination économique des plateformes.<br><b>Contre</b> : le pétrole se consomme, la donnée se duplique sans perte et peut servir simultanément à plusieurs usages ; elle se déprécie très vite avec le temps ; et sa valeur dépend entièrement du contexte d'usage, ce que ne fait pas un baril.<br><b>Position tenable</b> : la métaphore décrit correctement la logique d'extraction mais fausse le raisonnement économique. Une donnée n'a pas de valeur intrinsèque au bilan, seulement une valeur d'usage. C'est précisément pourquoi 12,9 millions de dollars de mauvaise qualité passent inaperçus : on ne mesure pas ce qu'on ne valorise pas."
+    }
+  ]
+}

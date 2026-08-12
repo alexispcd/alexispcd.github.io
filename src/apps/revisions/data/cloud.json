@@ -1,0 +1,316 @@
+{
+  "themeId": "cloud",
+  "theme": "Cloud et virtualisation",
+  "version": "2026-08-12",
+  "cardCount": 44,
+  "cards": [
+    {
+      "id": "cloud-35cc0a",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Cloud computing (définition de référence)",
+      "verso": "Modèle qui permet d'accéder à la demande, par le réseau, à des ressources informatiques partagées et configurables : serveurs, stockage, applications.<br>Le NIST, institut de normalisation américain, retient 5 caractéristiques : libre-service à la demande, accès réseau large, mutualisation des ressources, élasticité rapide, service mesuré (on paie ce qu'on consomme).<br><i>Ex. : ouvrir un serveur en deux minutes depuis une console web, sans acheter de matériel.</i><br><i>Source : NIST SP 800-145, 2011</i>"
+    },
+    {
+      "id": "cloud-0d9d6b",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "IaaS, PaaS, SaaS : la différence",
+      "verso": "Trois niveaux de délégation croissante.<br><b>IaaS</b> : le fournisseur loue l'infrastructure brute (machines, réseau, stockage), vous gérez le système et les applications. Ex. : AWS EC2, OVHcloud Public Cloud.<br><b>PaaS</b> : il fournit aussi le système et l'environnement d'exécution, vous n'apportez que le code. Ex. : Azure App Service, Scalingo.<br><b>SaaS</b> : il fournit l'application finie, vous ne gérez que vos données et vos utilisateurs. Ex. : Microsoft 365, Salesforce.<br><i>Repère : plus on monte, moins on maîtrise, moins on porte de charge d'exploitation.</i>"
+    },
+    {
+      "id": "cloud-a123c1",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Cloud public, privé, hybride, multicloud",
+      "verso": "<b>Public</b> : infrastructure mutualisée entre clients chez un fournisseur.<br><b>Privé</b> : infrastructure dédiée à une seule organisation, chez elle ou chez un tiers.<br><b>Hybride</b> : les deux reliés, avec des applications qui circulent entre eux.<br><b>Multicloud</b> : plusieurs fournisseurs publics en parallèle.<br><i>Piège d'oral : hybride n'est pas multicloud. L'hybride mélange public et privé, le multicloud additionne des publics.</i><br><i>Gartner prévoit 90 % d'organisations en infrastructure hybride d'ici 2027.</i>"
+    },
+    {
+      "id": "cloud-2c35e8",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Virtualisation et hyperviseur (type 1 / type 2)",
+      "verso": "La virtualisation découpe un serveur physique en plusieurs machines virtuelles autonomes, chacune avec son propre système d'exploitation. L'hyperviseur est la couche logicielle qui réalise ce découpage.<br><b>Type 1</b>, dit bare metal : posé directement sur le matériel, pour la production. Ex. : VMware ESXi, Proxmox VE, Hyper-V, KVM.<br><b>Type 2</b> : posé sur un système d'exploitation existant, pour le poste de travail. Ex. : VirtualBox, VMware Workstation.<br><i>C'est la virtualisation qui rend le cloud économiquement possible : sans mutualisation, pas de cloud.</i>"
+    },
+    {
+      "id": "cloud-a33d64",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Conteneur",
+      "verso": "Paquet qui embarque une application et tout ce dont elle a besoin pour tourner (bibliothèques, dépendances), mais qui partage le noyau du système de la machine hôte au lieu d'embarquer un système complet.<br>Résultat : démarrage en quelques secondes, quelques dizaines de mégaoctets, et un comportement identique du poste du développeur à la production.<br><i>Ex. : Docker, apparu en 2013, a rendu la technologie accessible ; les mécanismes Linux sous-jacents (cgroups, namespaces) existaient avant.</i>"
+    },
+    {
+      "id": "cloud-60974d",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Machine virtuelle ou conteneur : la vraie différence",
+      "verso": "La machine virtuelle virtualise le matériel et embarque un système d'exploitation complet : lourde (plusieurs gigaoctets), lente à démarrer (minutes), mais isolation forte.<br>Le conteneur virtualise le système : léger (mégaoctets), démarrage en secondes, densité bien supérieure, mais isolation plus faible puisque tous partagent le même noyau.<br><i>Conséquence sécurité : une évasion de conteneur atteint l'hôte et donc les voisins. D'où les environnements d'exécution renforcés (gVisor, Kata Containers) pour les charges sensibles.</i>"
+    },
+    {
+      "id": "cloud-5a69a7",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Orchestration de conteneurs et Kubernetes",
+      "verso": "Faire tourner dix conteneurs est simple, en faire tourner cinq mille ne l'est pas. L'orchestrateur automatise le placement, le redémarrage en cas de panne, la montée en charge, la mise à jour progressive et le réseau interne.<br>Kubernetes, issu de Google et confié à la fondation CNCF en 2015, est le standard de fait.<br><i>82 % des utilisateurs de conteneurs le font tourner en production, contre 66 % en 2023 (CNCF, enquête annuelle 2025).</i>"
+    },
+    {
+      "id": "cloud-cab374",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Cloud native",
+      "verso": "Concevoir une application pour le cloud dès le départ, au lieu d'y déplacer une application existante. Cela suppose un découpage en microservices, la conteneurisation, une infrastructure déclarée en code, un déploiement automatisé et une tolérance à la panne intégrée.<br><i>Opposé : le lift and shift, qui déplace la machine telle quelle et hérite du cloud la facture sans les bénéfices.</i>"
+    },
+    {
+      "id": "cloud-5f9359",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Architecture en microservices",
+      "verso": "Découper une application en petits services indépendants, chacun avec sa responsabilité et souvent sa propre base de données, qui communiquent par des interfaces (API).<br><b>Gain</b> : équipes autonomes, montée en charge ciblée sur le seul service saturé, panne circonscrite.<br><b>Coût</b> : complexité réseau, supervision distribuée, cohérence des données difficile à garantir.<br><i>Ex. : Netflix, pionnier de la bascule vers les microservices sur AWS.</i>"
+    },
+    {
+      "id": "cloud-f66f0d",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Les 6R de la migration cloud",
+      "verso": "Les six stratégies possibles, à choisir application par application.<br><b>Rehost</b> : déplacer tel quel (lift and shift). <b>Replatform</b> : déplacer avec quelques optimisations. <b>Repurchase</b> : remplacer par un logiciel en SaaS. <b>Refactor</b> : réécrire pour le cloud. <b>Retain</b> : conserver sur place. <b>Retire</b> : décommissionner.<br><i>Argument d'oral : une migration réussie n'applique pas une stratégie unique, elle commence par classer le parc applicatif.</i>"
+    },
+    {
+      "id": "cloud-dc31b1",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Élasticité et scalabilité : quelle différence ?",
+      "verso": "La <b>scalabilité</b> est la capacité à encaisser plus de charge en ajoutant des ressources : verticale (une machine plus puissante) ou horizontale (plus de machines).<br>L'<b>élasticité</b> y ajoute l'automatisme et la réversibilité : les ressources montent au pic puis redescendent, et la facture avec.<br><i>C'est l'élasticité, pas la scalabilité, qui justifie économiquement le cloud. Une charge constante n'en tire aucun bénéfice.</i>"
+    },
+    {
+      "id": "cloud-396984",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Modèle de responsabilité partagée",
+      "verso": "Répartition contractuelle de la sécurité entre le fournisseur et le client. Le fournisseur répond de la sécurité <b>du</b> cloud (matériel, hyperviseur, réseau physique, datacenter), le client de la sécurité <b>dans</b> le cloud (données, identités, configuration, chiffrement).<br>La frontière se déplace selon le modèle : en IaaS le client porte beaucoup, en SaaS très peu.<br><i>Ex. : un espace de stockage laissé ouvert au public est une faute du client. Capital One en 2019 en est le cas d'école.</i>"
+    },
+    {
+      "id": "cloud-1b76a9",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Frais de sortie (egress fees)",
+      "verso": "Les fournisseurs facturent peu ou pas l'entrée des données, mais facturent leur sortie vers l'extérieur. Économiquement, cela crée une barrière à la sortie proportionnelle au volume accumulé.<br><i>Le Data Act européen, règlement (UE) 2023/2854, les encadre depuis le 12 septembre 2025 et les interdit totalement pour un changement de fournisseur à partir du 12 janvier 2027.</i>"
+    },
+    {
+      "id": "cloud-c409f0",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Vendor lock-in et réversibilité",
+      "verso": "Le <b>lock-in</b> est la dépendance qui rend un changement de fournisseur coûteux ou impraticable : frais de sortie, services propriétaires sans équivalent, compétences spécifiques, volume de données à déplacer.<br>La <b>réversibilité</b> est la capacité contractuelle et technique à récupérer ses données et ses traitements pour les remettre ailleurs.<br><i>Plus de 80 % des entreprises ayant envisagé de changer de fournisseur cloud y ont renoncé face aux obstacles techniques et financiers (enquête de la Commission européenne, travaux préparatoires du Data Act).</i>"
+    },
+    {
+      "id": "cloud-584093",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "FinOps",
+      "verso": "Discipline de pilotage de la dépense cloud qui réunit la DSI, la finance et les métiers autour du même tableau de bord. Trois temps : rendre visible (qui consomme quoi), optimiser (redimensionner, éteindre l'inutilisé, réserver à l'avance), gouverner (budgets, alertes, responsabilisation des équipes).<br><i>Le cloud transforme un investissement (CAPEX) en dépense courante (OPEX) : le contrôle ne se fait plus au moment de l'achat mais en continu.</i>"
+    },
+    {
+      "id": "cloud-7d3272",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Infrastructure as Code (IaC)",
+      "verso": "Décrire l'infrastructure dans des fichiers versionnés plutôt que de la créer à la main dans une console. On applique le fichier, l'outil crée ou corrige ce qui diffère de la description.<br><b>Gains</b> : environnements identiques, reconstruction rapide après incident, revue par les pairs, traçabilité des changements.<br><i>Ex. : Terraform ou OpenTofu (déclaratif, multifournisseur), Ansible (configuration), CloudFormation (AWS).</i>"
+    },
+    {
+      "id": "cloud-f82536",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Serverless et FaaS",
+      "verso": "Le fournisseur exécute votre code à la demande sans que vous gériez de serveur : il alloue, met à l'échelle et facture à l'exécution réelle, souvent à la milliseconde. Le serveur existe toujours, il n'est simplement plus votre problème.<br><b>Limites</b> : latence au démarrage à froid, durée d'exécution plafonnée, dépendance forte au fournisseur.<br><i>Ex. : AWS Lambda, Azure Functions, Google Cloud Run.</i>"
+    },
+    {
+      "id": "cloud-15bd2a",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "SLA et taux de disponibilité : que valent les « neuf » ?",
+      "verso": "Le SLA, engagement de niveau de service, chiffre la disponibilité garantie et la compensation due en cas de manquement.<br>99,9 % représente environ 8 h 45 d'indisponibilité par an. 99,99 % : 52 minutes. 99,999 % : 5 minutes.<br><i>Piège d'oral : la compensation est presque toujours un avoir proportionnel à l'abonnement, sans rapport avec la perte d'exploitation réelle. Un SLA n'est pas une assurance.</i>"
+    },
+    {
+      "id": "cloud-d3d8ed",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2006 : lancement d'Amazon S3 puis EC2",
+      "verso": "Amazon ouvre au public le stockage à la demande (S3, mars 2006) puis les serveurs à la demande (EC2, août 2006). C'est l'acte de naissance du cloud public moderne : pour la première fois, une entreprise peut louer de la capacité à l'heure sans acheter de matériel.<br><i>Portée : renversement du modèle d'investissement informatique, et début de vingt ans de domination américaine sur l'infrastructure.</i>"
+    },
+    {
+      "id": "cloud-0203ef",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2013-2015 : Docker puis Kubernetes",
+      "verso": "2013, Docker rend les conteneurs simples à utiliser. 2014, Google publie le code de Kubernetes, inspiré de son système interne Borg. 2015, Kubernetes est confié à la CNCF, fondation indépendante rattachée à la Linux Foundation.<br><i>Portée : la portabilité applicative devient réelle et le standard reste ouvert au lieu d'appartenir à un fournisseur. C'est l'argument technique central contre le verrouillage.</i>"
+    },
+    {
+      "id": "cloud-6fe9ca",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "2018 : le CLOUD Act américain",
+      "verso": "Loi américaine qui oblige les fournisseurs de droit américain à remettre aux autorités les données qu'ils détiennent, y compris lorsqu'elles sont stockées hors des États-Unis.<br><i>Portée : héberger ses données en Europe ne suffit plus, c'est la nationalité du fournisseur qui compte. C'est le fondement juridique de tout le débat sur le cloud souverain.</i>"
+    },
+    {
+      "id": "cloud-9a3116",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2019 : la fuite de données Capital One",
+      "verso": "Une ancienne ingénieure d'AWS exploite un pare-feu applicatif mal configuré et des droits d'accès trop larges pour atteindre le service de métadonnées des serveurs, récupérer des identifiants temporaires et exfiltrer 106 millions de dossiers de demande de crédit.<br>Conséquences : 80 M$ d'amende du régulateur bancaire américain (OCC, 2020) et 190 M$ de transaction collective (2021). AWS a ensuite durci son service de métadonnées (IMDSv2).<br><i>Portée : la faille était entièrement du côté client. Cas d'école du modèle de responsabilité partagée.</i>"
+    },
+    {
+      "id": "cloud-61b0e6",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "Juillet 2020 : l'arrêt Schrems II",
+      "verso": "La Cour de justice de l'Union européenne invalide le Privacy Shield, cadre qui autorisait les transferts de données personnelles vers les États-Unis, au motif que la surveillance américaine ne garantit pas une protection équivalente au RGPD.<br><i>Suite : nouvelle décision d'adéquation (Data Privacy Framework) en juillet 2023, validée par le Tribunal de l'UE le 3 septembre 2025 dans l'affaire Latombe, mais un pourvoi reste pendant devant la Cour de justice en 2026 (affaire C-703/25 P).</i><br><i>À retenir : la sécurité juridique des transferts reste conditionnelle.</i>"
+    },
+    {
+      "id": "cloud-3ed54f",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "Mars 2021 : l'incendie du datacenter OVHcloud de Strasbourg",
+      "verso": "Dans la nuit du 9 au 10 mars 2021, le bâtiment SBG2 est entièrement détruit et SBG1 partiellement. Environ 3,6 millions de sites web, rattachés à 464 000 noms de domaine, deviennent inaccessibles (mesure Netcraft). De nombreux clients découvrent que leur sauvegarde était hébergée sur le même site.<br><i>Portée : le cloud ne dispense pas d'un plan de reprise d'activité. La redondance géographique est une option à choisir et à payer, pas un acquis.</i>"
+    },
+    {
+      "id": "cloud-4afaa5",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "Novembre 2023 : Broadcom rachète VMware",
+      "verso": "Acquisition finalisée le 22 novembre 2023 pour environ 61 Md$ (69 Md$ dette comprise). Broadcom supprime les licences perpétuelles dès 2024, impose l'abonnement et concentre l'offre sur quelques packs.<br>Hausses tarifaires constatées de +100 % à +1050 % selon les clients, le cas AT&amp;T ayant été rendu public par voie judiciaire.<br><i>Portée : le verrouillage fournisseur n'est pas propre au cloud public. Cet épisode a relancé Proxmox, Nutanix AHV, Hyper-V et la virtualisation par Kubernetes.</i>"
+    },
+    {
+      "id": "cloud-a75cb5",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "Septembre 2025 : le Data Act européen entre en application",
+      "verso": "Le règlement (UE) 2023/2854 s'applique depuis le 12 septembre 2025. Il impose un droit effectif de changer de fournisseur cloud : préavis de deux mois, période de transition de trente jours, obligation d'assistance technique, interdiction des obstacles contractuels.<br>Les frais de changement sont réduits pendant la transition puis totalement interdits à compter du 12 janvier 2027.<br><i>Portée : la réversibilité devient une obligation légale et non plus une clause à négocier.</i>"
+    },
+    {
+      "id": "cloud-bf5fc7",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Parts de marché des trois hyperscalers, début 2026",
+      "verso": "AWS 28 %, Microsoft Azure 21 %, Google Cloud 14 %, soit environ 63 % du marché mondial de l'infrastructure cloud.<br><i>Source : Synergy Research Group, premier trimestre 2026</i>"
+    },
+    {
+      "id": "cloud-edd8d9",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Taille et croissance du marché cloud mondial, début 2026",
+      "verso": "129 Md$ de dépenses d'infrastructure cloud sur le seul premier trimestre 2026, en hausse de 35 % sur un an, soit un rythme annualisé qui dépasse pour la première fois 500 Md$.<br><i>Source : Synergy Research Group, premier trimestre 2026</i>"
+    },
+    {
+      "id": "cloud-9c94e6",
+      "type": "chiffre",
+      "angle": "technique",
+      "recto": "Adoption de Kubernetes en production",
+      "verso": "82 % des utilisateurs de conteneurs font tourner Kubernetes en production en 2025, contre 66 % en 2023. 98 % des organisations interrogées déclarent avoir adopté des pratiques cloud native, et 66 % de celles qui hébergent des modèles d'IA générative les font tourner sur Kubernetes.<br><i>Source : CNCF, enquête annuelle 2025, publiée en janvier 2026</i>"
+    },
+    {
+      "id": "cloud-fbd148",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Ampleur réelle du rapatriement (cloud repatriation)",
+      "verso": "83 à 86 % des directeurs des systèmes d'information prévoient de rapatrier une partie de leurs charges du cloud public vers du privé ou de l'interne, le taux le plus élevé jamais mesuré (Barclays, enquête DSI, quatrième trimestre 2024). Mais seulement 8 à 9 % envisagent une sortie totale (IDC).<br><i>Lecture d'oral : ce n'est pas un reflux du cloud, c'est un tri charge par charge.</i>"
+    },
+    {
+      "id": "cloud-9de2e1",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le blocage réel au changement de fournisseur",
+      "verso": "Plus de 80 % des entreprises ayant envisagé de changer de fournisseur cloud y ont renoncé face aux obstacles techniques et financiers.<br><i>Source : enquête de la Commission européenne, travaux préparatoires du Data Act</i>"
+    },
+    {
+      "id": "cloud-bc76f2",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Effet du rachat de VMware sur les factures clients",
+      "verso": "Hausses tarifaires de +100 % à +1050 % selon les clients après la suppression des licences perpétuelles. AT&amp;T a chiffré publiquement à +1050 % la proposition de renouvellement reçue.<br><i>Source : procédure judiciaire AT&amp;T contre Broadcom, 2024</i>"
+    },
+    {
+      "id": "cloud-140d43",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "SecNumCloud",
+      "verso": "Qualification délivrée par l'ANSSI, l'agence française de cybersécurité, aux fournisseurs de services cloud. Elle atteste deux choses à la fois : un très haut niveau de sécurité technique (référentiel 3.2, plus de 350 exigences auditées) et une immunité juridique aux lois extraterritoriales comme le CLOUD Act.<br>Valable trois ans, avec audit de surveillance tous les dix-huit mois. Une dizaine d'offres qualifiées mi-2026 (OVHcloud, Outscale, Cloud Temple, Oodrive, Worldline, Orange Business entre autres) et une douzaine de candidatures en cours.<br><i>Source : ANSSI, catalogue des produits et services qualifiés, 2026</i>"
+    },
+    {
+      "id": "cloud-c169b6",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "Doctrine « cloud au centre » et schéma européen EUCS",
+      "verso": "La doctrine française « cloud au centre » impose aux administrations d'héberger leurs données sensibles sur une offre qualifiée SecNumCloud. C'est ce qui a transformé SecNumCloud en critère structurant des appels d'offres publics, puis de nombreux marchés privés.<br>Au niveau européen, le schéma de certification EUCS devait harmoniser ces exigences, mais il reste bloqué en négociation, notamment sur l'inclusion de critères de souveraineté.<br><i>Argument d'oral : faute d'accord européen, la souveraineté numérique reste aujourd'hui une politique nationale.</i>"
+    },
+    {
+      "id": "cloud-6c4e38",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "CNCF (Cloud Native Computing Foundation)",
+      "verso": "Fondation rattachée à la Linux Foundation, créée en 2015 pour héberger Kubernetes puis l'écosystème cloud native. Elle garantit la neutralité de ces projets : aucun fournisseur ne les contrôle.<br>Elle héberge aujourd'hui plus de deux cents projets, dont Prometheus pour la supervision, Argo pour le déploiement et OpenTelemetry pour l'observabilité, et publie l'enquête annuelle de référence du secteur.<br><i>Enjeu : c'est la garantie institutionnelle contre le verrouillage technique.</i>"
+    },
+    {
+      "id": "cloud-c525fd",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "Face aux hyperscalers : les alternatives européennes",
+      "verso": "<b>Infrastructure</b> : OVHcloud (français, coté en bourse), Scaleway (groupe Iliad), Outscale (Dassault Systèmes), Cloud Temple, Infomaniak (suisse).<br><b>Coentreprises</b> : Bleu (Orange et Capgemini, pour les technologies Microsoft) et S3NS (Thales et Google) visent à porter des technologies américaines sous qualification française.<br><b>Virtualisation</b> : Proxmox VE (autrichien, open source), Nutanix.<br><i>Limite à assumer à l'oral : ces acteurs pèsent quelques pourcents du marché et n'offrent pas la profondeur de catalogue des hyperscalers, en particulier sur l'IA.</i>"
+    },
+    {
+      "id": "cloud-72a235",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Le cloud coûte-t-il vraiment moins cher que l'interne ?",
+      "verso": "<b>Pour</b> : pas d'investissement initial, pas de surdimensionnement pour absorber les pics, coûts d'exploitation et de renouvellement matériel transférés au fournisseur, délai de mise à disposition réduit à quelques minutes.<br><b>Contre</b> : facture qui dérive sans pilotage FinOps, frais de sortie, surcoût des services managés, et effet de seuil dès que la charge devient stable et prévisible.<br><b>Position tenable</b> : le cloud est rentable sur la variabilité et l'incertitude, pas sur le volume constant. D'où le rapatriement sélectif (plus de 80 % des DSI concernés selon Barclays) et le cas Dropbox, dont la marge brute est passée de 33 % à 67 % après retour sur infrastructure propre."
+    },
+    {
+      "id": "cloud-f6064d",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "Le cloud est-il plus sûr que l'hébergement interne ?",
+      "verso": "<b>Pour</b> : les grands fournisseurs mobilisent des moyens de sécurité hors de portée d'une PME (équipes dédiées, correctifs permanents, chiffrement, détection, certifications) et mutualisent ce coût.<br><b>Contre</b> : la surface d'attaque se déplace vers la configuration et les identités, l'erreur devient instantanée et massive, et la concentration crée un risque systémique.<br><b>Position tenable</b> : le cloud relève le plancher de sécurité et déplace le risque plutôt qu'il ne le supprime. La grande majorité des incidents cloud vient de la partie client, pas du fournisseur, comme l'illustre Capital One."
+    },
+    {
+      "id": "cloud-b06979",
+      "type": "controverse",
+      "angle": "souverainete",
+      "recto": "Le cloud souverain est-il une garantie réelle ou un argument marketing ?",
+      "verso": "<b>Pour</b> : SecNumCloud est une qualification d'État assortie d'un critère d'immunité extraterritoriale, pas un label commercial ; le CLOUD Act rend le risque juridique documenté et concret.<br><b>Contre</b> : surcoût de l'ordre de 30 à 50 %, catalogue de services plus étroit, retard sur l'IA, et des montages comme Bleu ou S3NS qui restent adossés à des technologies américaines.<br><b>Position tenable</b> : la souveraineté est une exigence à graduer selon la sensibilité des données, pas une décision uniforme pour tout le système d'information."
+    },
+    {
+      "id": "cloud-b92be5",
+      "type": "controverse",
+      "angle": "technique",
+      "recto": "Faut-il migrer tel quel ou réécrire pour le cloud ?",
+      "verso": "<b>Lift and shift</b> : rapide, peu risqué, libère le datacenter, mais paie le cloud sans en tirer l'élasticité, donc aboutit souvent à une facture supérieure à l'existant.<br><b>Cloud native</b> : exploite réellement l'élasticité et l'automatisation, mais suppose une réécriture, des compétences rares et un délai long.<br><b>Position tenable</b> : la question ne se pose pas pour le système entier mais application par application, ce que formalisent les 6R. Le lift and shift est légitime comme étape de transition, pas comme cible."
+    },
+    {
+      "id": "cloud-fbea27",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Mauvaise configuration et CSPM",
+      "verso": "La <b>mauvaise configuration</b> est la première cause d'incident en environnement de nuage : espace de stockage ouvert au public, groupe de sécurité laissé grand ouvert, journalisation désactivée, chiffrement non activé.<br>Le <b>CSPM</b> est l'outillage qui analyse en continu la configuration de l'ensemble des comptes et signale les écarts par rapport à un référentiel.<br><i>Pourquoi c'est structurel et non accidentel : dans le nuage, une commande unique expose une ressource au monde entier, sans passer par un pare-feu ni par une équipe réseau. La vitesse de mise à disposition est aussi la vitesse de l'erreur.</i><br><i>Parade la plus efficace : appliquer la configuration par infrastructure déclarée en code, avec des politiques bloquantes, plutôt que corriger après coup.</i>"
+    },
+    {
+      "id": "cloud-a16253",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Identités et privilèges excessifs dans le nuage",
+      "verso": "Dans une infrastructure de nuage, tout est piloté par des identités : utilisateurs, rôles applicatifs, comptes de service, clés d'accès programmatiques. C'est l'identité qui remplace le périmètre réseau comme mécanisme de contrôle.<br><b>Risque dominant</b> : l'accumulation de droits jamais réduits. Les études de posture montrent qu'une très large majorité des identités de nuage disposent de privilèges nettement supérieurs à ce qu'elles utilisent réellement.<br><i>C'est le mécanisme exact de la fuite Capital One : un rôle applicatif trop permissif a transformé une faille sur un pare-feu applicatif en accès complet au stockage.</i><br><i>Parades : droits accordés à la demande et pour une durée limitée, revue périodique, analyse de l'écart entre droits accordés et droits utilisés.</i>"
+    },
+    {
+      "id": "cloud-ede7b5",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Chiffrement et maîtrise des clés dans le nuage",
+      "verso": "<b>Clés gérées par le fournisseur</b> : le plus simple, mais le fournisseur peut techniquement déchiffrer, donc répondre à une réquisition judiciaire.<br><b>BYOK</b> : le client apporte sa propre clé, tout en la confiant au service de gestion du fournisseur.<br><b>HYOK</b> : la clé reste chez le client, dans son propre module matériel de sécurité, et ne quitte jamais son périmètre.<br><i>Point décisif pour tout sujet mêlant sécurité et souveraineté : chiffrer ne protège du CLOUD Act que si la clé est hors de portée du fournisseur. Un chiffrement dont le fournisseur détient la clé protège des autres clients, pas du fournisseur ni des autorités dont il dépend.</i><br><i>Contrepartie honnête : plus la maîtrise des clés est forte, plus on perd l'usage des services managés qui doivent accéder à la donnée en clair.</i>"
+    },
+    {
+      "id": "cloud-b73f77",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Risque de concentration et effet systémique",
+      "verso": "Trois fournisseurs concentrent environ deux tiers du marché mondial de l'infrastructure. Une panne majeure sur une seule région d'un seul opérateur interrompt simultanément des milliers d'organisations sans lien entre elles.<br><b>Traduction en risque</b> : la mutualisation qui réduit le risque individuel de chaque client augmente le risque systémique pour l'ensemble de l'économie.<br><i>C'est précisément ce que traite le règlement DORA en soumettant les prestataires informatiques critiques à une supervision directe des autorités financières européennes, une première.</i><br><i>Réponse au niveau d'une organisation : identifier les charges pour lesquelles une indisponibilité prolongée est inacceptable, et accepter d'en payer la redondance, sur une autre région ou un autre fournisseur.</i>"
+    }
+  ]
+}

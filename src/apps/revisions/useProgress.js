@@ -3,8 +3,10 @@ import supabase from '../../lib/supabase'
 
 const EMPTY = {}
 
-// Lecture de la progression de l'utilisateur courant. Volume maximal 400 lignes :
-// pas de pagination, pas de filtre serveur, tout tient en memoire.
+// Lecture de la progression de l'utilisateur courant. Une ligne par carte vue,
+// soit 407 au maximum pour le corpus actuel, tres en dessous du plafond de 1000
+// lignes par requete de PostgREST : pas de pagination, pas de filtre serveur,
+// tout tient en memoire.
 const fetchProgress = async () => {
   const { data: auth, error: authError } = await supabase.auth.getUser()
   if (authError) throw authError

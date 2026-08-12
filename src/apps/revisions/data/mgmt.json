@@ -1,0 +1,288 @@
+{
+  "themeId": "mgmt",
+  "theme": "Management et stratégie",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "mgmt-f4d131",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Alignement stratégique du SI",
+      "verso": "Cohérence entre la stratégie de l'entreprise et les choix informatiques, dans les deux sens : le SI sert la stratégie, et il ouvre aussi des options stratégiques que l'entreprise n'aurait pas envisagées.<br><b>Modèle de référence</b> : celui de Henderson et Venkatraman, qui croise deux axes, l'alignement externe entre stratégie métier et stratégie technologique, et l'alignement interne entre organisation et infrastructure.<br><i>Symptôme d'un défaut d'alignement, immédiatement parlant à l'oral : une DSI qui livre à l'heure et dans le budget des projets dont personne ne se sert.</i>"
+    },
+    {
+      "id": "mgmt-96ead7",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Schéma directeur du SI",
+      "verso": "Document d'orientation à trois ou cinq ans qui décrit la situation existante, la cible souhaitée et la trajectoire pour y parvenir, avec les grands chantiers, leur séquencement, leur budget et leurs dépendances.<br><b>Ce qui en fait un outil vivant ou un document mort</b> : sa révision périodique et son adossement à des arbitrages réels de la direction générale.<br><i>Critique classique et fondée : un schéma directeur à cinq ans dans un environnement où les cycles technologiques durent dix-huit mois. La réponse mature est de figer les principes et les invariants d'architecture, et de garder la trajectoire révisable chaque année.</i>"
+    },
+    {
+      "id": "mgmt-0178cd",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Gouvernance du SI et comitologie",
+      "verso": "Ensemble des instances et des règles qui déterminent qui décide quoi : comité stratégique du SI, comité d'investissement, comité d'architecture, comité de sécurité.<br><b>Question centrale</b> : le degré de centralisation. Un modèle centralisé assure la cohérence et les économies d'échelle ; un modèle fédéré donne de la réactivité aux métiers ; un modèle hybride confie le socle au centre et laisse l'usage aux métiers.<br><i>Indicateur révélateur : le seuil budgétaire à partir duquel une dépense informatique remonte en comité. Trop bas, il paralyse ; trop haut, il laisse la prolifération applicative s'installer sans contrôle.</i>"
+    },
+    {
+      "id": "mgmt-20d38e",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Analyse de rentabilité et retour sur investissement",
+      "verso": "Le <b>business case</b> justifie un investissement en confrontant coûts complets et bénéfices attendus, quantifiés et datés, avec les hypothèses et les risques associés.<br><b>Trois natures de bénéfice</b> : gain direct mesurable, coût évité, et option stratégique ouverte pour l'avenir.<br><i>Écueil le plus fréquent : présenter comme gain une réduction de temps qui ne se traduit par aucune réduction d'effectif ni par aucune activité supplémentaire. Un gain de productivité non réalloué n'est pas un gain économique, et un comité de direction le sait.</i>"
+    },
+    {
+      "id": "mgmt-c43b7e",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Valeur, coût évité et dette de décision",
+      "verso": "Trois registres à distinguer dans un arbitrage. La <b>valeur créée</b> se mesure en chiffre d'affaires, en satisfaction ou en part de marché. Le <b>coût évité</b> se mesure en incidents qui n'ont pas eu lieu, ce qui le rend difficile à défendre. La <b>dette de décision</b> est le coût futur d'un choix repoussé.<br><i>Difficulté propre à la sécurité et à la modernisation : elles produisent du coût évité, donc un bénéfice invisible. C'est pourquoi elles perdent systématiquement les arbitrages face à un projet métier, jusqu'à l'incident qui rend le coût visible.</i>"
+    },
+    {
+      "id": "mgmt-7427f7",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Gestion de portefeuille de projets",
+      "verso": "Arbitrage entre l'ensemble des projets candidats, sur des critères communs : valeur métier, coût, risque, dépendances, capacité disponible.<br><b>Contrainte oubliée dans la plupart des organisations</b> : la capacité. Lancer plus de projets que l'organisation ne peut en absorber ne les accélère pas, cela les ralentit tous simultanément.<br><i>Décision la plus difficile et la plus utile : arrêter un projet en cours. Le biais des coûts irrécupérables pousse à poursuivre au motif de ce qui a déjà été dépensé, alors que seul compte le coût restant rapporté au bénéfice restant.</i>"
+    },
+    {
+      "id": "mgmt-75917b",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Mode projet et mode produit",
+      "verso": "<b>Mode projet</b> : une équipe temporaire, un périmètre défini, une date de fin, puis dissolution et transfert à une équipe de maintenance.<br><b>Mode produit</b> : une équipe stable et pluridisciplinaire, responsable d'un produit sur toute sa durée de vie, pilotée par des résultats plutôt que par un périmètre.<br><i>Ce que change la bascule : on cesse de mesurer la livraison pour mesurer l'usage. Le succès n'est plus « livré dans les délais » mais « utilisé et utile ».</i><br><i>Obstacle réel : le mode produit suppose un budget récurrent, alors que le contrôle de gestion est structuré pour financer des projets datés.</i>"
+    },
+    {
+      "id": "mgmt-290992",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "OKR et pilotage par les résultats",
+      "verso": "Méthode fixant des objectifs qualitatifs assortis de résultats clés chiffrés, revus par cycles courts, avec un alignement descendant des objectifs et une définition ascendante des moyens.<br><i>Distinction essentielle : un indicateur de résultat mesure un effet obtenu, un indicateur d'activité mesure un effort fourni. « Déployer l'outil dans douze agences » est une activité ; « réduire de 30 % le délai de traitement d'un dossier » est un résultat.</i><br><i>Dérive courante : transformer les OKR en liste de tâches, ce qui reproduit exactement le pilotage par l'activité qu'ils visaient à remplacer.</i>"
+    },
+    {
+      "id": "mgmt-446bd4",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Conduite du changement",
+      "verso": "Ensemble des actions visant l'adoption réelle d'un changement par les personnes concernées : diagnostic des résistances, communication, formation, accompagnement de proximité, mesure de l'appropriation.<br><b>Modèles usuels</b> : ADKAR, qui décrit un parcours individuel en cinq étapes, de la conscience du besoin à l'ancrage ; les huit étapes de Kotter, qui décrivent un parcours collectif.<br><i>Constat qui fait la différence à l'oral : l'échec se joue à l'usage, pas à l'achat. Près d'un salarié sur deux déclare qu'un outil lui a été imposé sans formation adaptée, et une large part abandonne une technologie dont le bénéfice ne lui apparaît pas.</i>"
+    },
+    {
+      "id": "mgmt-1dfca3",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Faire ou faire faire",
+      "verso": "Arbitrage entre production interne et recours au marché, sur quatre critères : le caractère différenciant de l'activité, la disponibilité des compétences, le coût complet, et le niveau de dépendance acceptable.<br><b>Règle communément admise</b> : internaliser ce qui différencie l'entreprise, externaliser ce qui est nécessaire mais banalisé.<br><i>Piège à mentionner : l'externalisation de la compétence, et non seulement de la tâche. Une organisation qui externalise toute son ingénierie perd la capacité d'évaluer ses prestataires, donc de négocier, donc de reprendre la main.</i>"
+    },
+    {
+      "id": "mgmt-94a913",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Externalisation, infogérance et TMA",
+      "verso": "<b>Infogérance</b> : délégation de l'exploitation de tout ou partie de l'infrastructure. <b>TMA</b> : tierce maintenance applicative, délégation de la maintenance corrective et évolutive d'un parc d'applications. <b>Régie</b> : mise à disposition de compétences pilotées par le client. <b>Forfait</b> : engagement du prestataire sur un résultat et un prix.<br><i>Différence de risque déterminante : en régie, le client porte le risque de dérive ; au forfait, le prestataire le porte et le facture dans son prix. Un forfait très inférieur au marché signale généralement une sous-estimation qui se paiera en avenants.</i>"
+    },
+    {
+      "id": "mgmt-c6d114",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Contrat de service, engagements et pénalités",
+      "verso": "Le contrat fixe le périmètre, les niveaux de service attendus, les modalités de mesure, les pénalités et les conditions de sortie.<br><b>Points de vigilance</b> : qui mesure les indicateurs, ce qui est exclu du calcul, et le plafonnement des pénalités.<br><i>Réalité à assumer : les pénalités sont presque toujours plafonnées à une fraction du montant du contrat, sans rapport avec le préjudice réel. Elles servent d'incitation, jamais de réparation. Le vrai levier de pilotage est la revue de service régulière, pas la clause.</i>"
+    },
+    {
+      "id": "mgmt-04dfa7",
+      "type": "definition",
+      "angle": "souverainete",
+      "recto": "Réversibilité contractuelle",
+      "verso": "Capacité organisée, contractuellement et techniquement, de reprendre en interne ou de transférer à un tiers une activité externalisée : documentation à jour, transfert de compétences, restitution des données dans un format exploitable, période d'accompagnement.<br><i>Ce que la pratique montre : une clause de réversibilité jamais éprouvée est une clause théorique. Les organisations sérieuses testent la restitution des données pendant la vie du contrat, pas au moment de la rupture.</i><br><i>Évolution réglementaire : le Data Act européen rend la réversibilité opposable pour les services de nuage, ce qui la fait passer d'un objet de négociation à une obligation.</i>"
+    },
+    {
+      "id": "mgmt-6d4197",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Numérisation, digitalisation et transformation",
+      "verso": "<b>Numérisation</b> : convertir un support papier en format numérique. <b>Digitalisation</b> : outiller un processus existant pour le rendre plus efficace. <b>Transformation</b> : repenser le modèle d'affaires ou le fonctionnement de l'organisation à partir des possibilités offertes par le numérique.<br><i>Distinction à poser tôt dans un oral, elle structure tout le reste : la plupart des projets présentés comme des transformations sont des digitalisations. Numériser un processus défaillant produit un processus défaillant plus rapide.</i>"
+    },
+    {
+      "id": "mgmt-ed088d",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Modèle opérationnel cible",
+      "verso": "Description de la manière dont l'organisation doit fonctionner pour tenir sa stratégie : processus, structure, rôles, gouvernance, compétences, outillage, indicateurs.<br><b>Intérêt par rapport à une simple cible technique</b> : il oblige à décrire qui fait quoi, ce qui fait apparaître les décisions organisationnelles que le projet supposait sans les dire.<br><i>Utilité pour un architecte : c'est le document qui traduit une architecture cible en conséquences pour les équipes, et donc le point où l'on découvre si la transformation est réellement acceptée.</i>"
+    },
+    {
+      "id": "mgmt-9ff15b",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Bureau des projets",
+      "verso": "Structure qui outille et pilote la conduite des projets : méthodes communes, consolidation des états d'avancement, gestion des ressources et des dépendances, alerte sur les dérives.<br><b>Deux postures possibles</b> : un rôle de contrôle, qui produit du reporting et devient vite perçu comme une charge ; un rôle de soutien, qui lève les obstacles et outille les équipes.<br><i>Critère d'évaluation simple : si les chefs de projet viennent d'eux-mêmes chercher de l'aide auprès du bureau des projets, il est utile. S'ils ne font que lui remonter des tableaux, il est devenu un coût administratif.</i>"
+    },
+    {
+      "id": "mgmt-67f467",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "La loi de Conway",
+      "verso": "Formulée en 1967 : une organisation qui conçoit un système produit une architecture qui reproduit sa propre structure de communication.<br><b>Conséquence directe</b> : trois équipes séparées produiront presque toujours trois composants mal intégrés, quelle que soit l'architecture cible dessinée.<br><i>La <i>manoeuvre inverse</i> consiste à organiser délibérément les équipes selon l'architecture souhaitée, plutôt que d'espérer que l'architecture s'impose à l'organisation. C'est l'argument le plus solide pour justifier une réorganisation par une raison technique.</i>"
+    },
+    {
+      "id": "mgmt-daa03f",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Gestion des talents informatiques",
+      "verso": "Attraction, développement et fidélisation des compétences, dans un marché où la rareté porte sur des profils précis, cybersécurité, données, ingénierie de plateforme, plutôt que sur l'ensemble des métiers.<br><b>Leviers au-delà du salaire</b> : intérêt technique des sujets, qualité de l'outillage, autonomie, temps consacré à la montée en compétences, flexibilité d'organisation.<br><i>Effet à connaître : la dette technique est un facteur de départ documenté. Un ingénieur qui passe son temps à maintenir un système obsolète voit sa valeur sur le marché se dégrader, et il le sait.</i>"
+    },
+    {
+      "id": "mgmt-1ff132",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "1993 : la réingénierie des processus",
+      "verso": "Hammer et Champy publient un ouvrage qui popularise l'idée de repenser radicalement les processus plutôt que de les optimiser à la marge, en s'appuyant sur les possibilités de l'informatique.<br><i>Portée, et bilan à nuancer : la méthode a produit des réussites et de nombreux échecs, souvent assimilés à des plans de réduction d'effectifs mal conduits. Elle reste la matrice intellectuelle de tous les discours ultérieurs sur la transformation, et son enseignement principal tient : numériser un processus sans le repenser ne produit qu'un gain marginal.</i>"
+    },
+    {
+      "id": "mgmt-d27380",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2003 : l'informatique ne fait plus la différence",
+      "verso": "Nicholas Carr publie dans la Harvard Business Review un article soutenant que l'informatique, devenue une commodité disponible pour tous, ne procure plus d'avantage concurrentiel et doit être gérée comme un coût à minimiser.<br><i>Portée du débat, qui n'est pas clos : la thèse s'est révélée fausse pour les entreprises dont le modèle repose sur la technologie, et largement juste pour l'infrastructure banalisée. C'est exactement l'arbitrage que formalise aujourd'hui la question du faire ou faire faire.</i>"
+    },
+    {
+      "id": "mgmt-140554",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2011 : le logiciel dévore le monde",
+      "verso": "Marc Andreessen soutient que les entreprises qui maîtrisent le logiciel prennent le contrôle de secteurs entiers, du commerce à la musique en passant par le transport. La suite lui donne largement raison.<br><i>Portée pour un oral de management : c'est l'argument inverse de celui de Carr, huit ans plus tard. La bonne réponse à un jury n'est pas de trancher, c'est de montrer que les deux thèses cohabitent selon que la technologie porte le modèle d'affaires ou seulement son support.</i>"
+    },
+    {
+      "id": "mgmt-34db95",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "Années 2000-2010 : les cas Kodak, Blockbuster et Netflix",
+      "verso": "Kodak, qui avait inventé le capteur numérique, et Blockbuster, qui avait refusé de racheter Netflix, disparaissent face à des acteurs ayant accepté de cannibaliser leur propre modèle.<br><i>Portée, et il faut se garder de la lecture facile : ces entreprises n'ont pas manqué la technologie, elles l'avaient identifiée. Elles n'ont pas su renoncer à un modèle encore rentable pour un modèle moins rentable à court terme. Le blocage est de gouvernance et d'incitation, pas de veille technologique.</i>"
+    },
+    {
+      "id": "mgmt-1d6106",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2020 : l'accélération contrainte",
+      "verso": "La crise sanitaire impose en quelques semaines des transformations que les organisations planifiaient sur des années : télétravail, vente en ligne, dématérialisation des échanges, signature électronique.<br><i>Enseignement le plus réutilisable : la contrainte réelle n'était pas technique ni budgétaire, elle était décisionnelle. Ce qui a changé, c'est que l'arbitrage a été rendu et que les résistances internes ont cessé d'être audibles. C'est un argument puissant sur la conduite du changement.</i>"
+    },
+    {
+      "id": "mgmt-0d666d",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2023-2025 : le retour de l'exigence de retour sur investissement",
+      "verso": "Après une phase d'investissement massif, les directions générales resserrent les arbitrages : réduction du nombre et de la taille des projets, priorité à l'optimisation des coûts, massification des fournisseurs. En France, le marché des services numériques connaît un recul inédit depuis 2008.<br><i>Portée : la DSI passe d'une logique d'expansion à une logique de démonstration. La compétence la plus valorisée devient la capacité à prouver la valeur produite, pas à livrer davantage.</i>"
+    },
+    {
+      "id": "mgmt-b5b363",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2026 : l'écart entre l'investissement en IA et sa valeur démontrée",
+      "verso": "Gartner relève ses prévisions de dépenses informatiques mondiales à environ 6 310 milliards de dollars pour 2026, en croissance de 13,5 %, tirées presque entièrement par l'infrastructure d'IA. Le cabinet observe simultanément que les entreprises privilégient des initiatives tactiques d'efficacité plutôt que des projets de rupture, et que les DSI peinent à prouver la valeur métier de ces investissements.<br><i>Portée : c'est la tension centrale du management du SI en 2026, et une problématique directement utilisable, l'investissement s'accélère pendant que la démonstration de valeur recule.</i>"
+    },
+    {
+      "id": "mgmt-38eda3",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "2025-2026 : la souveraineté entre au comité de direction",
+      "verso": "Sous l'effet combiné des tensions géopolitiques, de la réglementation européenne et de la dépendance aux fournisseurs non européens, la souveraineté numérique cesse d'être un sujet technique pour devenir un critère d'arbitrage stratégique. Une majorité de grandes entreprises françaises la classe parmi ses priorités critiques.<br><i>Portée : elle s'ajoute au triptyque classique coût, délai, qualité comme quatrième critère d'arbitrage, et elle entre parfois en contradiction directe avec le critère de coût.</i>"
+    },
+    {
+      "id": "mgmt-1fc1d2",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Les dépenses informatiques mondiales en 2026",
+      "verso": "Environ 6 310 milliards de dollars attendus, soit une croissance de 13,5 %, révisée à deux reprises à la hausse depuis une prévision initiale de 9,8 %. Les systèmes de centres de données progressent de près de 56 %, tandis que les terminaux ne croissent que d'environ 6 %, freinés par la hausse des prix de la mémoire.<br><i>Source : Gartner, prévisions révisées d'avril 2026</i><br><i>Lecture d'oral : c'est un marché à plusieurs vitesses. Tout ce qui touche à l'IA surperforme, le reste stagne.</i>"
+    },
+    {
+      "id": "mgmt-8d0cd7",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Les dépenses mondiales liées à l'IA",
+      "verso": "Environ 2 596 milliards de dollars en 2026, en hausse de 47 % sur un an, dont environ 1 432 milliards pour la seule infrastructure. La progression reste très majoritairement portée par les fournisseurs technologiques et les grands opérateurs de nuage, les entreprises utilisatrices n'ayant pas encore pleinement engagé leur cycle d'investissement.<br><i>Source : Gartner, 2026</i><br><i>Nuance décisive : l'essentiel de cette dépense est en amont, chez ceux qui construisent la capacité, pas chez ceux qui l'utilisent.</i>"
+    },
+    {
+      "id": "mgmt-deaff9",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "Le taux d'échec des transformations",
+      "verso": "Environ 70 % des initiatives de transformation numérique n'atteignent pas leurs objectifs, et seuls environ 48 % des projets atteignent ou dépassent leurs cibles.<br><i>Sources : Gartner ; travaux McKinsey convergents</i><br><i>Causes constamment identifiées, et aucune n'est technique : absence de vision partagée par la direction, résistance culturelle, compétences internes insuffisantes, choix dictés par le fournisseur, et absence de mesure de l'usage réel.</i>"
+    },
+    {
+      "id": "mgmt-a98d15",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "Le coût de la pénurie de compétences",
+      "verso": "Plus de 90 % des organisations dans le monde subissent les effets de la pénurie de compétences informatiques, pour un coût estimé à plusieurs milliers de milliards de dollars en retards de production, perte de compétitivité et activité non réalisée.<br><i>Source : IDC</i><br><i>Précision utile : la pénurie n'est pas générale, elle est concentrée sur quelques familles de métiers, cybersécurité, données, plateforme. Un discours indifférencié sur le manque de talents informatiques est immédiatement repérable comme approximatif.</i>"
+    },
+    {
+      "id": "mgmt-fbce32",
+      "type": "chiffre",
+      "angle": "souverainete",
+      "recto": "Les priorités des DSI français",
+      "verso": "La cybersécurité est redevenue la préoccupation numéro un des DSI français, devant la donnée et l'IA. Le marché français des services numériques a connu un recul inédit depuis 2008, tandis que l'édition logicielle progresse d'environ 8 %, portée par le logiciel en ligne à environ 18 % et l'infrastructure en service à environ 13 %.<br><i>Source : Numeum, bilan du marché français</i><br><i>Lecture : les budgets se déplacent des grands projets d'intégration vers l'abonnement logiciel. Cela change la nature du travail de la DSI, moins de construction, plus de pilotage de fournisseurs.</i>"
+    },
+    {
+      "id": "mgmt-b823be",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "L'impact anticipé de l'IA sur l'emploi",
+      "verso": "Gartner estime que l'IA affectera à court terme de l'ordre de 32 millions d'emplois dans le monde, principalement par annulation de recrutements et transformation des postes plutôt que par suppressions directes.<br><i>Source : Gartner, 2026</i><br><i>À manier avec prudence devant un jury : ce sont des prévisions, non des mesures, et les prévisions d'impact de l'automatisation sur l'emploi ont historiquement été surestimées à court terme et sous-estimées dans leurs effets de recomposition à long terme.</i>"
+    },
+    {
+      "id": "mgmt-4e6ad8",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Le DSI et son positionnement",
+      "verso": "Son rattachement détermine son influence : à la direction générale, il participe à la définition de la stratégie ; à la direction financière, il est prioritairement évalué sur la maîtrise des coûts.<br><b>Nuance importante</b> : siéger au comité exécutif ne garantit pas l'arbitrage. Dans de nombreuses organisations, le DSI propose et la direction financière tranche sur l'enveloppe.<br><i>Évolution de 2026 : la responsabilité cyber désormais portée par les dirigeants au titre de NIS 2 fait remonter le sujet au conseil d'administration, ce qui renforce mécaniquement le poids du DSI et du RSSI dans les instances.</i>"
+    },
+    {
+      "id": "mgmt-295b98",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Les fonctions qui gravitent autour de la DSI",
+      "verso": "<b>RSSI</b> : arbitrage du risque, souvent en tension avec les délais projet. <b>CDO données</b> : valorisation du patrimoine informationnel. <b>Directeur du numérique</b> : porte la transformation côté métier, parfois en concurrence avec la DSI. <b>Architecte d'entreprise</b> : cohérence de la trajectoire. <b>DPO</b> : conformité et protection des données.<br><i>Point à savoir formuler : la multiplication de ces rôles traduit la montée en importance du numérique, mais crée des zones de recouvrement. La question de gouvernance qui compte n'est pas qui porte le titre, c'est qui tranche en cas de désaccord.</i>"
+    },
+    {
+      "id": "mgmt-023005",
+      "type": "acteur",
+      "angle": "economique",
+      "recto": "Les entreprises de services du numérique",
+      "verso": "Elles fournissent la capacité de réalisation que les DSI n'internalisent pas : régie, forfait, infogérance, maintenance applicative. Le marché français traverse une phase de consolidation, les clients ayant réduit le nombre et la taille des projets et cherchant à massifier leurs fournisseurs.<br><i>Point de vigilance pour le donneur d'ordre : la massification réduit le coût unitaire et accroît la dépendance. Concentrer l'essentiel de sa capacité de réalisation chez un prestataire unique reproduit exactement le verrouillage que l'on cherche à éviter côté technologique.</i>"
+    },
+    {
+      "id": "mgmt-2fde86",
+      "type": "acteur",
+      "angle": "economique",
+      "recto": "Les cabinets d'analyse et leur influence",
+      "verso": "Gartner, Forrester, IDC produisent prévisions de marché, positionnements de fournisseurs et cadres de maturité, largement utilisés dans les dossiers d'investissement et les appels d'offres.<br><i>Recul à afficher devant un jury, et il est apprécié : leurs prévisions sont révisées fréquemment, celles de dépenses informatiques pour 2026 ayant été relevées deux fois en six mois. Leur modèle économique repose en partie sur les fournisseurs qu'ils évaluent. Ce sont des sources utiles à citer avec leur date, jamais des vérités à invoquer.</i>"
+    },
+    {
+      "id": "mgmt-61667c",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Le SI est-il un centre de coût ou un avantage concurrentiel ?",
+      "verso": "<b>Thèse du centre de coût</b> : l'infrastructure est banalisée et accessible à tous pour le même prix ; ce qui est disponible pour tous ne différencie personne ; la bonne gestion consiste donc à minimiser la dépense.<br><b>Thèse de l'avantage</b> : les entreprises qui maîtrisent le logiciel ont pris le contrôle de secteurs entiers ; la capacité à livrer vite et à exploiter ses données est difficilement imitable.<br><b>Position tenable</b> : les deux thèses portent sur des périmètres différents. Le socle est une commodité qu'il faut acheter au meilleur prix et rendre réversible ; les capacités différenciantes justifient d'investir et d'internaliser. L'erreur de management la plus coûteuse est de traiter les deux avec la même grille."
+    },
+    {
+      "id": "mgmt-0a092c",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Faut-il internaliser ou externaliser la compétence ?",
+      "verso": "<b>Pour l'externalisation</b> : accès immédiat à des compétences rares, capacité d'ajustement, coûts variabilisés, engagement de résultat au forfait.<br><b>Pour l'internalisation</b> : la connaissance du métier ne s'externalise pas ; la dépendance rend la renégociation difficile ; et une organisation qui n'a plus d'ingénieurs ne sait plus évaluer ce qu'elle achète.<br><b>Position tenable</b> : le critère n'est pas le coût mais la capacité de jugement. Il faut conserver en interne assez de compétence pour spécifier, arbitrer et contrôler, même quand on ne réalise pas. Une DSI qui a externalisé jusqu'à sa capacité d'évaluation ne pilote plus, elle subit."
+    },
+    {
+      "id": "mgmt-9ee514",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "Le mode produit est-il applicable partout ?",
+      "verso": "<b>Pour</b> : il aligne l'équipe sur l'usage réel plutôt que sur la livraison, stabilise les compétences, supprime la rupture entre construction et maintenance, et améliore la responsabilité de bout en bout.<br><b>Contre</b> : il suppose un budget récurrent que le contrôle de gestion ne sait pas toujours accorder ; il ne convient pas aux chantiers à début et fin réels comme une migration d'infrastructure ; et il exige des métiers une disponibilité continue qu'ils n'ont pas toujours.<br><b>Position tenable</b> : le mode produit vaut pour ce qui vit et évolue avec les usages, le mode projet pour ce qui a une fin réelle. Généraliser l'un ou l'autre est une erreur de méthode ; la difficulté est de faire coexister deux modes de financement dans la même organisation."
+    },
+    {
+      "id": "mgmt-6ad952",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "Qui doit piloter l'IA dans l'entreprise ?",
+      "verso": "<b>Pour un pilotage par la DSI</b> : maîtrise des données, de la sécurité, de la conformité et des coûts ; sans socle de données gouverné, aucun cas d'usage ne passe à l'échelle ; l'IA fantôme fait courir un risque juridique réel.<br><b>Pour un pilotage par les métiers</b> : la valeur naît de la connaissance fine du processus, que la DSI n'a pas ; centraliser crée un goulot d'étranglement et reproduit l'erreur commise avec les projets de données il y a dix ans.<br><b>Position tenable</b> : la répartition qui fonctionne sépare le socle et l'usage. La DSI fournit un cadre gouverné, données, modèles autorisés, règles de sécurité et de coût ; les métiers identifient et portent les cas d'usage. Ce qui manque le plus souvent n'est ni l'un ni l'autre, c'est l'instance qui arbitre entre eux, et le fait que 95 % des pilotes d'IA générative ne produisent aucun impact mesurable tient d'abord à ce vide de gouvernance."
+    }
+  ]
+}

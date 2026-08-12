@@ -1,0 +1,288 @@
+{
+  "themeId": "bc",
+  "theme": "Blockchain",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "bc-efe3fb",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Blockchain",
+      "verso": "Registre de transactions répliqué sur un réseau de participants, organisé en blocs chaînés par des empreintes cryptographiques, et mis à jour selon un protocole de consensus sans autorité centrale.<br><b>Ce qu'elle résout réellement</b> : permettre à des acteurs qui ne se font pas confiance de partager un même registre sans arbitre commun.<br><i>Test à appliquer devant un jury, et il élimine la plupart des projets : s'il existe un tiers de confiance accepté par tous, une base de données classique fait mieux, plus vite et pour moins cher.</i>"
+    },
+    {
+      "id": "bc-365d0e",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Registre distribué et blockchain",
+      "verso": "Le <b>registre distribué</b> est la catégorie générale : un registre partagé et synchronisé entre plusieurs sites ou institutions. La <b>blockchain</b> en est une mise en oeuvre particulière, structurée en blocs chaînés.<br><i>Autres formes possibles : les graphes acycliques orientés, où les transactions se valident mutuellement sans former une chaîne linéaire.</i><br><i>Utile à l'oral : parler de registre distribué plutôt que de blockchain montre qu'on distingue le concept de sa mise en oeuvre la plus médiatisée.</i>"
+    },
+    {
+      "id": "bc-2b84d0",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Bloc, empreinte et chaînage",
+      "verso": "Chaque bloc contient un ensemble de transactions, un horodatage et l'<b>empreinte</b> du bloc précédent. Une empreinte est le résultat d'une fonction de hachage : une signature de taille fixe, unique et non réversible.<br><b>Mécanisme d'inviolabilité</b> : modifier une transaction ancienne change son empreinte, donc celle du bloc, donc celle de tous les blocs suivants. Il faudrait recalculer toute la chaîne plus vite que le reste du réseau ne l'allonge.<br><i>C'est de là que vient la propriété d'immuabilité, et elle est probabiliste, pas absolue.</i>"
+    },
+    {
+      "id": "bc-cc92e2",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Preuve de travail et preuve d'enjeu",
+      "verso": "<b>Preuve de travail</b> : les participants dépensent de la puissance de calcul pour proposer un bloc. La sécurité est adossée à un coût énergétique réel.<br><b>Preuve d'enjeu</b> : les validateurs immobilisent des jetons en garantie et sont sanctionnés en cas de comportement malveillant. La sécurité est adossée à un coût financier.<br><i>Écart d'ordre de grandeur : le passage d'Ethereum de l'une à l'autre en 2022 a réduit sa consommation électrique d'environ 99,9 %.</i><br><i>Critique de la preuve d'enjeu à connaître : elle tend à concentrer le pouvoir de validation chez ceux qui détiennent déjà le plus de jetons.</i>"
+    },
+    {
+      "id": "bc-4e9405",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Blockchain publique, privée et de consortium",
+      "verso": "<b>Publique</b> : ouverte à tous, sans permission, censurée par personne. Ex. : Bitcoin, Ethereum.<br><b>Privée</b> : contrôlée par une seule organisation. En pratique, une base de données répliquée avec des étapes supplémentaires.<br><b>De consortium</b> : gouvernée par un groupe d'acteurs identifiés qui ne se font pas totalement confiance. Ex. : plusieurs banques, une filière logistique.<br><i>C'est le modèle de consortium qui concentre l'essentiel des usages professionnels réellement viables, parce qu'il correspond au seul cas où le problème de confiance est authentique.</i>"
+    },
+    {
+      "id": "bc-c6512c",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Contrat intelligent",
+      "verso": "Programme déposé sur une blockchain, exécuté automatiquement par tous les noeuds lorsque ses conditions sont réunies, dont le code et les résultats sont publics et vérifiables.<br><b>Ce n'est ni un contrat, ni intelligent</b> : c'est du code déterministe, sans valeur juridique propre, et qui applique exactement ce qui est écrit, y compris ses propres défauts.<br><i>Conséquence majeure : une fois déployé, il est en principe immuable. Un défaut ne se corrige pas par une mise à jour, ce qui a produit les plus grands sinistres du secteur.</i>"
+    },
+    {
+      "id": "bc-31db85",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Jetons fongibles et non fongibles",
+      "verso": "<b>Fongible</b> : chaque unité est interchangeable, comme une monnaie ou une part. Standard usuel : ERC-20.<br><b>Non fongible</b> : chaque jeton est unique et identifié individuellement. Standard usuel : ERC-721.<br><i>Malentendu à corriger explicitement : un jeton non fongible ne contient presque jamais l'oeuvre elle-même, seulement un lien vers un fichier hébergé ailleurs. Il prouve la possession d'une inscription au registre, pas la propriété juridique de l'objet.</i>"
+    },
+    {
+      "id": "bc-8b84dc",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Jeton stable",
+      "verso": "Crypto-actif dont la valeur est arrimée à une monnaie officielle, généralement le dollar. Trois modèles : adossé à des réserves réelles auditées, adossé à d'autres crypto-actifs en surgarantie, ou algorithmique.<br><i>Le modèle algorithmique s'est effondré en 2022 avec TerraUSD, entraînant la disparition de dizaines de milliards de dollars.</i><br><i>Usage réel et souvent ignoré : c'est aujourd'hui l'usage le plus massif de la blockchain, comme instrument de règlement transfrontalier et comme refuge en dollar dans les économies à monnaie instable.</i>"
+    },
+    {
+      "id": "bc-b71d73",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Finance décentralisée",
+      "verso": "Reconstitution de services financiers, prêt, échange, produits dérivés, par des contrats intelligents plutôt que par des intermédiaires : pas de banque, pas de courtier, pas d'horaires d'ouverture.<br><b>Atouts</b> : accessibilité sans condition, transparence des règles, fonctionnement continu, composition libre des protocoles entre eux.<br><b>Risques</b> : défauts de code exploitables, absence de recours en cas de perte, manipulation par les oracles, et effet domino entre protocoles interconnectés.<br><i>Les échanges décentralisés ont franchi en 2026 le seuil du quart du volume total échangé sur les crypto-actifs.</i>"
+    },
+    {
+      "id": "bc-19dfe5",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Portefeuille, clés et phrase de récupération",
+      "verso": "La <b>clé publique</b> sert d'adresse, la <b>clé privée</b> autorise les dépenses. Le portefeuille ne contient pas les fonds, il détient les clés qui en donnent le contrôle. La <b>phrase de récupération</b> permet de régénérer les clés.<br><b>Portefeuille de dépôt</b> : les clés sont détenues par un prestataire, avec un recours possible mais un risque de contrepartie. <b>Autonome</b> : les clés sont détenues par l'utilisateur, sans aucun recours en cas de perte.<br><i>Conséquence brutale et sans équivalent bancaire : perdre la phrase de récupération, c'est perdre définitivement les fonds. Personne ne peut les restituer.</i>"
+    },
+    {
+      "id": "bc-df2027",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Le trilemme de la blockchain",
+      "verso": "Formulé par le cofondateur d'Ethereum : un réseau peut difficilement optimiser simultanément la <b>décentralisation</b>, la <b>sécurité</b> et la <b>capacité de traitement</b>. Améliorer l'une se fait généralement au détriment d'une autre.<br><i>Illustration : Bitcoin privilégie décentralisation et sécurité, au prix d'un débit de quelques transactions par seconde, sans commune mesure avec les dizaines de milliers d'un réseau de paiement classique.</i><br><i>C'est l'argument technique décisif contre l'idée d'une blockchain publique généralisée à tous les usages.</i>"
+    },
+    {
+      "id": "bc-562eca",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Solutions de seconde couche",
+      "verso": "Protocoles construits par-dessus une blockchain principale, qui traitent les transactions hors chaîne puis n'inscrivent qu'une preuve agrégée sur la chaîne principale.<br><b>Deux familles</b> : les <i>rollups optimistes</i>, qui supposent les transactions valides et ouvrent une fenêtre de contestation ; les <i>rollups à divulgation nulle</i>, qui fournissent une preuve cryptographique de validité.<br><i>Objectif : contourner le trilemme en déportant le volume, tout en conservant la sécurité de la couche principale. C'est la principale voie de passage à l'échelle aujourd'hui.</i>"
+    },
+    {
+      "id": "bc-3018b0",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Oracle et le problème de l'oracle",
+      "verso": "Un contrat intelligent ne peut pas accéder de lui-même à une donnée extérieure à la chaîne. L'<b>oracle</b> est le service qui l'y injecte : cours d'une devise, température, résultat d'une livraison.<br><b>Le problème</b> : cet oracle redevient un tiers de confiance. Toute la garantie décentralisée du contrat repose alors sur la fiabilité d'une source centralisée.<br><i>Argument central pour tout sujet sur la traçabilité : la blockchain garantit qu'une donnée inscrite n'a pas été modifiée après coup, jamais qu'elle était vraie au moment de son inscription.</i>"
+    },
+    {
+      "id": "bc-4fba30",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Attaque des 51 %",
+      "verso": "Si une entité contrôle la majorité de la puissance de validation d'un réseau, elle peut réorganiser les blocs récents et dépenser deux fois les mêmes fonds. Elle ne peut en revanche ni voler les fonds d'autrui, ni modifier l'historique ancien.<br><i>En pratique, l'attaque est économiquement irréaliste sur les grands réseaux et a été menée avec succès sur plusieurs réseaux secondaires.</i><br><i>Enseignement transposable : la sécurité d'une blockchain publique est proportionnelle à la valeur qui la protège. Une petite chaîne est structurellement fragile, ce qui vaut aussi pour une blockchain d'entreprise à peu de participants.</i>"
+    },
+    {
+      "id": "bc-6af519",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Immuabilité et droit à l'effacement",
+      "verso": "Contradiction frontale entre une technologie conçue pour que rien ne s'efface et un règlement qui garantit le droit à l'effacement des données personnelles.<br><b>Points de friction</b> : identification du responsable de traitement dans un réseau sans autorité, effacement techniquement impossible, transferts hors de l'Union par nature.<br><b>Parades usuelles</b> : ne jamais inscrire de donnée personnelle en clair, n'inscrire que des empreintes, conserver la donnée hors chaîne et détruire la clé de chiffrement.<br><i>La CNIL considère que la destruction de la clé peut se rapprocher d'un effacement, sans l'assimiler pleinement. Le sujet n'est pas tranché.</i>"
+    },
+    {
+      "id": "bc-ec5a91",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Tokenisation d'actifs réels",
+      "verso": "Représentation sur une blockchain d'un actif existant : obligation, action, part d'immeuble, créance commerciale, matière première.<br><b>Promesses</b> : fractionnement de l'investissement, règlement quasi instantané, marché secondaire continu, réduction des intermédiaires.<br><b>Obstacle juridique structurant</b> : dans la plupart des droits, la propriété immobilière suppose un acte authentique. On tokenise donc les parts d'une société qui détient le bien, jamais le bien lui-même.<br><i>C'est aujourd'hui le principal usage institutionnel de la technologie.</i>"
+    },
+    {
+      "id": "bc-928b5d",
+      "type": "definition",
+      "angle": "souverainete",
+      "recto": "Monnaie numérique de banque centrale",
+      "verso": "Version numérique de la monnaie officielle, émise directement par la banque centrale, à distinguer d'un jeton stable privé et d'un crypto-actif.<br><b>Projet d'euro numérique</b> : porté par la Banque centrale européenne, motivé par la souveraineté des paiements face aux réseaux de cartes et aux jetons stables en dollar, avec un plafond de détention envisagé pour éviter la fuite des dépôts bancaires.<br><i>Débat principal : la traçabilité des paiements et le risque de surveillance, la BCE défendant un niveau de confidentialité proche de l'espèce pour les petits montants.</i>"
+    },
+    {
+      "id": "bc-2de1d4",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Preuve d'existence et traçabilité",
+      "verso": "Usage le plus sobre et le plus solide de la technologie : inscrire l'empreinte d'un document ou d'un événement pour prouver ultérieurement qu'il existait à une date donnée et n'a pas été modifié depuis.<br><b>Applications</b> : diplômes, brevets, chaîne du froid, traçabilité alimentaire, authenticité de pièces détachées.<br><i>Limite à énoncer honnêtement : la preuve porte sur l'intégrité de l'inscription, jamais sur la véracité de la déclaration. Si l'on saisit une fausse température, elle sera inscrite de façon inviolable et restera fausse.</i>"
+    },
+    {
+      "id": "bc-cbf243",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2008-2009 : le livre blanc Bitcoin et le premier bloc",
+      "verso": "Un auteur sous le pseudonyme de Satoshi Nakamoto publie en octobre 2008 un document décrivant un système de paiement électronique de pair à pair, résolvant le problème de la double dépense sans autorité centrale. Le premier bloc est produit en janvier 2009.<br><i>Portée : l'innovation n'est pas cryptographique, toutes les briques existaient. Elle est économique, en alignant l'intérêt financier des participants avec l'honnêteté du protocole. C'est cette idée qui fonde tout le domaine.</i>"
+    },
+    {
+      "id": "bc-cde862",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2015 : Ethereum et les contrats intelligents",
+      "verso": "Lancement d'une blockchain conçue non pour transférer de la valeur mais pour exécuter des programmes, avec une machine virtuelle capable de calculs arbitraires.<br><i>Portée : la blockchain cesse d'être un registre de paiement pour devenir une plateforme applicative. Toutes les vagues suivantes, jetons non fongibles, finance décentralisée, tokenisation, en découlent directement.</i>"
+    },
+    {
+      "id": "bc-ee8dcf",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2016 : le piratage de The DAO et la scission d'Ethereum",
+      "verso": "Un défaut dans le code d'un fonds d'investissement autonome permet le détournement d'une part très importante des fonds déposés. La communauté choisit de modifier l'historique de la chaîne pour annuler le vol, provoquant une scission durable entre Ethereum et Ethereum Classic.<br><i>Portée, et c'est l'événement le plus riche du domaine : il démontre que le code n'est pas la loi ultime. Face à un sinistre majeur, ce sont des humains qui ont décidé de réécrire un registre présenté comme immuable. La gouvernance prime sur la technique.</i>"
+    },
+    {
+      "id": "bc-ce8844",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2020-2021 : la bulle des jetons non fongibles et de la finance décentralisée",
+      "verso": "Explosion des volumes, ventes d'oeuvres numériques à plusieurs dizaines de millions de dollars, multiplication des protocoles de rendement, entrée massive de capitaux spéculatifs.<br><i>Portée : la correction qui a suivi a effacé l'essentiel de la valeur des collections, mais a laissé une infrastructure et des standards durables. C'est un schéma classique de bulle technologique, à comparer avec celle des valeurs internet de 2000.</i>"
+    },
+    {
+      "id": "bc-f861be",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "Septembre 2022 : la fusion d'Ethereum",
+      "verso": "Ethereum abandonne la preuve de travail pour la preuve d'enjeu, en pleine exploitation et sans interruption de service, réduisant sa consommation électrique d'environ 99,9 %.<br><i>Portée : c'est la réponse la plus solide à l'argument environnemental, et une prouesse d'ingénierie, une migration de cette ampleur sur un système gérant des centaines de milliards sans arrêt de service. À citer systématiquement lorsqu'un jury oppose blockchain et sobriété.</i>"
+    },
+    {
+      "id": "bc-7dcf97",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "Novembre 2022 : la faillite de FTX",
+      "verso": "Effondrement en quelques jours de l'une des plus grandes plateformes d'échange mondiales, après la révélation d'un détournement des fonds des clients. Son fondateur sera condamné à une lourde peine de prison.<br><i>Portée décisive pour l'argumentation : la faillite ne vient pas de la blockchain, qui a fonctionné normalement, mais d'un intermédiaire centralisé opaque et non régulé. C'est ce sinistre qui a accéléré l'adoption du cadre européen.</i>"
+    },
+    {
+      "id": "bc-ff943a",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "30 décembre 2024 : le règlement MiCA devient applicable",
+      "verso": "Le règlement (UE) 2023/1114 entre pleinement en application pour les prestataires de services sur crypto-actifs, après un premier volet consacré aux jetons stables. Il est transposé en France par une ordonnance d'octobre 2024 et un décret de février 2025.<br><i>Portée : premier cadre complet au monde pour un marché entier de crypto-actifs, avec agrément unique et passeport européen valable dans les vingt-sept États membres. L'Europe applique ici la même stratégie normative que pour le RGPD.</i>"
+    },
+    {
+      "id": "bc-fac229",
+      "type": "evenement",
+      "angle": "souverainete",
+      "recto": "1er juillet 2026 : fin de la période transitoire française",
+      "verso": "L'article 143 du règlement permettait à chaque État de fixer une transition de 6 à 18 mois. La France a retenu la durée maximale, ce qui a repoussé au 1er juillet 2026 l'extinction du régime national d'enregistrement issu de la loi PACTE.<br>Depuis cette date, seuls les prestataires agréés au titre de MiCA, en France ou via le passeport européen, peuvent servir les résidents français. Plusieurs acteurs majeurs, dont Binance France, ont cessé leurs services faute d'agrément.<br><i>Portée : consolidation brutale du secteur, la conformité devenant une barrière à l'entrée.</i>"
+    },
+    {
+      "id": "bc-2b5d2a",
+      "type": "chiffre",
+      "angle": "souverainete",
+      "recto": "L'agrément MiCA en chiffres",
+      "verso": "Plus de 170 prestataires agréés dans l'Union début 2026, contre une douzaine début 2025. Le coût de mise en conformité est passé d'environ 10 000 euros sous les anciens régimes nationaux à plus de 60 000 euros, avec des fonds propres minimaux de 50 000 à 150 000 euros selon les services.<br><i>Sources : AMF ; Coincub, 2025</i><br><i>Lecture d'oral : la régulation a produit exactement l'effet attendu, une professionnalisation, et un effet moins commenté, l'élimination des petits acteurs.</i>"
+    },
+    {
+      "id": "bc-69314e",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "La tokenisation d'actifs réels",
+      "verso": "La valeur des actifs tokenisés est passée d'environ 3 milliards de dollars en 2025 à un ordre de grandeur de 30 à 40 milliards mi-2026 selon les sources, avec une nette domination des obligations d'État américaines et des actions.<br><i>Sources : RWA.xyz, DefiLlama, Binance Research, 2026. Les périmètres divergent, d'où l'écart entre les estimations.</i><br><i>À citer en ordre de grandeur plutôt qu'au chiffre exact, et à comparer aux dizaines de milliers de milliards des marchés traditionnels : c'est encore marginal.</i>"
+    },
+    {
+      "id": "bc-67fef8",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le contre-chiffre de la tokenisation",
+      "verso": "Moins de 10 % des actifs tokenisés, soit environ 3 milliards de dollars, circulent effectivement dans les protocoles décentralisés. Le reste demeure immobile : les principaux fonds tokenisés de bons du Trésor enregistrent moins de trente transferts par mois.<br><i>Source : analyses on-chain relayées en juin 2026</i><br><i>C'est le chiffre qui fait la différence à l'oral. Il montre que l'actif est bien inscrit sur une blockchain, mais que la liquidité promise, principale justification économique, ne s'est pas matérialisée.</i>"
+    },
+    {
+      "id": "bc-05f8db",
+      "type": "chiffre",
+      "angle": "technique",
+      "recto": "L'écart énergétique entre les deux mécanismes de consensus",
+      "verso": "La consommation de Bitcoin, en preuve de travail, est estimée à un ordre de grandeur de plus de cent térawattheures par an, comparable à celle d'un pays de taille moyenne. Celle d'Ethereum, passé en preuve d'enjeu, est de l'ordre du centième de térawattheure par an.<br><i>Sources : indice de consommation de l'université de Cambridge ; mesures postérieures à la migration de 2022</i><br><i>Argument à tenir : l'empreinte énergétique n'est pas une propriété de la blockchain, c'est une propriété d'un mécanisme de consensus particulier, et il est remplaçable.</i>"
+    },
+    {
+      "id": "bc-0e03b3",
+      "type": "chiffre",
+      "angle": "technique",
+      "recto": "La concentration réelle de l'écosystème",
+      "verso": "Plus d'un millier de blockchains publiques sont actives, mais une vingtaine concentre environ 95 % de l'activité économique. Les échanges décentralisés ont dépassé en 2026 le quart du volume total d'échange de crypto-actifs.<br><i>Sources : agrégateurs de données on-chain, 2026</i><br><i>Utile pour désamorcer l'objection de la dispersion : le secteur s'est structuré autour d'un petit nombre d'infrastructures, comme l'internet autour d'un petit nombre de protocoles.</i>"
+    },
+    {
+      "id": "bc-1f9e23",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "L'entrée des institutions financières",
+      "verso": "Le fonds indiciel Bitcoin lancé par BlackRock en janvier 2024 est devenu le produit coté à la croissance la plus rapide de l'histoire, avec des encours dépassant 70 milliards de dollars. Son fonds monétaire tokenisé dépasse pour sa part 3 milliards de dollars.<br><i>Sources : communications de l'émetteur et données de marché, 2026</i><br><i>Portée : le sujet a changé de nature. Il ne relève plus de la contre-culture technologique mais de l'infrastructure de marché, ce qui est le bon angle pour un oral de niveau Bac+5.</i>"
+    },
+    {
+      "id": "bc-2a19ab",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "MiCA et l'AMF",
+      "verso": "<b>MiCA</b> : règlement européen couvrant les émetteurs de jetons, les jetons stables et les prestataires de services. Obligations de fonds propres, de gouvernance, de ségrégation des actifs des clients, d'information par un document de référence, et de lutte contre le blanchiment.<br><b>AMF</b> : autorité compétente en France, elle délivre l'agrément et tient la liste blanche des prestataires autorisés.<br><i>Sanction de l'exercice sans agrément : deux ans d'emprisonnement et 30 000 euros d'amende.</i>"
+    },
+    {
+      "id": "bc-6b4dd1",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "Ethereum et son écosystème",
+      "verso": "Principale plateforme de contrats intelligents, socle de la majorité des jetons, des protocoles décentralisés et des actifs tokenisés. Son écosystème comprend les solutions de seconde couche qui absorbent le volume, et une fondation qui coordonne l'évolution du protocole sans le contrôler.<br><i>Point de gouvernance intéressant : les évolutions sont décidées par un processus de propositions publiques et adoptées par les opérateurs de noeuds. Personne ne peut imposer une modification, ce qui explique la lenteur des changements et leur robustesse.</i>"
+    },
+    {
+      "id": "bc-6a880c",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Hyperledger et les blockchains d'entreprise",
+      "verso": "Ensemble de projets hébergés par la Linux Foundation, dont <b>Hyperledger Fabric</b>, conçu pour les consortiums : participants identifiés, canaux privés entre sous-groupes, pas de jeton ni de minage, et débit très supérieur aux chaînes publiques.<br><i>Ex. d'usage : traçabilité alimentaire, documents de commerce international, certification de pièces aéronautiques.</i><br><i>Lucidité à conserver : beaucoup de ces projets ont été abandonnés après leur phase pilote, moins pour des raisons techniques que par difficulté à faire coopérer durablement des concurrents sur une gouvernance commune.</i>"
+    },
+    {
+      "id": "bc-3ac6ec",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "La Banque centrale européenne et l'euro numérique",
+      "verso": "Projet de monnaie numérique de banque centrale motivé par la souveraineté des paiements européens, aujourd'hui largement dépendants de réseaux de cartes non européens, et par la montée des jetons stables adossés au dollar.<br><b>Arbitrages en discussion</b> : plafond de détention pour préserver les dépôts bancaires, niveau de confidentialité des transactions, rôle laissé aux banques dans la distribution.<br><i>Point technique souvent mal compris : rien n'impose qu'un euro numérique repose sur une blockchain, et la BCE n'a pas tranché en faveur d'un registre distribué.</i>"
+    },
+    {
+      "id": "bc-870f14",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "La blockchain a-t-elle une utilité réelle en entreprise ?",
+      "verso": "<b>Pour</b> : elle règle un problème authentique de registre partagé entre acteurs concurrents, avec des usages avérés en traçabilité, en commerce international et désormais en tokenisation d'actifs financiers.<br><b>Contre</b> : l'immense majorité des projets d'entreprise n'a pas dépassé le stade du pilote ; dans presque tous les cas, une base de données avec signature électronique et journal d'audit répond au besoin plus simplement.<br><b>Position tenable</b> : le critère de décision tient en une question, existe-t-il un tiers de confiance acceptable par toutes les parties. Si oui, la blockchain est une complication coûteuse. Si non, et c'est rare, elle est pertinente. Beaucoup d'échecs viennent d'avoir choisi la technologie avant d'avoir posé cette question."
+    },
+    {
+      "id": "bc-7c2dd8",
+      "type": "controverse",
+      "angle": "technique",
+      "recto": "La blockchain est-elle incompatible avec l'écologie ?",
+      "verso": "<b>Pour l'accusation</b> : Bitcoin consomme l'équivalent d'un pays de taille moyenne pour un débit de quelques transactions par seconde, et cette dépense énergétique est constitutive de son modèle de sécurité.<br><b>Contre</b> : la migration d'Ethereum a réduit sa consommation d'environ 99,9 % sans perte de sécurité, prouvant que le coût énergétique est un choix de conception et non une propriété de la technologie ; les blockchains de consortium ne minent pas.<br><b>Position tenable</b> : l'accusation vise juste pour la preuve de travail et manque sa cible pour tout le reste. Assimiler blockchain et gaspillage revient à confondre une technologie avec sa mise en oeuvre la plus ancienne."
+    },
+    {
+      "id": "bc-80e580",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "Le code fait-il loi ?",
+      "verso": "<b>Pour</b> : l'exécution automatique supprime l'interprétation, la mauvaise foi et le recours à un tribunal ; c'est la promesse fondatrice des contrats intelligents.<br><b>Contre</b> : le code contient des défauts, il ne prévoit pas l'imprévu, et il n'a aucune valeur juridique propre ; l'épisode de 2016 a montré qu'en cas de sinistre majeur, une communauté humaine réécrit le registre réputé immuable.<br><b>Position tenable</b> : le code exécute, il ne juge pas. Les usages sérieux articulent aujourd'hui un contrat intelligent et un contrat de droit qui prévoit explicitement ce qui se passe quand le code se comporte autrement qu'attendu."
+    },
+    {
+      "id": "bc-c97ea7",
+      "type": "controverse",
+      "angle": "souverainete",
+      "recto": "Réguler les crypto-actifs protège-t-il ou étouffe-t-il l'innovation ?",
+      "verso": "<b>Pour la régulation</b> : la faillite de FTX a coûté des milliards à des particuliers non avertis ; le passeport européen ouvre vingt-sept marchés avec un agrément unique ; et la clarté juridique est précisément ce que réclamaient les acteurs institutionnels avant d'investir.<br><b>Contre</b> : le coût de conformité a été multiplié par six, éliminant les petites structures ; la finance décentralisée reste largement hors du champ du texte ; et les acteurs mondiaux arbitrent entre juridictions.<br><b>Position tenable</b> : MiCA a réussi ce qu'il visait, assainir le marché des intermédiaires, et échoue là où il ne pouvait pas grand-chose, sur des protocoles sans personne morale identifiable. C'est la limite structurelle de toute régulation appliquée à une infrastructure décentralisée."
+    }
+  ]
+}

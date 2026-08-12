@@ -1,0 +1,288 @@
+{
+  "themeId": "dev",
+  "theme": "Développement",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "dev-362e22",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Cycle en V et méthodes agiles",
+      "verso": "<b>Cycle en V</b> : les besoins sont figés au départ, chaque phase de conception a sa phase de validation en miroir. Adapté quand l'exigence est stable et la conformité forte (aéronautique, ferroviaire, médical).<br><b>Agile</b> : le produit est construit par incréments courts, avec réajustement du besoin à chaque itération. Adapté quand le besoin est incertain ou évolutif.<br><i>Nuance à tenir devant un jury : ce n'est pas le moderne contre l'ancien. Le vrai critère est la stabilité du besoin et le coût d'une erreur tardive. Beaucoup d'organisations pratiquent un cycle en V pour le cadrage contractuel et de l'agile pour la réalisation.</i>"
+    },
+    {
+      "id": "dev-0d4969",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Scrum",
+      "verso": "Cadre de travail agile organisé en itérations de durée fixe (sprints), avec trois rôles : le <b>product owner</b> qui porte la valeur et priorise, le <b>scrum master</b> qui lève les obstacles et protège le processus, et l'équipe de développement autonome.<br>Quatre rituels : planification, mêlée quotidienne, revue, rétrospective.<br><i>Échec le plus fréquent en entreprise : conserver les rituels en supprimant l'autonomie de l'équipe et la capacité du product owner à arbitrer. On obtient alors un cycle en V découpé en sprints, avec les inconvénients des deux modèles.</i>"
+    },
+    {
+      "id": "dev-60dd1d",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Dette technique",
+      "verso": "Coût futur des raccourcis pris aujourd'hui : code non testé, conception contournée, dépendance non mise à jour, documentation absente. La métaphore vient de Ward Cunningham : on emprunte du temps maintenant, on rembourse avec des intérêts sous forme de ralentissement.<br><b>Distinction utile</b> : la dette délibérée et assumée (livrer vite pour valider un marché) est un choix légitime ; la dette subie et non documentée est un risque.<br><i>Signal d'alerte mesurable : quand le délai de livraison d'une fonctionnalité de taille comparable augmente d'une année sur l'autre, la dette est en train de gagner.</i>"
+    },
+    {
+      "id": "dev-86d1a7",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Intégration continue et déploiement continu",
+      "verso": "<b>Intégration continue</b> : chaque modification est fusionnée fréquemment dans la branche commune et déclenche automatiquement compilation, tests et analyses. Objectif : détecter le conflit ou la régression en minutes, pas en semaines.<br><b>Livraison continue</b> : chaque version validée est prête à être déployée, la mise en production restant une décision.<br><b>Déploiement continu</b> : elle part automatiquement en production.<br><i>Prérequis souvent absent : sans suite de tests fiable, l'automatisation ne fait que livrer les défauts plus vite.</i>"
+    },
+    {
+      "id": "dev-7f3f11",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "DevOps",
+      "verso": "Approche visant à supprimer la séparation entre ceux qui construisent le logiciel et ceux qui l'exploitent, par des équipes responsables de bout en bout, une automatisation forte et des indicateurs partagés.<br><b>Problème d'origine</b> : le développement est mesuré sur le changement, l'exploitation sur la stabilité. Ces deux objectifs opposés produisaient un mur organisationnel.<br><i>À affirmer clairement à l'oral : DevOps est une transformation de culture et de responsabilité, pas l'achat d'un outil. Une organisation qui recrute un ingénieur DevOps pour maintenir des scripts n'a pas fait de DevOps.</i>"
+    },
+    {
+      "id": "dev-0ad92b",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "DevSecOps et décalage vers l'amont",
+      "verso": "Intégration de la sécurité dans la chaîne de développement dès les premières étapes, plutôt qu'en audit final : analyse automatique du code à chaque enregistrement, contrôle des dépendances, tests de sécurité dans la chaîne d'intégration, secrets sortis du code.<br><b>Justification économique</b> : le coût de correction d'un défaut croît fortement à chaque étape franchie. Corriger à la conception coûte une fraction de ce que coûte une correction en production.<br><i>C'est le principe du décalage vers l'amont, souvent appelé shift-left : déplacer le contrôle vers la gauche de la chaîne.</i>"
+    },
+    {
+      "id": "dev-cb5bc1",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "La pyramide des tests",
+      "verso": "<b>Base</b> : de nombreux tests unitaires, rapides et isolés, qui vérifient une fonction. <b>Milieu</b> : des tests d'intégration, qui vérifient que les composants dialoguent. <b>Sommet</b> : peu de tests de bout en bout, qui rejouent un parcours utilisateur complet.<br><b>Logique</b> : plus on monte, plus le test est réaliste, mais plus il est lent, coûteux et instable.<br><i>Anti-modèle classique, le cornet de glace : beaucoup de tests de bout en bout et peu de tests unitaires. La suite devient si lente et si capricieuse que l'équipe finit par ignorer ses propres alertes.</i>"
+    },
+    {
+      "id": "dev-f32ab8",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Développement piloté par les tests (TDD)",
+      "verso": "Écrire le test avant le code : le test échoue, on écrit le minimum pour le faire passer, puis on réusine le code à comportement constant. Cycle rouge, vert, refactor.<br><b>Bénéfice réel, souvent mal compris</b> : le gain principal n'est pas la couverture obtenue, c'est la pression exercée sur la conception. Un code difficile à tester est presque toujours un code mal découpé.<br><i>Limite honnête : la pratique exige de la discipline et se prête mal à l'exploration, quand on ne sait pas encore ce que l'on construit.</i>"
+    },
+    {
+      "id": "dev-26580a",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Couverture de code et ses limites",
+      "verso": "Pourcentage de lignes ou de branches exécutées lors du passage de la suite de tests.<br><b>Ce qu'elle mesure</b> : le code parcouru. <b>Ce qu'elle ne mesure pas</b> : la pertinence des vérifications. Un test qui exécute une fonction sans rien vérifier compte pour de la couverture.<br><i>Conséquence classique : imposer un seuil de couverture comme objectif produit des tests écrits pour atteindre le seuil. C'est une illustration de la loi de Goodhart, selon laquelle une mesure devenue objectif cesse d'être une bonne mesure.</i>"
+    },
+    {
+      "id": "dev-112ff2",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Revue de code et demande de fusion",
+      "verso": "Relecture par un pair d'une modification avant son intégration dans la branche principale. Elle sert à détecter des défauts, mais surtout à diffuser la connaissance et à maintenir une cohérence de conception.<br><b>Effet de bord à connaître</b> : c'est très souvent le goulot d'étranglement réel d'une équipe. Le temps d'attente en revue dépasse fréquemment le temps d'écriture.<br><i>Point d'actualité : les assistants IA accélèrent l'écriture sans accélérer la revue, ce qui déplace l'engorgement au lieu de le résorber.</i>"
+    },
+    {
+      "id": "dev-af72c1",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Stratégies de branches et intégration dans le tronc",
+      "verso": "<b>Git flow</b> : branches longues séparées par nature (développement, correctifs, publication). Structuré, mais les branches divergent et les fusions deviennent douloureuses.<br><b>Trunk-based development</b> : tout le monde intègre dans une branche unique plusieurs fois par jour, avec des branches de très courte durée.<br><i>Résultat mesuré par les travaux DORA : les équipes les plus performantes pratiquent des branches courtes. Une branche qui vit trois semaines n'est pas de l'intégration continue, quel que soit l'outillage en place.</i>"
+    },
+    {
+      "id": "dev-087d9c",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Déploiement progressif : bleu-vert, canari, drapeaux de fonctionnalité",
+      "verso": "<b>Bleu-vert</b> : deux environnements identiques, on bascule le trafic de l'un à l'autre, et on revient instantanément en cas de problème.<br><b>Canari</b> : la nouvelle version reçoit d'abord une petite fraction du trafic, puis la part augmente si les indicateurs restent bons.<br><b>Drapeau de fonctionnalité</b> : le code est déployé mais la fonctionnalité reste désactivée, puis activée pour une population choisie.<br><i>Effet décisif : la mise en production cesse d'être un événement à risque pour devenir une opération banale et réversible. C'est ce qui permet de déployer souvent sans augmenter l'incident.</i>"
+    },
+    {
+      "id": "dev-fffcbb",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "ISO/CEI 25010 et la qualité logicielle",
+      "verso": "Norme internationale qui définit les caractéristiques de qualité d'un produit logiciel. Elle a remplacé l'ISO/CEI 9126 et retient notamment : adéquation fonctionnelle, performance, compatibilité, utilisabilité, fiabilité, sécurité, maintenabilité et portabilité.<br><b>Intérêt pratique</b> : elle donne un vocabulaire commun pour discuter de qualité autrement qu'en absence de bugs, et permet d'écrire des exigences non fonctionnelles vérifiables.<br><i>Limite à assumer : c'est un cadre de description, pas une méthode. Elle ne dit pas comment atteindre ces caractéristiques ni comment arbitrer entre elles, or elles s'opposent souvent, la sécurité contre l'utilisabilité par exemple.</i>"
+    },
+    {
+      "id": "dev-7ae35a",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "SBOM et chaîne d'approvisionnement logicielle",
+      "verso": "Le <b>SBOM</b> est la nomenclature logicielle : l'inventaire exhaustif et lisible par machine des composants d'une application, avec leurs versions et leurs licences.<br><b>La chaîne d'approvisionnement logicielle</b> désigne l'ensemble des dépendances externes, directes et transitives, dont dépend une application.<br><i>Utilité démontrée par l'expérience : lors de Log4Shell, des entreprises ont mis des semaines à seulement identifier où la bibliothèque vulnérable était présente. Avec un SBOM à jour, la même question se traite en minutes.</i>"
+    },
+    {
+      "id": "dev-2d21f6",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "SAST, DAST et SCA",
+      "verso": "<b>SAST</b> : analyse statique du code source, sans l'exécuter, pour détecter des motifs vulnérables. Tôt dans la chaîne, mais génère des faux positifs.<br><b>DAST</b> : analyse dynamique, en attaquant l'application en fonctionnement. Plus réaliste, mais tardive et limitée aux chemins parcourus.<br><b>SCA</b> : analyse des composants tiers, pour repérer les dépendances vulnérables ou aux licences incompatibles.<br><i>À retenir : c'est le SCA qui traite la vulnérabilité la plus probable, puisque l'essentiel du code d'une application moderne n'a pas été écrit par l'équipe.</i>"
+    },
+    {
+      "id": "dev-6d8486",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Observabilité : journaux, métriques et traces",
+      "verso": "Capacité à comprendre l'état interne d'un système à partir de ce qu'il émet, y compris pour des pannes qui n'avaient pas été anticipées.<br><b>Trois piliers</b> : les <b>journaux</b> racontent des événements, les <b>métriques</b> agrègent des valeurs dans le temps, les <b>traces</b> suivent une requête à travers tous les services traversés.<br><i>Différence avec la supervision classique : la supervision répond à des questions prévues à l'avance, l'observabilité permet de poser des questions nouvelles après coup. C'est devenu indispensable avec les architectures distribuées.</i><br><i>Standard du secteur : OpenTelemetry, projet de la CNCF.</i>"
+    },
+    {
+      "id": "dev-c79c41",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Plateforme interne de développement et platform engineering",
+      "verso": "Constat de départ : demander à chaque équipe produit de maîtriser le déploiement, l'observabilité, la sécurité et l'infrastructure produit une charge cognitive intenable et des pratiques divergentes.<br><b>Réponse</b> : une équipe plateforme construit un chemin balisé, un ensemble d'outils et de modèles préconfigurés que les équipes produit consomment en libre-service, sans devenir expertes de l'infrastructure.<br><i>Ex. : Backstage, catalogue de services publié en source ouverte par Spotify.</i><br><i>Piège : la plateforme doit rester un accélérateur optionnel. Dès qu'elle devient un passage obligé qui ralentit, elle recrée le silo qu'elle prétendait supprimer.</i>"
+    },
+    {
+      "id": "dev-d0c198",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Assistants de code et génération assistée",
+      "verso": "Outils fondés sur des grands modèles de langage qui proposent des complétions, génèrent des fonctions entières, écrivent des tests, expliquent du code existant ou pilotent des tâches de bout en bout depuis un terminal.<br><b>Où le gain est réel</b> : code répétitif, tests, migration, documentation, découverte d'une base de code inconnue.<br><b>Où il est faible ou négatif</b> : conception d'architecture, code de domaine métier spécifique, et tout ce qui exige une compréhension du contexte de l'organisation.<br><i>Risque structurant : le code produit est syntaxiquement correct et plausible, donc les défauts qui subsistent sont des erreurs de logique métier et des cas limites oubliés, précisément ceux que la relecture rapide ne détecte pas.</i>"
+    },
+    {
+      "id": "dev-ed7695",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2001 : le Manifeste Agile",
+      "verso": "Dix-sept praticiens réunis dans l'Utah publient quatre valeurs : les individus et leurs interactions plutôt que les processus et les outils, un logiciel qui fonctionne plutôt qu'une documentation exhaustive, la collaboration avec le client plutôt que la négociation contractuelle, l'adaptation au changement plutôt que le suivi d'un plan.<br><i>Portée, et nuance à apporter : le manifeste dit « plutôt que », pas « au lieu de ». Les éléments de droite conservent de la valeur. Vingt-cinq ans après, le principal reproche fait à l'agilité est justement d'avoir été industrialisée en processus, ce que le manifeste combattait.</i>"
+    },
+    {
+      "id": "dev-299a86",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2005 : la création de Git",
+      "verso": "Linus Torvalds écrit Git en quelques semaines, après que le noyau Linux a perdu l'accès à son outil de gestion de versions propriétaire. Le modèle est distribué : chaque copie contient l'historique complet.<br><i>Portée : sans Git, ni les branches légères, ni la demande de fusion, ni les plateformes collaboratives, ni l'intégration continue telle qu'on la pratique n'auraient été possibles. C'est l'infrastructure invisible de toutes les pratiques modernes.</i>"
+    },
+    {
+      "id": "dev-3dc5e4",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2009 : la naissance du mouvement DevOps",
+      "verso": "Une conférence présente le retour d'expérience d'une organisation déployant dix fois par jour grâce à la coopération entre développement et exploitation. Dans la foulée, les premiers devopsdays sont organisés à Gand, en Belgique, et donnent son nom au mouvement.<br><i>Portée : le sujet cesse d'être une affaire d'outillage pour devenir une question d'organisation. La fréquence de déploiement devient un indicateur de performance, alors qu'elle était jusque-là vue comme une prise de risque.</i>"
+    },
+    {
+      "id": "dev-0acbd7",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2014 : les métriques DORA et le State of DevOps",
+      "verso": "Le programme de recherche DevOps Research and Assessment, ensuite racheté par Google, établit sur plusieurs années que quatre indicateurs prédisent la performance : fréquence de déploiement, délai entre l'écriture et la mise en production, taux d'échec des changements, et temps de rétablissement après incident.<br><i>Résultat contre-intuitif et central : vitesse et stabilité ne s'opposent pas. Les équipes qui déploient le plus souvent sont aussi celles qui cassent le moins et se rétablissent le plus vite. C'est l'argument le plus solide contre l'idée que ralentir sécurise.</i>"
+    },
+    {
+      "id": "dev-ebae62",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "Décembre 2020 : SolarWinds",
+      "verso": "Des attaquants étatiques compromettent la chaîne de compilation de l'éditeur SolarWinds et insèrent une porte dérobée dans une mise à jour légitime de son logiciel de supervision, distribuée à plus de 18 000 clients, dont des agences fédérales américaines et de grands groupes.<br><i>Portée : l'attaque canonique de la chaîne d'approvisionnement. Elle démontre qu'il ne suffit pas de sécuriser son code, il faut sécuriser la fabrique qui le produit et le signe. C'est le point de départ des politiques publiques sur le SBOM.</i>"
+    },
+    {
+      "id": "dev-21d6b6",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "Décembre 2021 : Log4Shell",
+      "verso": "Une vulnérabilité critique de gravité maximale est découverte dans Log4j, bibliothèque de journalisation Java présente dans une immense proportion des applications d'entreprise. Elle permet l'exécution de code à distance à partir d'une simple chaîne de caractères enregistrée dans un journal.<br>Dix jours après la divulgation publique, une part importante des charges vulnérables n'était toujours pas corrigée.<br><i>Portée : révélation grand public de la dépendance du monde entier à des composants libres maintenus par très peu de personnes. C'est aussi le moment où la question « où est ce composant chez nous » s'est révélée sans réponse.</i>"
+    },
+    {
+      "id": "dev-f12f68",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "Mars 2024 : la porte dérobée XZ Utils",
+      "verso": "Un acteur opérant sous une fausse identité pendant environ deux ans gagne la confiance du mainteneur d'une bibliothèque de compression présente dans quasiment toutes les distributions Linux, obtient les droits d'écriture, puis y insère une porte dérobée visant l'authentification SSH.<br>Elle est détectée quelques jours avant son arrivée dans les versions stables de Debian et Red Hat, par un ingénieur intrigué par un ralentissement de quelques centaines de millisecondes à la connexion.<br><i>Portée : le vecteur d'attaque n'est plus technique mais social. Il vise la confiance accordée à un contributeur, ce qu'aucun scanner ne détecte. C'est le cas le plus inquiétant de la décennie, et il a tenu à la curiosité d'une seule personne.</i>"
+    },
+    {
+      "id": "dev-ace98b",
+      "type": "evenement",
+      "angle": "economique",
+      "recto": "2021-2026 : les assistants de code et le rapport DORA 2025",
+      "verso": "L'arrivée des assistants de code en 2021, puis leur généralisation, culmine avec le rapport DORA publié par Google en octobre 2025 : 90 % des professionnels du développement déclarent utiliser l'IA, soit 14 points de plus en un an, l'adoption la plus rapide jamais mesurée dans le génie logiciel.<br><i>Conclusion centrale du rapport, et c'est elle qu'il faut retenir : l'IA amplifie les capacités existantes. Elle démultiplie les équipes déjà structurées et aggrave les dysfonctionnements des autres. Ce n'est pas un correctif organisationnel.</i>"
+    },
+    {
+      "id": "dev-74fae1",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "L'adoption de l'IA par les développeurs et le paradoxe de la confiance",
+      "verso": "90 % des professionnels du développement utilisent l'IA en 2025, en progression de 14 points sur un an. Dans le même temps, environ 30 % déclarent avoir peu ou pas confiance dans le code qu'elle produit.<br>Les mesures montrent un débit qui remonte en 2025 après avoir baissé en 2024, mais une stabilité qui continue de se dégrader.<br><i>Source : rapport DORA, Google, octobre 2025</i><br><i>Lecture d'oral : on produit plus vite et on casse davantage. Le goulot d'étranglement s'est déplacé de l'écriture vers la validation.</i>"
+    },
+    {
+      "id": "dev-6c9ee2",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "La part de l'open source dans les applications d'entreprise",
+      "verso": "80 à 90 % des composants d'une application d'entreprise proviennent de bibliothèques libres. Le rapport 2026 fait état de plus de 1,2 million de paquets malveillants bloqués, de 65 % de nouvelles vulnérabilités publiées sans score de gravité, et de 27 % de suggestions de dépendances par IA jugées risquées.<br><i>Source : Sonatype, State of the Software Supply Chain 2026</i><br><i>Conséquence d'architecture : l'essentiel de la surface d'attaque d'une application n'a pas été écrit par l'équipe qui en répond.</i>"
+    },
+    {
+      "id": "dev-cd8fc8",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "La progression des attaques sur la chaîne d'approvisionnement",
+      "verso": "Les attaques visant la chaîne d'approvisionnement logicielle ont progressé d'environ 78 % en 2025 par rapport à 2024. Par ailleurs, l'implication d'un tiers dans les violations de données a doublé pour atteindre 30 % des cas.<br><i>Sources : Sonatype, 2025 ; Verizon Data Breach Investigations Report, 2025</i><br><i>Argument d'architecte : la sécurité périmétrique ne protège pas contre une dépendance compromise, puisque celle-ci entre par la porte principale, signée et légitime.</i>"
+    },
+    {
+      "id": "dev-933f73",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "Log4Shell en chiffres",
+      "verso": "Vulnérabilité notée au maximum de l'échelle de gravité, dans une bibliothèque de journalisation présente dans une part considérable des applications Java. Dix jours après la divulgation publique, une part importante des charges vulnérables hébergées dans le nuage n'avait toujours pas été corrigée.<br><i>Sources : base nationale de vulnérabilités, télémétrie sectorielle, décembre 2021</i><br><i>Le chiffre le plus parlant n'est pas la gravité, c'est le délai de correction. Il mesure l'écart entre connaître la faille et être capable d'agir, et cet écart est un problème d'inventaire, pas de sécurité.</i>"
+    },
+    {
+      "id": "dev-180233",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Le coût moyen d'une violation de données",
+      "verso": "Environ 4,4 millions de dollars en moyenne mondiale en 2025, en baisse d'environ 9 % par rapport à l'année précédente, mais nettement supérieur aux États-Unis.<br><i>Source : IBM, Cost of a Data Breach Report, 2025</i><br><i>À utiliser pour justifier économiquement le décalage vers l'amont : ce montant est à comparer au coût d'une analyse automatique des dépendances intégrée à la chaîne d'intégration, qui se compte en jours de mise en place.</i>"
+    },
+    {
+      "id": "dev-c26c0e",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "L'adoption du SBOM",
+      "verso": "Près de la moitié des organisations utilisaient déjà une nomenclature logicielle en 2024, et une large majorité prévoyait d'en accroître l'usage. Gartner anticipait que 60 % des organisations opérant des infrastructures critiques l'imposeraient contractuellement en 2025, contre moins de 20 % en 2022.<br><i>Sources : Anchore, 2024 ; Gartner</i><br><i>Ce qui change la donne : ce n'est plus une bonne pratique, c'est une exigence contractuelle et bientôt réglementaire pour vendre en Europe.</i>"
+    },
+    {
+      "id": "dev-ad5557",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "Le Cyber Resilience Act",
+      "verso": "Règlement européen qui impose des exigences de cybersécurité aux produits comportant des éléments numériques vendus dans l'Union : sécurité dès la conception, absence de vulnérabilité connue à la mise sur le marché, nomenclature logicielle, mises à jour de sécurité pendant une durée définie, et signalement des vulnérabilités activement exploitées.<br>Entré en vigueur fin 2024, avec une application échelonnée : obligations de signalement à partir de septembre 2026, application complète fin 2027.<br><i>Portée : pour la première fois, la responsabilité de la sécurité logicielle est mise sur l'éditeur et non sur l'utilisateur, avec des sanctions calculées en pourcentage du chiffre d'affaires mondial.</i>"
+    },
+    {
+      "id": "dev-fc4977",
+      "type": "acteur",
+      "angle": "securite",
+      "recto": "OWASP",
+      "verso": "Fondation à but non lucratif qui publie des référentiels de sécurité applicative librement accessibles, dont le <b>Top 10</b>, classement des risques les plus critiques des applications web, révisé périodiquement et devenu la référence universelle.<br>Elle publie aussi l'ASVS pour les exigences de vérification, le Cheat Sheet Series pour les pratiques concrètes, et depuis peu un Top 10 dédié aux applications fondées sur des grands modèles de langage.<br><i>Utilité à l'oral : c'est le référentiel que tout le monde cite, il est gratuit et il donne un vocabulaire partagé entre développeurs, architectes et auditeurs.</i>"
+    },
+    {
+      "id": "dev-c3a446",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "La chaîne d'outillage type",
+      "verso": "<b>Versionnement et forge</b> : Git, avec GitHub ou GitLab.<br><b>Intégration continue</b> : GitHub Actions, GitLab CI, Jenkins.<br><b>Qualité et sécurité</b> : SonarQube pour l'analyse continue, Dependabot ou Renovate pour les dépendances, Syft et Grype pour la nomenclature et son analyse.<br><b>Tests</b> : Jest, Vitest, PHPUnit, Cypress ou Playwright pour le bout en bout.<br><b>Observabilité</b> : OpenTelemetry, Prometheus, Grafana.<br><i>Conseil de présentation : citer deux ou trois outils par catégorie suffit et démontre la maîtrise. Énumérer davantage donne l'impression d'un catalogue récité.</i>"
+    },
+    {
+      "id": "dev-5ce1a7",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Les cadres d'agilité à l'échelle",
+      "verso": "<b>SAFe</b> : le plus répandu en grande entreprise, très structuré, avec des cycles de planification communs à plusieurs équipes. Reproché pour sa lourdeur et sa recentralisation de la décision.<br><b>Spotify model</b> : organisation en squads, tribus et guildes, largement copiée, y compris par Spotify qui a depuis indiqué ne plus la pratiquer telle quelle.<br><b>LeSS</b> : mise à l'échelle de Scrum par la simplicité plutôt que par l'ajout de couches.<br><i>Point de lucidité apprécié d'un jury : aucun cadre ne compense l'absence de découpage clair du produit. Coordonner dix équipes sur un système fortement couplé reste douloureux, quel que soit le cadre choisi.</i>"
+    },
+    {
+      "id": "dev-4273ec",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Les assistants IA rendent-ils vraiment les équipes plus productives ?",
+      "verso": "<b>Pour</b> : adoption à 90 %, gains nets sur le code répétitif, les tests, la migration et la prise en main d'une base inconnue ; retour du débit à la hausse en 2025 après l'apprentissage.<br><b>Contre</b> : la stabilité continue de se dégrader, environ 30 % des développeurs se méfient du code produit, et l'accélération de l'écriture engorge la revue qui devient le vrai goulot d'étranglement.<br><b>Position tenable</b> : l'IA amplifie l'état organisationnel existant plutôt qu'elle ne le corrige. Sur une équipe outillée en tests automatisés, revue rapide et déploiement réversible, le gain est réel ; sur une équipe sans ces garde-fous, elle accélère la production de dette."
+    },
+    {
+      "id": "dev-cecca2",
+      "type": "controverse",
+      "angle": "technique",
+      "recto": "Faut-il tout tester ou tester juste ?",
+      "verso": "<b>Pour une couverture élevée</b> : elle sécurise le réusinage, documente le comportement attendu, et sans filet une équipe finit par ne plus oser modifier son code.<br><b>Contre</b> : la suite de tests est elle-même du code à maintenir ; une couverture imposée comme objectif produit des tests creux ; et les tests de bout en bout instables détruisent la confiance dans la chaîne.<br><b>Position tenable</b> : la bonne question n'est pas le pourcentage mais la répartition du risque. Couvrir fortement le coeur métier et les règles de calcul, légèrement les couches de présentation. Un taux global est un indicateur de pilotage médiocre, jamais un objectif."
+    },
+    {
+      "id": "dev-501dea",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "L'open source est-il une force ou une vulnérabilité ?",
+      "verso": "<b>Force</b> : code auditable par tous, absence de verrouillage fournisseur, correction souvent plus rapide que dans le logiciel propriétaire, et mutualisation d'un effort colossal.<br><b>Vulnérabilité</b> : 80 à 90 % du code d'une application vient de l'extérieur, des bibliothèques critiques sont maintenues bénévolement par une poignée de personnes, et XZ Utils a montré qu'un attaquant patient peut acheter la confiance plutôt que casser la technique.<br><b>Position tenable</b> : le problème n'est pas l'ouverture du code mais l'asymétrie entre une consommation industrielle et un financement de la maintenance quasi nul. La réponse n'est pas de renoncer au libre, c'est l'inventaire, le SBOM et le soutien aux mainteneurs critiques."
+    },
+    {
+      "id": "dev-6bd9cc",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "L'agilité à l'échelle tient-elle ses promesses ?",
+      "verso": "<b>Pour</b> : sans cadre commun, dix équipes interdépendantes se bloquent mutuellement ; SAFe apporte une cadence partagée, une visibilité budgétaire et un langage compris par la direction générale.<br><b>Contre</b> : ces cadres réintroduisent la planification longue, la hiérarchie de rôles et la documentation contractuelle que l'agilité voulait alléger, au point qu'on parle d'un cycle en V déguisé.<br><b>Position tenable</b> : le problème traité est réel mais mal posé. La dépendance entre équipes vient d'abord d'une architecture couplée. Selon la loi de Conway, l'organisation et l'architecture se reflètent, donc découper le système correctement fait plus pour l'autonomie des équipes que n'importe quel cadre de coordination."
+    }
+  ]
+}

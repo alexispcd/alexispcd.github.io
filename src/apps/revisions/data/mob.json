@@ -1,0 +1,288 @@
+{
+  "themeId": "mob",
+  "theme": "Mobilité",
+  "version": "2026-08-12",
+  "cardCount": 40,
+  "cards": [
+    {
+      "id": "mob-ef82f6",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "La mobilité dans un système d'information",
+      "verso": "Capacité pour un utilisateur d'accéder aux ressources de l'entreprise depuis n'importe quel lieu, sur n'importe quel terminal, sans dégradation du niveau de service ni de sécurité.<br><b>Trois dimensions à distinguer</b> : la mobilité <i>du terminal</i> (portable, smartphone), la mobilité <i>du lieu</i> (télétravail, déplacement, site client), la mobilité <i>de l'usage</i> (reprendre une tâche d'un appareil à l'autre).<br><i>Conséquence d'architecture : la mobilité fait disparaître le périmètre réseau. Ce n'est plus le réseau qui délimite la confiance, c'est l'identité et l'état du terminal.</i>"
+    },
+    {
+      "id": "mob-f94eb4",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "BYOD, COPE, CYOD, COBO",
+      "verso": "<b>BYOD</b> : l'employé utilise son propre matériel. <b>COPE</b> : l'entreprise fournit le matériel et tolère un usage personnel. <b>CYOD</b> : l'employé choisit dans un catalogue fourni par l'entreprise. <b>COBO</b> : matériel de l'entreprise strictement professionnel, verrouillé.<br><i>Axe de lecture : du BYOD au COBO, le contrôle et le coût pour l'entreprise augmentent, l'acceptation par l'utilisateur diminue.</i><br><i>Constat de terrain à assumer devant un jury : le BYOD n'est le plus souvent pas une politique choisie, c'est ce qui s'installe par défaut quand l'entreprise ne finance pas de flotte mobile.</i>"
+    },
+    {
+      "id": "mob-6075ae",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "MDM, EMM et UEM",
+      "verso": "<b>MDM</b> : gestion du terminal lui-même, inscription, configuration, verrouillage, effacement à distance.<br><b>EMM</b> : élargit au-delà du matériel, en ajoutant la gestion des applications, des contenus et des identités.<br><b>UEM</b> : unifie dans une seule console tous les terminaux, mobiles comme postes de travail, quel que soit le système d'exploitation.<br><i>Ex. : Microsoft Intune, VMware Workspace ONE, Jamf pour l'écosystème Apple.</i><br><i>Trajectoire à retenir : de la gestion du matériel vers la gestion de l'accès. C'est exactement le mouvement qui mène au Zero Trust.</i>"
+    },
+    {
+      "id": "mob-6e3567",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "MAM et conteneurisation applicative",
+      "verso": "Plutôt que de contrôler tout le terminal, on isole les applications et les données professionnelles dans un espace chiffré et cloisonné, sans toucher à la sphère personnelle.<br><b>Ce que cela permet</b> : interdire le copier-coller vers une application personnelle, imposer un code d'accès sur le seul espace professionnel, et effacer uniquement les données de l'entreprise en cas de départ.<br><i>C'est la réponse technique la plus convaincante au dilemme du BYOD : sécuriser la donnée de l'entreprise sans revendiquer le contrôle d'un appareil qui ne lui appartient pas.</i>"
+    },
+    {
+      "id": "mob-466d89",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Zero Trust",
+      "verso": "Modèle qui supprime la confiance implicite accordée à ce qui se trouve à l'intérieur du réseau. Chaque accès est vérifié individuellement, en fonction de l'identité, de l'état du terminal, du contexte et de la sensibilité de la ressource.<br><b>Trois principes</b> : ne jamais faire confiance et toujours vérifier, accorder le moindre privilège nécessaire, supposer la compromission déjà survenue.<br><i>Formule utilisable à l'oral : l'identité est devenu le nouveau périmètre. La question n'est plus de savoir comment l'attaquant entre, mais jusqu'où il peut aller une fois entré.</i><br><i>Référence : NIST, publication spéciale 800-207, 2020.</i>"
+    },
+    {
+      "id": "mob-6b3785",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "VPN et ZTNA",
+      "verso": "<b>VPN</b> : établit un tunnel chiffré qui place le terminal <i>dans</i> le réseau de l'entreprise. Une fois connecté, l'utilisateur voit largement le réseau interne.<br><b>ZTNA</b> : donne accès à une application précise, jamais au réseau, après vérification de l'identité et de la conformité du terminal, avec réévaluation continue.<br><i>Différence décisive : avec un VPN, un poste compromis expose tout le réseau interne. Avec le ZTNA, il n'expose que les applications explicitement autorisées à cet utilisateur.</i>"
+    },
+    {
+      "id": "mob-3c8fff",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "SASE et SSE",
+      "verso": "<b>SASE</b> : convergence des fonctions réseau et des fonctions de sécurité dans un service unique distribué dans le nuage, au plus près de l'utilisateur, quel que soit l'endroit d'où il se connecte.<br><b>SSE</b> : la partie strictement sécurité de cet ensemble, sans le volet réseau.<br><b>Logique</b> : quand les utilisateurs et les applications sont tous hors du siège, faire remonter tout le trafic vers le centre de données pour le filtrer n'a plus de sens.<br><i>Ce modèle est la traduction concrète du Zero Trust au niveau du réseau.</i>"
+    },
+    {
+      "id": "mob-a5251e",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Shadow IT et consumérisation",
+      "verso": "La <b>consumérisation</b> désigne le renversement historique : les technologies grand public sont devenues plus simples et plus agréables que les outils d'entreprise, et l'usage personnel entraîne désormais l'usage professionnel.<br>Le <b>shadow IT</b> en est la conséquence : les collaborateurs adoptent des outils non validés par la DSI, messageries, stockages en ligne, désormais assistants d'IA.<br><i>Lecture d'architecte : le shadow IT est un symptôme, pas une faute. Il signale un besoin réel que la DSI n'a pas couvert. L'interdire sans proposer d'équivalent le déplace simplement hors de vue.</i>"
+    },
+    {
+      "id": "mob-741929",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Accès conditionnel et posture du terminal",
+      "verso": "Mécanisme qui évalue à chaque tentative de connexion un ensemble de signaux, système à jour, chiffrement actif, absence de contournement des protections, localisation, comportement inhabituel, et décide d'autoriser, d'exiger une authentification supplémentaire ou de bloquer.<br><i>Point clé : le contrôle porte sur l'état du terminal, pas seulement sur l'utilisateur. Des identifiants valides présentés depuis un appareil non conforme sont refusés.</i><br><i>C'est le mécanisme qui ferme le chemin de compromission le plus courant du BYOD.</i>"
+    },
+    {
+      "id": "mob-96e96a",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Authentification multifacteur et clés d'accès",
+      "verso": "L'<b>authentification multifacteur</b> combine plusieurs preuves de nature différente : ce que l'on sait, ce que l'on possède, ce que l'on est.<br><b>Toutes ne se valent pas</b> : un code envoyé par SMS est interceptable et se transmet par hameçonnage ; une <b>clé d'accès</b> (passkey), fondée sur la cryptographie asymétrique et liée au site légitime, ne peut pas être rejouée sur un site frauduleux.<br><i>C'est ce qu'on appelle une authentification résistante au hameçonnage, et les grands fournisseurs d'identité estiment qu'elle bloque la très grande majorité des attaques fondées sur l'identité.</i>"
+    },
+    {
+      "id": "mob-09b2b8",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Authentification unique et fédération d'identité",
+      "verso": "L'<b>authentification unique</b> permet de s'authentifier une fois pour accéder à plusieurs applications. La <b>fédération</b> permet à une application de déléguer l'authentification à un fournisseur d'identité tiers.<br><b>Protocoles</b> : SAML, historique et répandu en entreprise ; OpenID Connect, adossé à OAuth 2.0, standard des usages modernes et mobiles.<br><i>Avantage sécurité contre-intuitif : centraliser l'authentification réduit la surface d'attaque, car on applique la politique une seule fois. Mais cela crée un point unique de défaillance qu'il faut protéger en conséquence.</i>"
+    },
+    {
+      "id": "mob-0cf805",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Applications natives, web, hybrides et PWA",
+      "verso": "<b>Native</b> : développée pour un système donné, performances et accès matériel maximaux, mais un développement par plateforme.<br><b>Web</b> : accessible par navigateur, un seul code, mais accès limité aux fonctions du terminal.<br><b>Hybride</b> : un code unique encapsulé dans une enveloppe native. Ex. : React Native, Flutter.<br><b>PWA</b> : application web installable sur l'écran d'accueil, fonctionnant hors ligne, sans passer par un magasin d'applications.<br><i>Argument stratégique de la PWA : elle échappe à la commission et aux règles de validation des magasins d'applications, ce qui en fait autant un choix économique que technique.</i>"
+    },
+    {
+      "id": "mob-69c8af",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Conception adaptative et approche mobile d'abord",
+      "verso": "La <b>conception adaptative</b> ajuste la mise en page à la taille de l'écran. L'approche <b>mobile d'abord</b> consiste à concevoir pour le plus petit écran puis à enrichir, plutôt que l'inverse.<br><b>Pourquoi cet ordre</b> : partir du mobile force à hiérarchiser l'essentiel. Partir du poste fixe conduit à masquer des éléments sur mobile, donc à livrer une version dégradée à la majorité des utilisateurs.<br><i>Convergence à signaler : cette discipline rejoint l'écoconception, puisqu'une interface pensée pour un écran contraint et un réseau lent consomme moins et reste utilisable sur du matériel ancien.</i>"
+    },
+    {
+      "id": "mob-16e3f6",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Effacement à distance et effacement sélectif",
+      "verso": "<b>Effacement complet</b> : le terminal est remis en état d'usine. Approprié pour un appareil de l'entreprise perdu ou volé.<br><b>Effacement sélectif</b> : seules les données et applications professionnelles sont supprimées, la sphère personnelle est préservée.<br><i>Enjeu juridique réel en BYOD : effacer intégralement l'appareil personnel d'un salarié, avec ses photos et ses données privées, expose l'employeur. L'effacement sélectif n'est pas un confort, c'est une nécessité de conformité, et il doit être annoncé dans la charte signée.</i>"
+    },
+    {
+      "id": "mob-d94515",
+      "type": "definition",
+      "angle": "securite",
+      "recto": "Menaces mobiles et hameçonnage par message",
+      "verso": "<b>Smishing</b> : hameçonnage par SMS ou messagerie instantanée. <b>Quishing</b> : hameçonnage par code QR, qui contourne les filtres de courriel.<br><b>Pourquoi le mobile est plus vulnérable</b> : écran réduit qui masque l'adresse complète d'un lien, contexte de mobilité propice à l'inattention, notification qui appelle une réaction immédiate, et absence quasi générale d'outil de détection sur les terminaux personnels.<br><i>Constat à formuler clairement : la bataille de la sécurité du poste de travail a été largement gagnée, celle du terminal mobile reste le principal angle mort des entreprises.</i>"
+    },
+    {
+      "id": "mob-e53872",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Télétravail, travail hybride et travail entièrement à distance",
+      "verso": "<b>Télétravail</b> : exercice de l'activité hors des locaux, de façon régulière ou occasionnelle, encadré par un accord ou une charte.<br><b>Hybride</b> : alternance organisée entre présentiel et distanciel, le modèle largement dominant en France.<br><b>Entièrement à distance</b> : aucun site de rattachement, modèle minoritaire.<br><i>Précision juridique utile : le télétravail est réversible, il repose sur un double volontariat, et l'employeur doit motiver un refus lorsque le poste est éligible.</i>"
+    },
+    {
+      "id": "mob-11d0d4",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Droit à la déconnexion",
+      "verso": "Droit du salarié de ne pas être joignable en dehors de son temps de travail, inscrit dans le code du travail français depuis 2017. Il doit être négocié dans les entreprises soumises à la négociation annuelle obligatoire, ou faire l'objet d'une charte.<br><b>Traduction concrète dans le SI</b> : plages de coupure des notifications, envois différés, absence d'obligation de répondre, indicateurs de connexion en soirée.<br><i>Argument d'oral : c'est le seul contrepoids juridique à l'effacement de la frontière entre vie professionnelle et vie personnelle que produit la mobilité. Sans lui, la disponibilité permanente devient une norme implicite.</i>"
+    },
+    {
+      "id": "mob-ab376e",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "Informatique en périphérie et 5G",
+      "verso": "L'<b>informatique en périphérie</b> rapproche le traitement du lieu où la donnée est produite, au lieu de tout renvoyer vers un centre de données distant.<br><b>Apports pour la mobilité</b> : latence réduite, fonctionnement possible en cas de rupture réseau, moins de données sensibles transportées.<br><b>Rôle de la 5G</b> : latence faible, densité de connexions élevée, et surtout découpage du réseau en tranches permettant de dédier une portion garantie à un usage critique.<br><i>Ex. : maintenance industrielle en réalité augmentée, véhicule connecté, télémédecine.</i>"
+    },
+    {
+      "id": "mob-e2edab",
+      "type": "evenement",
+      "angle": "technique",
+      "recto": "2007 : l'iPhone et le basculement vers le mobile",
+      "verso": "Le lancement de l'iPhone, suivi de l'ouverture de sa boutique d'applications en 2008, impose un modèle où le terminal personnel devient plus performant et plus agréable que le matériel fourni par l'entreprise.<br><i>Portée : c'est l'origine de la consumérisation. Pour la première fois, l'innovation vient du grand public et pénètre l'entreprise par les usages, au lieu de descendre de la recherche militaire ou professionnelle vers le consommateur.</i>"
+    },
+    {
+      "id": "mob-574828",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2010-2012 : l'irruption du BYOD",
+      "verso": "Les salariés apportent massivement leurs terminaux personnels au travail et exigent d'y consulter leur messagerie professionnelle. Les directions informatiques passent de l'interdiction à l'encadrement, faute de pouvoir empêcher le phénomène.<br><i>Portée : premier renversement du rapport de force entre DSI et utilisateurs. La DSI cesse de prescrire l'outil pour devoir sécuriser un choix qu'elle n'a pas fait. C'est une matrice qui se répétera avec le nuage puis avec l'IA générative.</i>"
+    },
+    {
+      "id": "mob-f38460",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2013 : les révélations Snowden",
+      "verso": "La divulgation de programmes de surveillance de masse déclenche une généralisation rapide du chiffrement : messageries chiffrées de bout en bout, chiffrement par défaut du stockage des smartphones, généralisation du protocole HTTPS.<br><i>Portée pour la mobilité : le chiffrement du terminal devient un standard, ce qui protège l'entreprise en cas de perte ou de vol. C'est aussi le point de départ du conflit durable entre besoin d'enquête judiciaire et protection des communications.</i>"
+    },
+    {
+      "id": "mob-749e2b",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2020 : le Zero Trust devient une doctrine officielle",
+      "verso": "Le NIST publie la publication spéciale 800-207, qui formalise l'architecture Zero Trust et lui donne un cadre de référence. Un décret présidentiel américain l'imposera ensuite aux agences fédérales.<br><i>Portée : le concept, formulé dès 2010, cesse d'être un argument commercial pour devenir une norme d'État. C'est ce qui explique sa généralisation rapide dans les appels d'offres et les référentiels.</i>"
+    },
+    {
+      "id": "mob-ec87f8",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "Mars 2020 : la bascule contrainte vers le télétravail",
+      "verso": "Le confinement impose en quelques jours un télétravail massif à des organisations qui n'y étaient pas préparées : ouverture précipitée des accès distants, dimensionnement d'urgence des passerelles VPN, tolérance de fait au matériel personnel.<br><i>Portée double : accélération de dix ans sur les usages, mais aussi création d'une dette de sécurité considérable. Beaucoup d'accès ouverts dans l'urgence n'ont jamais été refermés, et c'est un angle d'analyse très apprécié d'un jury.</i>"
+    },
+    {
+      "id": "mob-32ba80",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2021 : l'affaire Pegasus",
+      "verso": "Un consortium de journalistes révèle l'usage d'un logiciel espion commercial capable de compromettre un smartphone sans aucune action de la victime, et d'accéder aux messages, au micro et à la caméra, y compris sur des messageries chiffrées.<br><i>Portée : démonstration que le chiffrement des communications ne protège pas si le terminal lui-même est compromis. Pour une entreprise, cela justifie de traiter le mobile comme un poste de travail à part entière, avec détection et supervision, et non comme un accessoire.</i>"
+    },
+    {
+      "id": "mob-fa4749",
+      "type": "evenement",
+      "angle": "organisationnel",
+      "recto": "2022-2026 : la stabilisation du modèle hybride",
+      "verso": "Après le pic de la crise sanitaire, la pratique se stabilise autour de deux jours par semaine, encadrée par des accords d'entreprise. Plusieurs grands groupes internationaux annoncent un retour au présentiel, sans que la tendance générale s'inverse en France.<br><i>Portée : le télétravail est passé du statut de dispositif d'urgence à celui d'objet de négociation collective et de critère d'attractivité. Pour la DSI, cela signifie que l'architecture d'accès distant n'est plus temporaire et doit être conçue comme un socle pérenne.</i>"
+    },
+    {
+      "id": "mob-e299aa",
+      "type": "evenement",
+      "angle": "securite",
+      "recto": "2023-2026 : la généralisation des clés d'accès",
+      "verso": "Les principaux éditeurs de systèmes et de navigateurs déploient les clés d'accès, fondées sur les standards FIDO2 et WebAuthn, et les administrations américaines en font la référence pour l'authentification forte. Le mot de passe commence à être retiré des parcours de connexion grand public.<br><i>Portée : première réponse structurelle au hameçonnage, puisque la clé est liée cryptographiquement au site légitime et ne peut pas être rejouée ailleurs. C'est l'évolution la plus importante en authentification depuis vingt ans.</i>"
+    },
+    {
+      "id": "mob-b05292",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "Le télétravail en France, chiffres de référence",
+      "verso": "Au premier semestre 2024, 22 % des salariés du secteur privé télétravaillent au moins une fois par mois, pour une moyenne de 1,9 jour par semaine, contre 3,6 jours au pic de 2021. Environ 55 % des accords d'entreprise plafonnent à deux jours hebdomadaires.<br><i>Sources : Insee et Dares, publication de mars 2025</i><br><i>Lecture : ni disparition, ni généralisation. Le modèle hybride à deux jours s'est imposé comme point d'équilibre.</i>"
+    },
+    {
+      "id": "mob-9d8baa",
+      "type": "chiffre",
+      "angle": "organisationnel",
+      "recto": "La fracture d'accès au télétravail",
+      "verso": "Environ deux cadres sur trois télétravaillent fréquemment, contre deux salariés sur dix parmi les professions intermédiaires et un sur dix parmi les employés. En 2023, 60 % des salariés estimaient occuper un poste non télétravaillable.<br><i>Sources : Dares, enquêtes Tracov ; Insee</i><br><i>Argument à forte valeur devant un jury : la mobilité produit une inégalité nouvelle entre les métiers qui peuvent en bénéficier et les autres. Un sujet sur le télétravail traité sans cette dimension sociale reste incomplet.</i>"
+    },
+    {
+      "id": "mob-367b7f",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "Zero Trust : l'écart entre l'intention et la mise en oeuvre",
+      "verso": "82 % des organisations considèrent le Zero Trust comme essentiel à leur stratégie de sécurité, mais seulement 17 % déclarent l'avoir réellement déployé de bout en bout. Le secteur financier est le plus avancé, à environ 50 %, sous l'effet de la réglementation sur la résilience opérationnelle.<br><i>Source : Zero Trust Statistics Report, Ordr, 2026</i><br><i>Ce décalage est le vrai sujet : le Zero Trust n'est pas un produit à acheter, c'est une refonte progressive de l'identité, du réseau et du parc.</i>"
+    },
+    {
+      "id": "mob-d57418",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "Le poids des terminaux non gérés dans les compromissions",
+      "verso": "46 % des systèmes compromis contenant des identifiants d'entreprise étaient des appareils non gérés par l'organisation.<br><i>Source : Verizon Data Breach Investigations Report</i><br><i>C'est le chiffre le plus utile pour argumenter sur le BYOD : le risque n'est pas théorique, et la parade est connue, conditionner l'accès à la conformité du terminal plutôt qu'à la seule validité des identifiants.</i>"
+    },
+    {
+      "id": "mob-89fc54",
+      "type": "chiffre",
+      "angle": "securite",
+      "recto": "L'identité comme point de bascule d'une attaque",
+      "verso": "Selon l'édition 2026 du rapport Verizon, l'exploitation de vulnérabilités est devenue le premier vecteur d'accès initial, à 31 %, devant les identifiants compromis, retombés à 13 %. Mais les identifiants compromis interviennent dans 39 % des compromissions considérées sur l'ensemble de la chaîne d'attaque.<br><i>Lecture d'architecte : la vulnérabilité fait entrer, l'identité détermine jusqu'où l'attaquant progresse. C'est exactement ce que le Zero Trust cherche à contenir.</i>"
+    },
+    {
+      "id": "mob-5797e1",
+      "type": "chiffre",
+      "angle": "economique",
+      "recto": "Ce que rapporte une authentification forte bien choisie",
+      "verso": "Les grands fournisseurs d'identité estiment qu'une authentification multifacteur résistante au hameçonnage bloque plus de 99 % des attaques fondées sur l'identité. Le rapport IBM sur le coût d'une violation attribue par ailleurs une économie de l'ordre de 1,76 million de dollars aux organisations ayant déployé une approche Zero Trust.<br><i>Sources : Microsoft ; IBM, Cost of a Data Breach Report 2025</i><br><i>Rapport coût-bénéfice à mettre en avant : le déploiement de clés d'accès est l'une des rares mesures de sécurité au retour sur investissement immédiat et mesurable.</i>"
+    },
+    {
+      "id": "mob-a01b7a",
+      "type": "acteur",
+      "angle": "souverainete",
+      "recto": "L'ANSSI et le nomadisme numérique",
+      "verso": "L'agence publie des recommandations spécifiques sur le nomadisme et les terminaux mobiles : chiffrement du terminal, authentification forte, cloisonnement des usages, mise à jour systématique, interdiction des réseaux non maîtrisés sans tunnel chiffré, et sensibilisation à l'affichage en lieu public.<br><b>Position constante de l'agence sur le BYOD</b> : à éviter pour les données sensibles, et à défaut, à encadrer par une conteneurisation stricte et une charte signée.<br><i>Utile à citer : l'ANSSI recommande de fournir un terminal maîtrisé plutôt que de sécuriser un terminal personnel, ce qui pose la question en termes de budget et non de technique.</i>"
+    },
+    {
+      "id": "mob-fd2c58",
+      "type": "acteur",
+      "angle": "economique",
+      "recto": "Apple et Google, arbitres de la mobilité d'entreprise",
+      "verso": "Les deux systèmes concentrent la quasi-totalité du parc mondial. Ce sont eux qui définissent les interfaces de gestion à distance, les règles des magasins d'applications, la durée de support logiciel de chaque appareil et les commissions prélevées sur les transactions.<br><i>Conséquence stratégique : une politique de mobilité d'entreprise est structurellement dépendante des choix de deux acteurs non européens. La durée de support qu'ils fixent détermine directement le rythme de renouvellement du parc, donc son coût et son empreinte environnementale.</i>"
+    },
+    {
+      "id": "mob-4fcfa5",
+      "type": "acteur",
+      "angle": "organisationnel",
+      "recto": "Le cadre juridique français du télétravail",
+      "verso": "<b>Code du travail</b> : télétravail défini et encadré, double volontariat, réversibilité, obligation de motiver un refus pour un poste éligible.<br><b>Accord national interprofessionnel de 2020</b> : cadre de référence négocié après la crise sanitaire, sur l'équipement, la prise en charge des frais, le maintien du lien et la prévention de l'isolement.<br><b>Droit à la déconnexion</b> : obligation de négociation depuis 2017.<br><i>Point rarement maîtrisé et qui fait mouche : l'accident survenu au domicile pendant les heures de télétravail est présumé être un accident du travail.</i>"
+    },
+    {
+      "id": "mob-56e79f",
+      "type": "acteur",
+      "angle": "technique",
+      "recto": "L'alliance FIDO et les standards d'identité",
+      "verso": "Consortium industriel à l'origine des spécifications FIDO2 et, avec le W3C, de WebAuthn, qui fondent les clés d'accès. Le principe : la clé privée ne quitte jamais le terminal et le secret n'est jamais transmis au service.<br><b>Conséquence directe</b> : il n'y a plus de base de mots de passe à voler côté serveur, et rien à rejouer côté attaquant.<br><i>À mettre en regard des protocoles de fédération, SAML et OpenID Connect, qui gèrent la circulation de l'identité entre applications. Les deux couches sont complémentaires : FIDO prouve qui vous êtes, la fédération transporte cette preuve.</i>"
+    },
+    {
+      "id": "mob-a79767",
+      "type": "controverse",
+      "angle": "economique",
+      "recto": "Le BYOD est-il une économie ou une fausse bonne idée ?",
+      "verso": "<b>Pour</b> : pas d'achat de flotte, matériel souvent plus récent que celui de l'entreprise, utilisateur déjà à l'aise avec son appareil, et satisfaction supérieure.<br><b>Contre</b> : 46 % des systèmes compromis porteurs d'identifiants d'entreprise sont des appareils non gérés ; le support devient ingérable face à la diversité du parc ; l'encadrement juridique du contrôle et de l'effacement est lourd ; et la frontière entre vie professionnelle et vie privée s'efface.<br><b>Position tenable</b> : l'économie est réelle sur le matériel et illusoire sur le coût complet, car elle est reprise par le support, l'outillage de cloisonnement et le risque. Le COPE, ou le BYOD strictement conteneurisé, est le compromis le plus défendable."
+    },
+    {
+      "id": "mob-21a05d",
+      "type": "controverse",
+      "angle": "organisationnel",
+      "recto": "Le télétravail nuit-il à la performance collective ?",
+      "verso": "<b>Pour le télétravail</b> : moins d'interruptions sur les tâches de concentration, temps de trajet supprimé, élargissement du bassin de recrutement, et critère d'attractivité devenu déterminant pour les cadres.<br><b>Contre</b> : affaiblissement des échanges informels d'où naissent la coordination et l'innovation, intégration des nouveaux arrivants nettement plus difficile, transmission des compétences ralentie, et risque d'isolement.<br><b>Position tenable</b> : les études convergent sur un optimum autour de deux jours, ce qui correspond exactement à la pratique constatée en France. Le débat pertinent ne porte plus sur le nombre de jours mais sur ce que l'on fait du temps en présentiel, qui doit être consacré au collectif plutôt qu'à des tâches faisables seul."
+    },
+    {
+      "id": "mob-0cf94d",
+      "type": "controverse",
+      "angle": "technique",
+      "recto": "Le VPN est-il mort ?",
+      "verso": "<b>Pour son remplacement</b> : il accorde un accès réseau trop large, expose une passerelle en frontal, supporte mal la montée en charge, dégrade l'expérience utilisateur, et raisonne encore en périmètre alors que le périmètre a disparu.<br><b>Pour son maintien</b> : il est éprouvé, maîtrisé, reste indispensable pour des protocoles anciens et des applications internes non modernisables, et une bascule vers le ZTNA suppose un référentiel d'identité propre que beaucoup d'organisations n'ont pas.<br><b>Position tenable</b> : le VPN ne disparaît pas, il se réduit au périmètre résiduel des applications qui ne peuvent pas être exposées autrement. La cible réaliste est une coexistence longue, pas un remplacement."
+    },
+    {
+      "id": "mob-3a2320",
+      "type": "controverse",
+      "angle": "securite",
+      "recto": "Jusqu'où l'employeur peut-il contrôler un terminal ?",
+      "verso": "<b>Pour un contrôle étendu</b> : l'employeur est responsable de la sécurité des données qu'il traite, la réglementation lui impose des mesures techniques appropriées, et un terminal non conforme met en danger toute l'organisation.<br><b>Contre</b> : la géolocalisation, l'inventaire des applications installées et l'effacement complet d'un appareil personnel touchent à la vie privée du salarié, que le droit du travail protège jusque sur le lieu de travail.<br><b>Position tenable</b> : le critère est la proportionnalité, et la solution technique existe. Le cloisonnement applicatif permet de contrôler strictement ce qui appartient à l'entreprise sans revendiquer aucun droit sur le reste. À défaut, une charte signée et une information loyale sont un minimum, pas une option."
+    }
+  ]
+}
