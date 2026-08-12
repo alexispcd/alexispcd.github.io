@@ -3,18 +3,23 @@ import { useNavigate } from 'react-router-dom'
 import { Box, Button, Card, CircularProgress, Divider, Typography } from '@mui/material'
 import TaskAlt from '@mui/icons-material/TaskAlt'
 import StyleOutlined from '@mui/icons-material/StyleOutlined'
-import Tune from '@mui/icons-material/Tune'
 import WarningAmber from '@mui/icons-material/WarningAmber'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx } from '../../styles/glass'
 import { cards } from './data'
 import { EMPTY_FILTERS, addDays, buildSession, matchesFilters, todayKey } from './leitner'
-import FilterSheet from './FilterSheet'
+import SessionBar, { BAR_HEIGHT } from './SessionBar'
 import StatsPanel from './StatsPanel'
 import useProgress from './useProgress'
 
 const PAGE_SX = { height: '100%', overflowY: 'auto' }
 const INNER_SX = { maxWidth: 720, mx: 'auto', px: 2.5, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }
+// Meme page, mais degagee sous la barre flottante : hauteur de la barre, son
+// decalage bas et une marge de respiration.
+const INNER_WITH_BAR_SX = {
+  ...INNER_SX,
+  pb: `calc(max(16px, env(safe-area-inset-bottom, 0px) + 12px) + ${BAR_HEIGHT + 24}px)`,
+}
 
 const Eyebrow = ({ children }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
@@ -62,7 +67,6 @@ const RevisionsHome = () => {
   const navigate = useNavigate()
   const { rows, loading, error, reload } = useProgress()
   const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [sheetOpen, setSheetOpen] = useState(false)
 
   // Apercu de la session du jour : memes regles que la session reelle, donc le
   // chiffre annonce applique deja le plafond de cartes nouvelles.
@@ -101,11 +105,6 @@ const RevisionsHome = () => {
   }, [preview])
 
   const start = () => navigate('/revisions/session', { state: { filters } })
-
-  const applyFilters = (next) => {
-    setFilters(next)
-    setSheetOpen(false)
-  }
 
   // Etat 1 : aucun JSON de cartes dans le bundle.
   if (cards.length === 0) {
@@ -149,7 +148,7 @@ const RevisionsHome = () => {
 
   return (
     <Box sx={PAGE_SX}>
-      <Box sx={INNER_SX}>
+      <Box sx={INNER_WITH_BAR_SX}>
 
         {total === 0 ? (
           /* Etat 2 : rien a reviser aujourd'hui. */
@@ -210,29 +209,13 @@ const RevisionsHome = () => {
           <StatsPanel cards={cards} rows={rows} />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1.25, mt: 2.75 }}>
-          <Button
-            variant="outlined"
-            color="inherit"
-            onClick={() => setSheetOpen(true)}
-            aria-label="Filtrer la session"
-            sx={{ width: 52, minWidth: 52, height: 52, flex: 'none' }}
-          >
-            <Tune fontSize="small" />
-          </Button>
-          <Button variant="contained" fullWidth sx={{ height: 52 }} disabled={total === 0} onClick={start}>
-            Démarrer une session
-          </Button>
-        </Box>
-
       </Box>
 
-      <FilterSheet
-        open={sheetOpen}
+      <SessionBar
         filters={filters}
-        onApply={applyFilters}
-        onClose={() => setSheetOpen(false)}
-        countFor={(draft) => buildSession(cards, rows, { filters: draft }).queue.length}
+        onFiltersChange={setFilters}
+        onStart={start}
+        startDisabled={total === 0}
       />
     </Box>
   )
