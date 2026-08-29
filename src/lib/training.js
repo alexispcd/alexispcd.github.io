@@ -322,6 +322,9 @@ export const getCorosStatus = () => callFunction('coros-oauth', { action: 'statu
 /** Prepare une connexion OAuth Coros. -> { url } vers l'ecran d'autorisation. */
 export const startCorosOauth = () => callFunction('coros-oauth', { action: 'start' })
 
+/** Deconnecte Coros (suppression locale des tokens). -> { connected: false } */
+export const disconnectCoros = () => callFunction('coros-oauth', { action: 'disconnect' })
+
 // ─────────────────────────────────────────────────────────────────────────────
 // REALTIME / POLLING — suivi du statut de génération
 // ─────────────────────────────────────────────────────────────────────────────

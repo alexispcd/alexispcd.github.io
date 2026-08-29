@@ -106,6 +106,7 @@ async function handleAction(req: Request): Promise<Response> {
 
   if (action === "status") return await handleStatus(userId)
   if (action === "start") return await handleStart(userId)
+  if (action === "disconnect") return await handleDisconnect(userId)
   return json(400, { error: "Action inconnue" })
 }
 
@@ -125,6 +126,35 @@ async function handleStatus(userId: string): Promise<Response> {
 
   const connected = Boolean(data?.expires_at) && new Date(data!.expires_at).getTime() > Date.now()
   return json(200, { connected })
+}
+
+/**
+ * Deconnexion purement locale : suppression de la ligne coros_tokens. Le
+ * revocation_endpoint de Coros n'accepte pas les clients publics sans secret
+ * (401 systematique), aucun appel de revocation n'est donc tente.
+ */
+async function handleDisconnect(userId: string): Promise<Response> {
+  const supabaseAdmin = adminClient()
+
+  const { error: tokenError } = await supabaseAdmin
+    .from("coros_tokens")
+    .delete()
+    .eq("user_id", userId)
+
+  if (tokenError) {
+    console.error("[coros-oauth] disconnect delete error:", tokenError.code, tokenError.message)
+    return json(500, { error: "Deconnexion Coros impossible" })
+  }
+
+  // Etats OAuth restes en attente pour cet utilisateur : rien ne sert de les garder.
+  const { error: stateError } = await supabaseAdmin
+    .from("coros_oauth_state")
+    .delete()
+    .eq("user_id", userId)
+  if (stateError) console.error("[coros-oauth] disconnect state cleanup error:", stateError.message)
+
+  // Une suppression qui ne touche aucune ligne n'est pas une erreur.
+  return json(200, { connected: false })
 }
 
 /** Prepare un couple state/verifier et retourne l'URL d'autorisation Coros. */

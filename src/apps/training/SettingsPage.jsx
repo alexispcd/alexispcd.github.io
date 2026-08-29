@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Box, Typography, Button, Chip, CircularProgress, Alert } from '@mui/material'
+import {
+  Box, Typography, Button, Chip, CircularProgress, Alert,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+} from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { cardSx } from '../../styles/glass'
-import { getCorosStatus, startCorosOauth } from '../../lib/training'
+import { cardSx, glassSx, GLASS_BACKDROP } from '../../styles/glass'
+import { getCorosStatus, startCorosOauth, disconnectCoros } from '../../lib/training'
 
 // Coins concentriques : radius carte = inset (16 = p 2) + radius bouton (12) = 28.
 const CARD_INSET = 2
@@ -13,6 +16,15 @@ const CARD_RADIUS = '28px'
 // Vert aligne sur primary.main, orange deja utilise pour la zone B.
 const connectedColor = (t) => (t.palette.mode === 'dark' ? '#5DCAA5' : '#1D9E75')
 const DISCONNECTED_COLOR = '#f97316'
+
+// Bandeau unique de la page. Une seule source d'alerte, alimentee par le retour
+// OAuth (parametre de requete), par la deconnexion et par les erreurs d'appel.
+const noticeFromParam = (result) => {
+  if (!result) return null
+  return result === 'ok'
+    ? { severity: 'success', text: 'Compte Coros connecté.' }
+    : { severity: 'error', text: 'La connexion Coros a échoué. Réessaie.' }
+}
 
 const SectionLabel = ({ children }) => (
   <Typography
@@ -31,17 +43,21 @@ const SectionLabel = ({ children }) => (
 const SettingsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [connected, setConnected] = useState(null) // null = chargement
-  const [error, setError] = useState(null)
   // Resultat du retour OAuth, lu une seule fois au montage : l'URL est nettoyee
   // juste apres pour que le message ne persiste pas au rechargement.
-  const [notice, setNotice] = useState(() => searchParams.get('coros'))
+  const [notice, setNotice] = useState(() => noticeFromParam(searchParams.get('coros')))
   const [starting, setStarting] = useState(false)
+
+  // Deconnexion : confirmation, appel en cours, erreur affichee dans la modale.
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [disconnectError, setDisconnectError] = useState(null)
 
   const refresh = useCallback(() => {
     getCorosStatus()
       .then((res) => setConnected(Boolean(res?.connected)))
       .catch((e) => {
-        setError(e.message || 'Impossible de lire l’état de la connexion Coros.')
+        setNotice({ severity: 'error', text: e.message || 'Impossible de lire l’état de la connexion Coros.' })
         setConnected(false)
       })
   }, [])
@@ -66,13 +82,33 @@ const SettingsPage = () => {
 
   const handleConnect = async () => {
     setStarting(true)
-    setError(null)
+    setNotice(null)
     try {
       const { url } = await startCorosOauth()
       window.location.href = url
     } catch (e) {
-      setError(e.message || 'Impossible de démarrer la connexion Coros.')
+      setNotice({ severity: 'error', text: e.message || 'Impossible de démarrer la connexion Coros.' })
       setStarting(false)
+    }
+  }
+
+  const openDisconnect = () => {
+    setDisconnectError(null)
+    setConfirmDisconnect(true)
+  }
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true)
+    setDisconnectError(null)
+    try {
+      const res = await disconnectCoros()
+      setConnected(Boolean(res?.connected))
+      setConfirmDisconnect(false)
+      setNotice({ severity: 'success', text: 'Compte Coros déconnecté.' })
+    } catch (e) {
+      setDisconnectError(e.message || 'La déconnexion a échoué.')
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -82,18 +118,10 @@ const SettingsPage = () => {
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
 
-        {notice === 'ok' && (
-          <Alert severity="success" sx={{ mt: 2 }} onClose={() => setNotice(null)}>
-            Compte Coros connecté.
+        {notice && (
+          <Alert severity={notice.severity} sx={{ mt: 2 }} onClose={() => setNotice(null)}>
+            {notice.text}
           </Alert>
-        )}
-        {notice && notice !== 'ok' && (
-          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setNotice(null)}>
-            La connexion Coros a échoué. Réessaie.
-          </Alert>
-        )}
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>
         )}
 
         <SectionLabel>Connexions</SectionLabel>
@@ -133,9 +161,49 @@ const SettingsPage = () => {
               ? <CircularProgress size={18} color="inherit" />
               : connected ? 'Reconnecter Coros' : 'Connecter Coros'}
           </Button>
+
+          {connected && (
+            <Button
+              variant="text"
+              fullWidth
+              sx={{ mt: 1, color: DISCONNECTED_COLOR }}
+              disabled={starting}
+              onClick={openDisconnect}
+            >
+              Déconnecter
+            </Button>
+          )}
         </Box>
 
       </Box>
+
+      {/* Confirmation de deconnexion */}
+      <Dialog
+        open={confirmDisconnect}
+        onClose={() => !disconnecting && setConfirmDisconnect(false)}
+        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Déconnecter Coros</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Les activités ne seront plus importées. Tu pourras te reconnecter à tout moment.
+          </DialogContentText>
+          {disconnectError && <Alert severity="error" sx={{ mt: 2 }}>{disconnectError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmDisconnect(false)} disabled={disconnecting} color="inherit">
+            Annuler
+          </Button>
+          <Button
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            variant="contained"
+            sx={{ bgcolor: DISCONNECTED_COLOR, color: '#fff', '&:hover': { bgcolor: DISCONNECTED_COLOR } }}
+          >
+            {disconnecting ? <CircularProgress size={18} color="inherit" /> : 'Déconnecter'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
