@@ -1,19 +1,15 @@
 /**
  * Client partagé pour l'API Anthropic (api.anthropic.com/v1/messages).
  *
- * Deux modes :
- *   - anthropicSimple()     : appel classique (model, system, messages, max_tokens).
- *   - anthropicWithCoros()  : ajoute le MCP Coros (header beta + mcp_servers +
- *                             mcp_toolset référençant le serveur par son nom).
+ * Un seul mode : anthropicSimple(), appel classique (model, system, messages,
+ * max_tokens). L'accès aux données Coros ne passe plus par un modèle : voir
+ * _shared/coros-mcp.ts, client MCP direct.
  *
  * La clé est lue depuis le secret ANTHROPIC_API_KEY.
  */
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 const ANTHROPIC_VERSION = "2023-06-01"
-const MCP_BETA = "mcp-client-2025-11-20"
-const COROS_MCP_URL = "https://mcpeu.coros.com/mcp"
-const COROS_SERVER_NAME = "coros"
 
 // Un appel qui traîne devient une erreur applicative propre plutôt qu'une mort
 // silencieuse de l'Edge Function (limite runtime).
@@ -33,19 +29,9 @@ interface SimpleParams {
   timeoutMs?: number
 }
 
-interface CorosParams extends SimpleParams {
-  corosToken: string
-  /** Outils MCP à activer par leur nom (max 2-3 par appel — limites CPU). */
-  tools: string[]
-}
-
 export interface AnthropicContentBlock {
   type: string
   text?: string
-  /** Présent sur les blocs mcp_tool_result. */
-  is_error?: boolean
-  /** Sous-contenu des blocs mcp_tool_result (items { type, text }). */
-  content?: Array<{ type: string; text?: string }>
   [key: string]: unknown
 }
 
@@ -60,25 +46,6 @@ export function extractText(data: AnthropicResponse): string {
   return blocks.filter((b) => b.type === "text").map((b) => b.text ?? "").join("")
 }
 
-/**
- * Retourne le texte de chaque bloc mcp_tool_result de la réponse (un par appel
- * d'outil MCP), en concaténant les items text de son sous-tableau `content`.
- * Les blocs en erreur (is_error) sont ignorés mais loggés.
- */
-export function extractMcpToolResults(data: AnthropicResponse): string[] {
-  const out: string[] = []
-  for (const b of data.content ?? []) {
-    if (b.type !== "mcp_tool_result") continue
-    const text = (b.content ?? []).map((c) => c.text ?? "").join("")
-    if (b.is_error) {
-      console.error("[anthropic] mcp_tool_result is_error:", text.slice(0, 500))
-      continue
-    }
-    if (text) out.push(text)
-  }
-  return out
-}
-
 async function callAnthropic(
   body: Record<string, unknown>,
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
@@ -91,8 +58,6 @@ async function callAnthropic(
     "anthropic-version": ANTHROPIC_VERSION,
     "Content-Type": "application/json",
   }
-  // Le mode MCP nécessite l'en-tête beta dédié.
-  if ("mcp_servers" in body) headers["anthropic-beta"] = MCP_BETA
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -131,71 +96,4 @@ export async function anthropicSimple(p: SimpleParams): Promise<string> {
   const text = extractText(data)
   if (!text) throw new Error("Réponse Anthropic vide")
   return text
-}
-
-/**
- * Appel avec MCP Coros. Le serveur "coros" est déclaré dans `mcp_servers` ET
- * référencé dans `tools` via un `mcp_toolset` (obligatoire, sinon l'API renvoie
- * "MCP server defined but not referenced"). Tous les outils sont désactivés par
- * défaut ; seuls ceux listés dans `tools` sont activés.
- */
-export async function anthropicWithCoros(p: CorosParams): Promise<string> {
-  if (!p.tools.length) throw new Error("anthropicWithCoros : au moins un outil MCP requis")
-
-  const configs: Record<string, { enabled: boolean }> = {}
-  for (const name of p.tools) configs[name] = { enabled: true }
-
-  const data = await callAnthropic({
-    model: p.model,
-    max_tokens: p.max_tokens,
-    ...(p.system ? { system: p.system } : {}),
-    messages: p.messages,
-    tools: [{
-      type: "mcp_toolset",
-      mcp_server_name: COROS_SERVER_NAME,
-      default_config: { enabled: false },
-      configs,
-    }],
-    mcp_servers: [{
-      type: "url",
-      url: COROS_MCP_URL,
-      name: COROS_SERVER_NAME,
-      authorization_token: p.corosToken,
-    }],
-  })
-  const text = extractText(data)
-  if (!text) throw new Error("Réponse Anthropic vide (MCP)")
-  return text
-}
-
-/**
- * Identique à anthropicWithCoros mais retourne la réponse Anthropic complète
- * (blocs content, dont les mcp_tool_result) au lieu du seul texte. À utiliser
- * quand on veut parser en code le résultat brut d'un outil MCP plutôt que de
- * laisser le modèle reformuler les données.
- */
-export async function anthropicWithCorosRaw(p: CorosParams): Promise<AnthropicResponse> {
-  if (!p.tools.length) throw new Error("anthropicWithCorosRaw : au moins un outil MCP requis")
-
-  const configs: Record<string, { enabled: boolean }> = {}
-  for (const name of p.tools) configs[name] = { enabled: true }
-
-  return await callAnthropic({
-    model: p.model,
-    max_tokens: p.max_tokens,
-    ...(p.system ? { system: p.system } : {}),
-    messages: p.messages,
-    tools: [{
-      type: "mcp_toolset",
-      mcp_server_name: COROS_SERVER_NAME,
-      default_config: { enabled: false },
-      configs,
-    }],
-    mcp_servers: [{
-      type: "url",
-      url: COROS_MCP_URL,
-      name: COROS_SERVER_NAME,
-      authorization_token: p.corosToken,
-    }],
-  }, p.timeoutMs)
 }

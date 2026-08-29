@@ -1,12 +1,8 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
-import {
-  type AnthropicResponse,
-  anthropicSimple,
-  anthropicWithCorosRaw,
-  extractMcpToolResults,
-} from "../_shared/anthropic.ts"
+import { anthropicSimple } from "../_shared/anthropic.ts"
+import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { dayTs, todayISO } from "../_shared/training/weeks.ts"
 import { type Comparison, type Lap, matchStepsToLaps, type Step } from "./match.ts"
@@ -424,35 +420,19 @@ type LapsResult =
   | { failure: string }
 
 /**
- * Récupère les laps via le connecteur MCP (queryActivityLapData) puis les parse
- * en code déterministe. Le LLM n'est qu'un déclencheur d'appel d'outil : sa
- * réponse texte est ignorée, seul le bloc mcp_tool_result est exploité.
+ * Récupère les laps via un appel MCP direct à queryActivityLapData (client
+ * JSON-RPC sans LLM) puis les parse en code déterministe.
  */
 async function fetchLaps(corosToken: string, labelId: string, stepCount: number, sportType: number): Promise<LapsResult> {
-  const system =
-    "Tu appelles l'outil MCP demandé, rien d'autre. Ta réponse texte sera ignorée : " +
-    "seul l'appel d'outil compte. N'interprète pas, ne reformule pas, n'invente pas de données."
-  const userMessage =
-    `Appelle queryActivityLapData avec labelId="${labelId}" et sportType=${sportType}.`
-
-  let data: AnthropicResponse
+  let raw: string
   try {
-    data = await anthropicWithCorosRaw({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-      corosToken,
-      tools: ["queryActivityLapData"],
-    })
+    raw = await callCorosTool(corosToken, "queryActivityLapData", { labelId, sportType })
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
     console.error("[complete-session] MCP laps error:", detail)
     return { failure: `Appel Coros en échec (${detail})` }
   }
 
-  const results = extractMcpToolResults(data)
-  const raw = results.join("\n")
   // Indispensable au premier run pour vérifier le schéma réel Coros.
   console.log("[complete-session] raw laps:", raw.slice(0, 2000))
 
@@ -461,14 +441,9 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number,
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
-  } catch {
-    // Plusieurs blocs concaténés ne forment pas un JSON valide : tenter le premier seul.
-    try {
-      parsed = JSON.parse(results[0] ?? "")
-    } catch (err) {
-      console.error("[complete-session] laps JSON parse error:", err instanceof Error ? err.message : err)
-      return { failure: "Données Coros illisibles (JSON invalide)" }
-    }
+  } catch (err) {
+    console.error("[complete-session] laps JSON parse error:", err instanceof Error ? err.message : err)
+    return { failure: "Données Coros illisibles (JSON invalide)" }
   }
 
   const lapGroups = (parsed as Record<string, unknown> | null)?.lapGroups

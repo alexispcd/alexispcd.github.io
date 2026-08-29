@@ -1,8 +1,8 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
-import { anthropicWithCoros } from "../_shared/anthropic.ts"
-import { extractJson } from "../_shared/extract-json.ts"
+import { callCorosTool } from "../_shared/coros-mcp.ts"
+import { parseSportRecords } from "../_shared/coros-parse.ts"
 import { dayTs, mondayOf, sundayOf, todayISO } from "../_shared/training/weeks.ts"
 
 const CORS = {
@@ -10,24 +10,14 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const TZ = "Europe/Paris"
 // 100 = course à pied, 102 = trail : on veut les deux comme candidats à la liaison.
+// Doit rester un TABLEAU : un scalaire fait échouer l'appel Coros.
 const SPORT_CODES = [100, 102]
 
 const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
 
 /** yyyy-MM-dd → yyyyMMdd (format Coros). */
 const toCompact = (iso: string) => iso.replace(/-/g, "")
-
-interface RawRecord {
-  labelId?: string
-  date?: string
-  startTimestamp?: number | null
-  sport_type?: number | null
-  distance_m?: number
-  duration_sec?: number
-  avg_hr?: number | null
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
@@ -98,83 +88,49 @@ async function handleRequest(req: Request): Promise<Response> {
   const startDate = toCompact(mondayStr)
   const endDate = toCompact(dayTs(endStr) < dayTs(mondayStr) ? mondayStr : endStr)
 
-  // 5. Appel MCP (querySportRecords uniquement) — le modèle relaie les données brutes,
-  //    aucune décision IA : le tri et la normalisation sont faits en code.
-  const system =
-    "Tu es un relais de données Coros. Tu appelles l'outil MCP demandé et tu retournes " +
-    "ses données brutes au format JSON strict, sans interprétation, sans arrondi, sans invention. " +
-    "Réponds UNIQUEMENT avec le JSON, commence par { et termine par }."
-
-  const userMessage = [
-    `Appelle querySportRecords avec startDate=${startDate}, endDate=${endDate}, limit=20, ` +
-      `sportTypeCodes=[${SPORT_CODES.join(", ")}], timezone=${TZ}.`,
-    "Retourne chaque activité au format :",
-    JSON.stringify({
-      records: [{
-        labelId: "identifiant labelId de l'activité (string)",
-        date: "date de l'activité au format yyyy-MM-dd",
-        startTimestamp: "horodatage de début de l'activité en MILLISECONDES (nombre) ou null",
-        sport_type: "code du type de sport (nombre) : 100 = course à pied, 102 = trail",
-        distance_m: "distance totale en MÈTRES (nombre)",
-        duration_sec: "durée totale en SECONDES (nombre)",
-        avg_hr: "FC moyenne en bpm (nombre) ou null si absente",
-      }],
-    }),
-    "Si aucune activité, retourne {\"records\":[]}.",
-  ].join("\n")
-
-  let rawText: string
+  // 5. Appel MCP direct a querySportRecords (aucun LLM). Les dix parametres du
+  //    schema sont declares required : un appel partiel est rejete. Les bornes
+  //    hautes a 0 valent "pas de borne", verifie par appel reel.
+  let records
   try {
-    rawText = await anthropicWithCoros({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
-      system,
-      messages: [{ role: "user", content: userMessage }],
-      corosToken,
-      tools: ["querySportRecords"],
+    const text = await callCorosTool(corosToken, "querySportRecords", {
+      startDate,
+      endDate,
+      sportTypeCodes: SPORT_CODES,
+      minDistanceKm: 0,
+      maxDistanceKm: 0,
+      minDurationMinutes: 0,
+      maxDurationMinutes: 0,
+      maxAveragePace: "null",
+      locationKeyword: "null",
+      limit: 20,
     })
+    // Un format devenu illisible doit remonter en 502 : renvoyer une liste vide
+    // ferait passer une panne pour une absence d'activité.
+    records = parseSportRecords(text)
   } catch (err) {
-    console.error("[coros-match] Anthropic/MCP error:", err instanceof Error ? err.message : err)
-    return json(502, { error: "Erreur lors de la récupération des activités Coros" })
+    const detail = err instanceof Error ? err.message : String(err)
+    console.error("[coros-match] Coros error:", detail)
+    return json(502, { error: "Erreur lors de la récupération des activités Coros", detail })
   }
 
-  let parsed: { records?: RawRecord[] }
-  try {
-    parsed = JSON.parse(extractJson(rawText))
-  } catch (err) {
-    console.error("[coros-match] JSON parse error:", err, "raw:", rawText.slice(0, 300))
-    return json(200, { candidates: [] })
-  }
-
-  // 6. Normalisation + tri par proximité de date (en code)
+  // 6. Tri par proximité de date (en code). Le parseur garantit déjà les types,
+  //    seule l'allure reste à dériver.
   const targetTs = dayTs(session.scheduled_date ?? anchor)
-  const candidates = (parsed.records ?? [])
-    .filter((r) => r.labelId)
-    .map((r) => {
-      const distance_m = typeof r.distance_m === "number" ? r.distance_m : null
-      const duration_sec = typeof r.duration_sec === "number" ? r.duration_sec : null
-      const avg_pace_sec = distance_m && distance_m > 0 && duration_sec
-        ? Math.round(duration_sec / (distance_m / 1000))
-        : null
-      return {
-        labelId: r.labelId!,
-        date: r.date ?? null,
-        startTimestamp: typeof r.startTimestamp === "number" ? r.startTimestamp : null,
-        sport_type: typeof r.sport_type === "number" ? r.sport_type : null,
-        distance_m,
-        duration_sec,
-        avg_pace_sec,
-        avg_hr: typeof r.avg_hr === "number" ? r.avg_hr : null,
-      }
-    })
-    .sort((a, b) => {
-      const da = Math.abs(dayTs(a.date) - targetTs)
-      const db = Math.abs(dayTs(b.date) - targetTs)
-      if (Number.isNaN(da) && Number.isNaN(db)) return 0
-      if (Number.isNaN(da)) return 1
-      if (Number.isNaN(db)) return -1
-      return da - db
-    })
+  const candidates = records
+    .map((r) => ({
+      labelId: r.labelId,
+      date: r.date,
+      startTimestamp: r.startTimestamp,
+      sport_type: r.sport_type,
+      distance_m: r.distance_m,
+      duration_sec: r.duration_sec,
+      avg_pace_sec: r.distance_m && r.distance_m > 0 && r.duration_sec
+        ? Math.round(r.duration_sec / (r.distance_m / 1000))
+        : null,
+      avg_hr: r.avg_hr,
+    }))
+    .sort((a, b) => Math.abs(dayTs(a.date) - targetTs) - Math.abs(dayTs(b.date) - targetTs))
 
   return json(200, { candidates })
 }
