@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import {
-  Box, Typography, Button, CircularProgress, Alert,
+  Box, Typography, Button, CircularProgress, Alert, Link,
   Dialog, DialogContent, DialogActions, TextField,
 } from '@mui/material'
 import DirectionsRun from '@mui/icons-material/DirectionsRun'
@@ -38,6 +39,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
   const [pendingActivities, setPendingActivities] = useState(null) // activités choisies [{ id, start_timestamp }], en attente du ressenti
   const [feedback, setFeedback] = useState(emptyFeedback())
   const [manualDate, setManualDate] = useState(scheduledDate ?? '') // date de séance, chemin sans Coros
+  const [authExpired, setAuthExpired] = useState(false) // token Coros expiré : on propose de se reconnecter
 
   useEffect(() => {
     if (!open) return
@@ -46,6 +48,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
     setCandidates([])
     setSelectedIds([])
     setError(null)
+    setAuthExpired(false)
     setPendingActivities(null)
     setFeedback(emptyFeedback())
     setManualDate(scheduledDate ?? '')
@@ -61,7 +64,13 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
       })
       .catch((e) => {
         if (cancelled) return
-        setError(e.message || 'Coros indisponible pour le moment.')
+        // coros-match répond 503 « Coros authentication required » quand le token
+        // Coros est mort : message technique inutile ici, on renvoie vers les réglages.
+        if (e.status === 503 && e.body?.error === 'Coros authentication required') {
+          setAuthExpired(true)
+        } else {
+          setError(e.message || 'Coros indisponible pour le moment.')
+        }
         setPhase('choose')
       })
     return () => { cancelled = true }
@@ -145,7 +154,18 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
               la séance a été enregistrée en morceaux.
             </Typography>
 
-            {error && <Alert severity="info" sx={{ mb: 2 }}>{error}</Alert>}
+            {(authExpired || error) && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {authExpired ? (
+                  <>
+                    Connexion Coros expirée.{' '}
+                    <Link component={RouterLink} to="/training/settings" color="inherit" sx={{ fontWeight: 600 }}>
+                      Reconnecter
+                    </Link>
+                  </>
+                ) : error}
+              </Alert>
+            )}
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {candidates.map((c) => {

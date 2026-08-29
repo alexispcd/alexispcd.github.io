@@ -446,3 +446,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/adapt-sessions/deno.json"
 entrypoint = "./functions/adapt-sessions/index.ts"
+
+[functions.coros-oauth]
+enabled = true
+verify_jwt = false
+import_map = "./functions/coros-oauth/deno.json"
+entrypoint = "./functions/coros-oauth/index.ts"

@@ -10,9 +10,11 @@ import EmojiEvents from '@mui/icons-material/EmojiEvents'
 import MilitaryTech from '@mui/icons-material/MilitaryTech'
 import MoreVert from '@mui/icons-material/MoreVert'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../styles/glass'
 import { getActivePlan, getPlans, deletePlan } from '../../lib/training'
+import { useAppCtx } from '../../lib/context'
 import {
   PLAN_STATUS_LABEL, raceDistanceLabel, formatGoalTime,
 } from './constants'
@@ -25,6 +27,7 @@ const formatEndDate = (d) =>
 
 const TrainingHome = () => {
   const navigate = useNavigate()
+  const { setHeaderActions } = useAppCtx()
   const [searchParams] = useSearchParams()
   const historyView = searchParams.get('view') === 'history'
 
@@ -52,6 +55,14 @@ const TrainingHome = () => {
       })
     return () => { cancelled = true }
   }, [])
+
+  // ── Actions du header ─────────────────────────────────────────────────────
+  useEffect(() => {
+    setHeaderActions([
+      { label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings') },
+    ])
+    return () => setHeaderActions([])
+  }, [navigate, setHeaderActions])
 
   const openMenu = (e, plan) => {
     e.stopPropagation()

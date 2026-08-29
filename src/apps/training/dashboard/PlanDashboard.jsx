@@ -8,6 +8,7 @@ import EmojiEvents from '@mui/icons-material/EmojiEvents'
 import Autorenew from '@mui/icons-material/Autorenew'
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
 import History from '@mui/icons-material/History'
+import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
@@ -158,6 +159,7 @@ const PlanDashboard = () => {
       actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
     }
     actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history') })
+    actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings') })
     setHeaderActions(actions)
     return () => setHeaderActions([])
   }, [plan, readOnly, renfoBusy, navigate, setHeaderActions])
