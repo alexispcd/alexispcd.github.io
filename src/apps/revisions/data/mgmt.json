@@ -1,7 +1,7 @@
 {
   "themeId": "mgmt",
   "theme": "Management et stratégie",
-  "version": "2026-08-12",
+  "version": "2026-09-02",
   "cardCount": 40,
   "cards": [
     {
@@ -37,7 +37,7 @@
       "type": "definition",
       "angle": "economique",
       "recto": "Valeur, coût évité et dette de décision",
-      "verso": "Trois registres à distinguer dans un arbitrage. La <b>valeur créée</b> se mesure en chiffre d'affaires, en satisfaction ou en part de marché. Le <b>coût évité</b> se mesure en incidents qui n'ont pas eu lieu, ce qui le rend difficile à défendre. La <b>dette de décision</b> est le coût futur d'un choix repoussé.<br><i>Difficulté propre à la sécurité et à la modernisation : elles produisent du coût évité, donc un bénéfice invisible. C'est pourquoi elles perdent systématiquement les arbitrages face à un projet métier, jusqu'à l'incident qui rend le coût visible.</i>"
+      "verso": "Trois registres à distinguer dans un arbitrage d'investissement.<br><b>Valeur créée</b> : se mesure en chiffre d'affaires, en satisfaction client ou en part de marché. C'est le registre que comprend immédiatement une direction générale.<br><b>Coût évité</b> : se mesure en incidents qui n'ont pas eu lieu, donc en événements non observables. C'est ce qui le rend très difficile à défendre en comité.<br><b>Dette de décision</b> : coût futur d'un choix repoussé, qui croît avec le temps sans jamais apparaître dans un budget.<br><i>Difficulté propre à la sécurité et à la modernisation : elles produisent du coût évité, donc un bénéfice invisible. C'est pourquoi elles perdent systématiquement les arbitrages face à un projet métier, jusqu'à l'incident qui rend le coût visible.</i>"
     },
     {
       "id": "mgmt-7427f7",
@@ -58,7 +58,7 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "OKR et pilotage par les résultats",
-      "verso": "Méthode fixant des objectifs qualitatifs assortis de résultats clés chiffrés, revus par cycles courts, avec un alignement descendant des objectifs et une définition ascendante des moyens.<br><i>Distinction essentielle : un indicateur de résultat mesure un effet obtenu, un indicateur d'activité mesure un effort fourni. « Déployer l'outil dans douze agences » est une activité ; « réduire de 30 % le délai de traitement d'un dossier » est un résultat.</i><br><i>Dérive courante : transformer les OKR en liste de tâches, ce qui reproduit exactement le pilotage par l'activité qu'ils visaient à remplacer.</i>"
+      "verso": "Méthode fixant des objectifs qualitatifs assortis de résultats clés chiffrés, revus par cycles courts, avec un alignement descendant des objectifs et une définition ascendante des moyens.<br><i>Distinction essentielle : un indicateur de résultat mesure un effet obtenu, un indicateur d'activité mesure un effort fourni. « Déployer l'outil dans douze agences » est une activité ; « réduire de 30 % le délai de traitement d'un dossier » est un résultat.</i><br><i>Dérive courante : transformer les OKR (Objectives and Key Results) en liste de tâches, ce qui reproduit exactement le pilotage par l'activité qu'ils visaient à remplacer.</i>"
     },
     {
       "id": "mgmt-446bd4",
@@ -79,28 +79,28 @@
       "type": "definition",
       "angle": "economique",
       "recto": "Externalisation, infogérance et TMA",
-      "verso": "<b>Infogérance</b> : délégation de l'exploitation de tout ou partie de l'infrastructure. <b>TMA</b> : tierce maintenance applicative, délégation de la maintenance corrective et évolutive d'un parc d'applications. <b>Régie</b> : mise à disposition de compétences pilotées par le client. <b>Forfait</b> : engagement du prestataire sur un résultat et un prix.<br><i>Différence de risque déterminante : en régie, le client porte le risque de dérive ; au forfait, le prestataire le porte et le facture dans son prix. Un forfait très inférieur au marché signale généralement une sous-estimation qui se paiera en avenants.</i>"
+      "verso": "<b>Infogérance</b> : délégation de l'exploitation de tout ou partie de l'infrastructure.<br><b>TMA</b> : tierce maintenance applicative, délégation de la maintenance corrective et évolutive d'un parc d'applications.<br><b>Régie</b> : mise à disposition de compétences pilotées par le client.<br><b>Forfait</b> : engagement du prestataire sur un résultat et un prix.<br><i>Différence de risque déterminante : en régie, le client porte le risque de dérive ; au forfait, le prestataire le porte et le facture dans son prix. Un forfait très inférieur au marché signale généralement une sous-estimation qui se paiera en avenants.</i>"
     },
     {
       "id": "mgmt-c6d114",
       "type": "definition",
       "angle": "economique",
       "recto": "Contrat de service, engagements et pénalités",
-      "verso": "Le contrat fixe le périmètre, les niveaux de service attendus, les modalités de mesure, les pénalités et les conditions de sortie.<br><b>Points de vigilance</b> : qui mesure les indicateurs, ce qui est exclu du calcul, et le plafonnement des pénalités.<br><i>Réalité à assumer : les pénalités sont presque toujours plafonnées à une fraction du montant du contrat, sans rapport avec le préjudice réel. Elles servent d'incitation, jamais de réparation. Le vrai levier de pilotage est la revue de service régulière, pas la clause.</i>"
+      "verso": "<b>Contrat de service</b> : il fixe le périmètre couvert, les modalités de mesure, la gouvernance de la relation et les conditions de sortie.<br><b>Engagements de niveau de service</b> : les seuils chiffrés que le prestataire s'oblige à tenir, disponibilité, délai de prise en charge, délai de rétablissement.<br><b>Pénalités</b> : les sommes dues en cas de manquement, presque toujours plafonnées à une fraction du montant du contrat.<br><b>Points de vigilance</b> : qui mesure les indicateurs, ce qui est exclu du calcul, et le niveau du plafond.<br><i>Réalité à assumer devant un jury : les pénalités servent d'incitation, jamais de réparation, puisque leur plafond est sans rapport avec le préjudice réel. Le vrai levier de pilotage est la revue de service régulière, pas la clause.</i>"
     },
     {
       "id": "mgmt-04dfa7",
       "type": "definition",
       "angle": "souverainete",
       "recto": "Réversibilité contractuelle",
-      "verso": "Capacité organisée, contractuellement et techniquement, de reprendre en interne ou de transférer à un tiers une activité externalisée : documentation à jour, transfert de compétences, restitution des données dans un format exploitable, période d'accompagnement.<br><i>Ce que la pratique montre : une clause de réversibilité jamais éprouvée est une clause théorique. Les organisations sérieuses testent la restitution des données pendant la vie du contrat, pas au moment de la rupture.</i><br><i>Évolution réglementaire : le Data Act européen rend la réversibilité opposable pour les services de nuage, ce qui la fait passer d'un objet de négociation à une obligation.</i>"
+      "verso": "Capacité organisée, contractuellement et techniquement, de reprendre en interne ou de transférer à un tiers une activité externalisée : documentation à jour, transfert de compétences, restitution des données dans un format exploitable, période d'accompagnement.<br><i>Ce que la pratique montre : une clause de réversibilité jamais éprouvée est une clause théorique. Les organisations sérieuses testent la restitution des données pendant la vie du contrat, pas au moment de la rupture.</i><br><i>Évolution réglementaire : le Data Act européen rend la réversibilité opposable pour les services de cloud, ce qui la fait passer d'un objet de négociation à une obligation.</i>"
     },
     {
       "id": "mgmt-6d4197",
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Numérisation, digitalisation et transformation",
-      "verso": "<b>Numérisation</b> : convertir un support papier en format numérique. <b>Digitalisation</b> : outiller un processus existant pour le rendre plus efficace. <b>Transformation</b> : repenser le modèle d'affaires ou le fonctionnement de l'organisation à partir des possibilités offertes par le numérique.<br><i>Distinction à poser tôt dans un oral, elle structure tout le reste : la plupart des projets présentés comme des transformations sont des digitalisations. Numériser un processus défaillant produit un processus défaillant plus rapide.</i>"
+      "verso": "<b>Numérisation</b> : convertir un support papier en format numérique.<br><b>Digitalisation</b> : outiller un processus existant pour le rendre plus efficace.<br><b>Transformation</b> : repenser le modèle d'affaires ou le fonctionnement de l'organisation à partir des possibilités offertes par le numérique.<br><i>Distinction à poser tôt dans un oral, elle structure tout le reste : la plupart des projets présentés comme des transformations sont des digitalisations. Numériser un processus défaillant produit un processus défaillant plus rapide.</i>"
     },
     {
       "id": "mgmt-ed088d",
@@ -191,14 +191,14 @@
       "type": "chiffre",
       "angle": "economique",
       "recto": "Les dépenses informatiques mondiales en 2026",
-      "verso": "Environ 6 310 milliards de dollars attendus, soit une croissance de 13,5 %, révisée à deux reprises à la hausse depuis une prévision initiale de 9,8 %. Les systèmes de centres de données progressent de près de 56 %, tandis que les terminaux ne croissent que d'environ 6 %, freinés par la hausse des prix de la mémoire.<br><i>Source : Gartner, prévisions révisées d'avril 2026</i><br><i>Lecture d'oral : c'est un marché à plusieurs vitesses. Tout ce qui touche à l'IA surperforme, le reste stagne.</i>"
+      "verso": "Environ 6 310 milliards de dollars attendus, soit une croissance de 13,5 %, révisée à deux reprises à la hausse depuis une prévision initiale de 9,8 %. Les systèmes de data centers progressent de près de 56 %, tandis que les terminaux ne croissent que d'environ 6 %, freinés par la hausse des prix de la mémoire.<br><i>Source : Gartner, prévisions révisées d'avril 2026</i><br><i>Lecture d'oral : c'est un marché à plusieurs vitesses. Tout ce qui touche à l'IA surperforme, le reste stagne.</i>"
     },
     {
       "id": "mgmt-8d0cd7",
       "type": "chiffre",
       "angle": "economique",
       "recto": "Les dépenses mondiales liées à l'IA",
-      "verso": "Environ 2 596 milliards de dollars en 2026, en hausse de 47 % sur un an, dont environ 1 432 milliards pour la seule infrastructure. La progression reste très majoritairement portée par les fournisseurs technologiques et les grands opérateurs de nuage, les entreprises utilisatrices n'ayant pas encore pleinement engagé leur cycle d'investissement.<br><i>Source : Gartner, 2026</i><br><i>Nuance décisive : l'essentiel de cette dépense est en amont, chez ceux qui construisent la capacité, pas chez ceux qui l'utilisent.</i>"
+      "verso": "Environ 2 596 milliards de dollars en 2026, en hausse de 47 % sur un an, dont environ 1 432 milliards pour la seule infrastructure. La progression reste très majoritairement portée par les fournisseurs technologiques et les grands opérateurs de cloud, les entreprises utilisatrices n'ayant pas encore pleinement engagé leur cycle d'investissement.<br><i>Source : Gartner, 2026</i><br><i>Nuance décisive : l'essentiel de cette dépense est en amont, chez ceux qui construisent la capacité, pas chez ceux qui l'utilisent.</i>"
     },
     {
       "id": "mgmt-deaff9",
@@ -233,14 +233,14 @@
       "type": "acteur",
       "angle": "organisationnel",
       "recto": "Le DSI et son positionnement",
-      "verso": "Son rattachement détermine son influence : à la direction générale, il participe à la définition de la stratégie ; à la direction financière, il est prioritairement évalué sur la maîtrise des coûts.<br><b>Nuance importante</b> : siéger au comité exécutif ne garantit pas l'arbitrage. Dans de nombreuses organisations, le DSI propose et la direction financière tranche sur l'enveloppe.<br><i>Évolution de 2026 : la responsabilité cyber désormais portée par les dirigeants au titre de NIS 2 fait remonter le sujet au conseil d'administration, ce qui renforce mécaniquement le poids du DSI et du RSSI dans les instances.</i>"
+      "verso": "Son rattachement détermine son influence : à la direction générale, il participe à la définition de la stratégie ; à la direction financière, il est prioritairement évalué sur la maîtrise des coûts.<br><b>Nuance importante</b> : siéger au comité exécutif ne garantit pas l'arbitrage. Dans de nombreuses organisations, le DSI propose et la direction financière tranche sur l'enveloppe.<br><i>Évolution de 2026 : la responsabilité cyber désormais portée par les dirigeants au titre de NIS 2 fait remonter le sujet au conseil d'administration, ce qui renforce mécaniquement le poids du DSI et du RSSI (responsable de la sécurité des systèmes d'information) dans les instances.</i>"
     },
     {
       "id": "mgmt-295b98",
       "type": "acteur",
       "angle": "organisationnel",
       "recto": "Les fonctions qui gravitent autour de la DSI",
-      "verso": "<b>RSSI</b> : arbitrage du risque, souvent en tension avec les délais projet. <b>CDO données</b> : valorisation du patrimoine informationnel. <b>Directeur du numérique</b> : porte la transformation côté métier, parfois en concurrence avec la DSI. <b>Architecte d'entreprise</b> : cohérence de la trajectoire. <b>DPO</b> : conformité et protection des données.<br><i>Point à savoir formuler : la multiplication de ces rôles traduit la montée en importance du numérique, mais crée des zones de recouvrement. La question de gouvernance qui compte n'est pas qui porte le titre, c'est qui tranche en cas de désaccord.</i>"
+      "verso": "<b>RSSI (responsable de la sécurité des systèmes d'information)</b> : arbitrage du risque, souvent en tension avec les délais projet.<br><b>CDO (Chief Data Officer) données</b> : valorisation du patrimoine informationnel.<br><b>Directeur du numérique</b> : porte la transformation côté métier, parfois en concurrence avec la DSI.<br><b>Architecte d'entreprise</b> : cohérence de la trajectoire.<br><b>DPO (Data Protection Officer)</b> : conformité et protection des données.<br><i>Point à savoir formuler : la multiplication de ces rôles traduit la montée en importance du numérique, mais crée des zones de recouvrement. La question de gouvernance qui compte n'est pas qui porte le titre, c'est qui tranche en cas de désaccord.</i>"
     },
     {
       "id": "mgmt-023005",

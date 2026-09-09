@@ -1,15 +1,15 @@
 {
   "themeId": "bigdata",
   "theme": "Big Data",
-  "version": "2026-08-12",
-  "cardCount": 40,
+  "version": "2026-09-07",
+  "cardCount": 41,
   "cards": [
     {
       "id": "bigdata-41fae7",
       "type": "definition",
       "angle": "technique",
       "recto": "Big Data et les 5V",
-      "verso": "Ensemble de données trop volumineuses, trop rapides ou trop hétérogènes pour être traitées par les outils classiques de base de données.<br><b>Volume</b> : l'échelle. <b>Vélocité</b> : la vitesse d'arrivée et le besoin de traitement quasi immédiat. <b>Variété</b> : texte, image, journaux techniques, capteurs, en plus des tables. <b>Véracité</b> : la fiabilité, souvent inégale. <b>Valeur</b> : ce que la donnée rapporte réellement.<br><i>Les trois premiers V datent de 2001 (Doug Laney, META Group). Les deux derniers ont été ajoutés ensuite, et ce sont ceux qui posent problème en entreprise : accumuler du volume est facile, en tirer de la valeur fiable ne l'est pas.</i>"
+      "verso": "Ensemble de données trop volumineuses, trop rapides ou trop hétérogènes pour être traitées par les outils classiques de base de données.<br><b>Volume</b> : l'échelle.<br><b>Vélocité</b> : la vitesse d'arrivée et le besoin de traitement quasi immédiat.<br><b>Variété</b> : texte, image, journaux techniques, capteurs, en plus des tables.<br><b>Véracité</b> : la fiabilité, souvent inégale.<br><b>Valeur</b> : ce que la donnée rapporte réellement.<br><i>Les trois premiers V datent de 2001 (Doug Laney, META Group). Les deux derniers ont été ajoutés ensuite, et ce sont ceux qui posent problème en entreprise : accumuler du volume est facile, en tirer de la valeur fiable ne l'est pas.</i>"
     },
     {
       "id": "bigdata-16a08e",
@@ -44,7 +44,7 @@
       "type": "definition",
       "angle": "technique",
       "recto": "ETL et ELT",
-      "verso": "<b>ETL</b> : extraire, transformer, puis charger. La transformation a lieu avant l'arrivée dans la cible, sur un serveur dédié. Modèle historique de l'entrepôt.<br><b>ELT</b> : extraire, charger, puis transformer. On dépose la donnée brute et on la transforme dans la cible, en profitant de sa puissance de calcul.<br><i>Ce qui a fait basculer vers l'ELT : le stockage et le calcul du nuage sont devenus assez peu chers pour qu'il soit plus rentable de tout charger puis de trier, plutôt que de trier avant de charger.</i>"
+      "verso": "<b>ETL (Extract, Transform, Load)</b> : extraire, transformer, puis charger. La transformation a lieu avant l'arrivée dans la cible, sur un serveur dédié. Modèle historique de l'entrepôt.<br><b>ELT (Extract, Load, Transform)</b> : extraire, charger, puis transformer. On dépose la donnée brute et on la transforme dans la cible, en profitant de sa puissance de calcul.<br><i>Ce qui a fait basculer vers l'ELT : le stockage et le calcul du cloud sont devenus assez peu chers pour qu'il soit plus rentable de tout charger puis de trier, plutôt que de trier avant de charger.</i>"
     },
     {
       "id": "bigdata-2f4951",
@@ -93,14 +93,14 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Gouvernance des données et data steward",
-      "verso": "Ensemble des rôles, règles et processus qui déterminent qui peut faire quoi avec quelle donnée : propriété, définitions communes, niveaux de confidentialité, durées de conservation, qualité attendue.<br><b>Data owner</b> : le responsable métier qui répond de la donnée. <b>Data steward</b> : celui qui la maintient au quotidien, arbitre les définitions et surveille la qualité.<br><i>Argument d'architecte : la gouvernance échoue quand elle est portée par la DSI seule. Sans propriétaire métier nommé, personne ne tranche sur la définition d'un client actif, et les indicateurs divergent d'une direction à l'autre.</i>"
+      "verso": "Ensemble des rôles, règles et processus qui déterminent qui peut faire quoi avec quelle donnée : propriété, définitions communes, niveaux de confidentialité, durées de conservation, qualité attendue.<br><b>Data owner</b> : le responsable métier qui répond de la donnée.<br><b>Data steward</b> : celui qui la maintient au quotidien, arbitre les définitions et surveille la qualité.<br><i>Argument d'architecte : la gouvernance échoue quand elle est portée par la DSI seule. Sans propriétaire métier nommé, personne ne tranche sur la définition d'un client actif, et les indicateurs divergent d'une direction à l'autre.</i>"
     },
     {
       "id": "bigdata-cd9753",
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Qualité des données : les cinq dimensions",
-      "verso": "<b>Exactitude</b> : la donnée reflète-t-elle la réalité ? <b>Complétude</b> : les champs critiques sont-ils renseignés ? <b>Cohérence</b> : dit-elle la même chose d'un système à l'autre ? <b>Fraîcheur</b> : est-elle assez récente pour décider ? <b>Unicité</b> : y a-t-il des doublons qui faussent les agrégats ?<br><i>Elles doivent être satisfaites simultanément : une donnée peut être exacte mais obsolète, complète mais incohérente entre deux bases.</i><br><i>Gartner chiffre à 12,9 millions de dollars par an le coût moyen de la mauvaise qualité des données pour une organisation.</i>"
+      "verso": "<b>Exactitude</b> : la donnée reflète-t-elle la réalité ?<br><b>Complétude</b> : les champs critiques sont-ils renseignés ?<br><b>Cohérence</b> : dit-elle la même chose d'un système à l'autre ?<br><b>Fraîcheur</b> : est-elle assez récente pour décider ?<br><b>Unicité</b> : y a-t-il des doublons qui faussent les agrégats ?<br><i>Elles doivent être satisfaites simultanément : une donnée peut être exacte mais obsolète, complète mais incohérente entre deux bases.</i><br><i>Gartner chiffre à 12,9 millions de dollars par an le coût moyen de la mauvaise qualité des données pour une organisation.</i>"
     },
     {
       "id": "bigdata-50c0df",
@@ -177,14 +177,14 @@
       "type": "evenement",
       "angle": "souverainete",
       "recto": "2022-2025 : Data Governance Act puis Data Act",
-      "verso": "L'Union bâtit un cadre de circulation des données distinct de leur protection. Le <b>Data Governance Act</b>, applicable depuis septembre 2023, organise le partage de données publiques et encadre les intermédiaires de confiance. Le <b>Data Act</b>, applicable depuis le 12 septembre 2025, donne à l'utilisateur d'un objet connecté un droit d'accès aux données qu'il génère et impose la réversibilité entre fournisseurs de nuage.<br><i>Portée : après avoir protégé la donnée personnelle avec le RGPD, l'Europe cherche à faire circuler la donnée industrielle. Les deux logiques coexistent et se contredisent parfois.</i>"
+      "verso": "L'Union bâtit un cadre de circulation des données distinct de leur protection. Le <b>Data Governance Act</b>, applicable depuis septembre 2023, organise le partage de données publiques et encadre les intermédiaires de confiance. Le <b>Data Act</b>, applicable depuis le 12 septembre 2025, donne à l'utilisateur d'un objet connecté un droit d'accès aux données qu'il génère et impose la réversibilité entre fournisseurs de cloud.<br><i>Portée : après avoir protégé la donnée personnelle avec le RGPD, l'Europe cherche à faire circuler la donnée industrielle. Les deux logiques coexistent et se contredisent parfois.</i>"
     },
     {
       "id": "bigdata-f5a2d0",
       "type": "evenement",
       "angle": "economique",
       "recto": "2023-2026 : l'IA générative revalorise les données d'entreprise",
-      "verso": "L'essor des architectures de génération augmentée par récupération (RAG) transforme les documents internes dormants, contrats, procédures, comptes rendus, en matière directement exploitable par un assistant conversationnel.<br><i>Portée : c'est le premier usage à grande échelle des données non structurées, longtemps stockées sans être exploitées. Et c'est aussi ce qui rend soudain visible la dette de gouvernance : sans droits d'accès propres, un assistant fondé sur les documents internes expose à chacun ce qu'il n'aurait pas dû voir.</i>"
+      "verso": "L'essor des architectures de génération augmentée par récupération, ou RAG (Retrieval-Augmented Generation), transforme les documents internes dormants, contrats, procédures, comptes rendus, en matière directement exploitable par un assistant conversationnel.<br><i>Portée : c'est le premier usage à grande échelle des données non structurées, longtemps stockées sans être exploitées. Et c'est aussi ce qui rend soudain visible la dette de gouvernance : sans droits d'accès propres, un assistant fondé sur les documents internes expose à chacun ce qu'il n'aurait pas dû voir.</i>"
     },
     {
       "id": "bigdata-c0488e",
@@ -233,28 +233,28 @@
       "type": "acteur",
       "angle": "securite",
       "recto": "La CNIL et l'architecture du RGPD",
-      "verso": "Autorité française de contrôle, chargée de l'accompagnement, du contrôle et de la sanction. Elle publie des référentiels sectoriels et des recommandations qui font office de doctrine pratique.<br><b>Les obligations structurantes pour un système d'information</b> : registre des traitements, analyse d'impact pour les traitements à risque, protection dès la conception et par défaut, notification d'une violation sous 72 heures, désignation d'un délégué à la protection des données.<br><i>Évolution 2026 : la CNIL est appelée à intervenir aussi sur le règlement européen sur l'IA, ce qui superpose deux régimes de contrôle sur les mêmes traitements.</i>"
+      "verso": "Autorité française de contrôle, chargée de l'accompagnement, du contrôle et de la sanction. Elle publie des référentiels sectoriels et des recommandations qui font office de doctrine pratique.<br><b>Les obligations structurantes pour un système d'information</b> : registre des traitements, analyse d'impact pour les traitements à risque, protection dès la conception et par défaut, notification d'une violation sous 72 heures, désignation d'un délégué à la protection des données.<br><i>Évolution 2026 : la CNIL est appelée à intervenir aussi sur l'AI Act, ce qui superpose deux régimes de contrôle sur les mêmes traitements.</i>"
     },
     {
       "id": "bigdata-38d69e",
       "type": "acteur",
       "angle": "souverainete",
       "recto": "Data Act et Data Governance Act",
-      "verso": "<b>Data Governance Act</b> (applicable depuis septembre 2023) : cadre de réutilisation des données du secteur public, statut des intermédiaires de données et notion d'altruisme des données.<br><b>Data Act</b> (applicable depuis le 12 septembre 2025) : accès de l'utilisateur aux données produites par ses objets connectés, encadrement du partage entre entreprises, obligation de réversibilité entre fournisseurs de nuage avec interdiction totale des frais de changement au 12 janvier 2027.<br><i>Logique d'ensemble : le RGPD protège, ces deux textes font circuler. C'est la stratégie européenne de la donnée.</i>"
+      "verso": "<b>Data Governance Act</b> (applicable depuis septembre 2023) : cadre de réutilisation des données du secteur public, statut des intermédiaires de données et notion d'altruisme des données.<br><b>Data Act</b> (applicable depuis le 12 septembre 2025) : accès de l'utilisateur aux données produites par ses objets connectés, encadrement du partage entre entreprises, obligation de réversibilité entre fournisseurs de cloud avec interdiction totale des frais de changement au 12 janvier 2027.<br><i>Logique d'ensemble : le RGPD protège, ces deux textes font circuler. C'est la stratégie européenne de la donnée.</i>"
     },
     {
       "id": "bigdata-e9703a",
       "type": "acteur",
       "angle": "technique",
       "recto": "L'écosystème technique de la donnée",
-      "verso": "<b>Plateformes</b> : Databricks (issu de Spark, orienté lakehouse), Snowflake (entrepôt dans le nuage), les offres intégrées des hyperscalers (BigQuery, Redshift, Synapse).<br><b>Fondation Apache</b> : Spark, Kafka, Airflow, Iceberg. C'est elle qui garantit la neutralité des briques de base.<br><b>Transformation et qualité</b> : dbt pour la transformation versionnée, Great Expectations pour les tests de qualité.<br><i>Point d'architecture : la bataille actuelle porte sur le format de table ouvert. Adopter Iceberg plutôt qu'un format propriétaire, c'est garder la possibilité de changer de moteur sans redéplacer les données.</i>"
+      "verso": "<b>Plateformes</b> : Databricks (issu de Spark, orienté lakehouse), Snowflake (entrepôt dans le cloud), les offres intégrées des hyperscalers (BigQuery, Redshift, Synapse).<br><b>Fondation Apache</b> : Spark, Kafka, Airflow, Iceberg. C'est elle qui garantit la neutralité des briques de base.<br><b>Transformation et qualité</b> : dbt pour la transformation versionnée, Great Expectations pour les tests de qualité.<br><i>Point d'architecture : la bataille actuelle porte sur le format de table ouvert. Adopter Iceberg plutôt qu'un format propriétaire, c'est garder la possibilité de changer de moteur sans redéplacer les données.</i>"
     },
     {
       "id": "bigdata-5a5f66",
       "type": "acteur",
       "angle": "organisationnel",
       "recto": "Le Chief Data Officer et le délégué à la protection des données",
-      "verso": "<b>CDO</b> : responsable de la valorisation des données, il porte la stratégie, la qualité, la gouvernance et l'acculturation. Rattachement variable, à la direction générale ou à la DSI, ce qui en dit long sur la maturité de l'organisation.<br><b>DPO</b> : délégué à la protection des données, obligatoire pour les organismes publics et pour les traitements sensibles à grande échelle. Il conseille, contrôle et dialogue avec la CNIL, en toute indépendance.<br><i>Tension à connaître et à assumer devant un jury : le premier cherche à exploiter davantage, le second à limiter. Cette tension est saine et elle doit être arbitrée, pas supprimée.</i>"
+      "verso": "<b>CDO</b> : responsable de la valorisation des données, il porte la stratégie, la qualité, la gouvernance et l'acculturation. Rattachement variable, à la direction générale ou à la DSI, ce qui en dit long sur la maturité de l'organisation.<br><b>DPO (Data Protection Officer)</b> : délégué à la protection des données, obligatoire pour les organismes publics et pour les traitements sensibles à grande échelle. Il conseille, contrôle et dialogue avec la CNIL, en toute indépendance.<br><i>Tension à connaître et à assumer devant un jury : le premier cherche à exploiter davantage, le second à limiter. Cette tension est saine et elle doit être arbitrée, pas supprimée.</i>"
     },
     {
       "id": "bigdata-7cbb86",
@@ -283,6 +283,13 @@
       "angle": "economique",
       "recto": "La donnée est-elle vraiment le nouveau pétrole ?",
       "verso": "<b>Pour la métaphore</b> : ressource stratégique, brute et sans valeur tant qu'elle n'est pas raffinée, à l'origine de la domination économique des plateformes.<br><b>Contre</b> : le pétrole se consomme, la donnée se duplique sans perte et peut servir simultanément à plusieurs usages ; elle se déprécie très vite avec le temps ; et sa valeur dépend entièrement du contexte d'usage, ce que ne fait pas un baril.<br><b>Position tenable</b> : la métaphore décrit correctement la logique d'extraction mais fausse le raisonnement économique. Une donnée n'a pas de valeur intrinsèque au bilan, seulement une valeur d'usage. C'est précisément pourquoi 12,9 millions de dollars de mauvaise qualité passent inaperçus : on ne mesure pas ce qu'on ne valorise pas."
+    },
+    {
+      "id": "bigdata-8d3c2a",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Dark data",
+      "verso": "Données collectées et conservées par une organisation sans jamais être exploitées : journaux techniques archivés, réponses à des formulaires, enregistrements de capteurs, copies de bases oubliées.<br><b>Double coût</b> : le stockage et son empreinte, mais surtout le risque, puisque chaque donnée conservée sans usage reste une donnée à sécuriser, à déclarer et à effacer sur demande.<br><i>Argument transversal très rentable à l'oral : la dark data relie le Big Data, la conformité au RGPD par le principe de minimisation, la cybersécurité par la surface d'exposition, et l'empreinte environnementale. Une seule notion, quatre thèmes.</i>"
     }
   ]
 }

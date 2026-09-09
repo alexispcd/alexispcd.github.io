@@ -1,8 +1,8 @@
 {
   "themeId": "opt",
   "theme": "Optimisation du SI",
-  "version": "2026-08-12",
-  "cardCount": 40,
+  "version": "2026-09-07",
+  "cardCount": 44,
   "cards": [
     {
       "id": "opt-355859",
@@ -23,7 +23,7 @@
       "type": "definition",
       "angle": "technique",
       "recto": "Les quatre couches de la cartographie",
-      "verso": "<b>Métier</b> : les processus et les activités de l'organisation. <b>Fonctionnelle</b> : les fonctions à assurer, indépendamment des outils. <b>Applicative</b> : les logiciels qui les réalisent. <b>Technique</b> : les infrastructures qui les font tourner.<br><i>Intérêt de la séparation entre fonctionnel et applicatif : elle permet de constater que quatre applications assurent la même fonction, ce qui est invisible si l'on ne raisonne qu'en logiciels.</i><br><i>Prérequis à toute optimisation : on ne rationalise pas ce qu'on n'a pas cartographié. La cartographie est le premier livrable, jamais le dernier.</i>"
+      "verso": "<b>Métier</b> : les processus et les activités de l'organisation.<br><b>Fonctionnelle</b> : les fonctions à assurer, indépendamment des outils.<br><b>Applicative</b> : les logiciels qui les réalisent.<br><b>Technique</b> : les infrastructures qui les font tourner.<br><i>Intérêt de la séparation entre fonctionnel et applicatif : elle permet de constater que quatre applications assurent la même fonction, ce qui est invisible si l'on ne raisonne qu'en logiciels.</i><br><i>Prérequis à toute optimisation : on ne rationalise pas ce qu'on n'a pas cartographié. La cartographie est le premier livrable, jamais le dernier.</i>"
     },
     {
       "id": "opt-7e64fc",
@@ -44,7 +44,7 @@
       "type": "definition",
       "angle": "economique",
       "recto": "Run et build",
-      "verso": "<b>Run</b> : maintenir le SI existant en condition opérationnelle, support, correctifs, exploitation. <b>Build</b> : construire de nouvelles capacités.<br><b>Enjeu de pilotage</b> : le ratio entre les deux mesure la capacité réelle d'innovation de la DSI. Plus le run absorbe le budget, moins il reste pour le build, et la dette technique alimente mécaniquement le run.<br><i>Cercle vicieux à décrire à l'oral : plus la dette croît, plus le run coûte, moins on investit dans la modernisation, plus la dette croît.</i>"
+      "verso": "<b>Run</b> : maintenir le SI existant en condition opérationnelle, support, correctifs, exploitation.<br><b>Build</b> : construire de nouvelles capacités.<br><b>Enjeu de pilotage</b> : le ratio entre les deux mesure la capacité réelle d'innovation de la DSI. Plus le run absorbe le budget, moins il reste pour le build, et la dette technique alimente mécaniquement le run.<br><i>Cercle vicieux à décrire à l'oral : plus la dette croît, plus le run coûte, moins on investit dans la modernisation, plus la dette croît.</i>"
     },
     {
       "id": "opt-8f217b",
@@ -65,7 +65,7 @@
       "type": "definition",
       "angle": "technique",
       "recto": "CMDB et gestion des actifs",
-      "verso": "La <b>CMDB</b> est la base qui recense les éléments du SI et surtout leurs relations : quel serveur porte quelle application, laquelle sert quel processus métier, avec quelles dépendances.<br><b>Usage décisif</b> : l'analyse d'impact. Avant d'arrêter un serveur ou d'appliquer un correctif, savoir ce qui va tomber.<br><i>Écueil universel : une CMDB tenue à la main devient fausse en quelques mois, et une CMDB fausse est plus dangereuse qu'une absence de CMDB, parce qu'on lui fait confiance. Seule la découverte automatique la rend viable.</i>"
+      "verso": "La <b>CMDB (Configuration Management Database)</b> est la base qui recense les éléments du SI et surtout leurs relations : quel serveur porte quelle application, laquelle sert quel processus métier, avec quelles dépendances.<br><b>Usage décisif</b> : l'analyse d'impact. Avant d'arrêter un serveur ou d'appliquer un correctif, savoir ce qui va tomber.<br><i>Écueil universel : une CMDB tenue à la main devient fausse en quelques mois, et une CMDB fausse est plus dangereuse qu'une absence de CMDB, parce qu'on lui fait confiance. Seule la découverte automatique la rend viable.</i>"
     },
     {
       "id": "opt-dd3acf",
@@ -79,7 +79,7 @@
       "type": "definition",
       "angle": "economique",
       "recto": "Prolifération SaaS et redondance applicative",
-      "verso": "Multiplication incontrôlée des abonnements logiciels achetés directement par les métiers, sans visibilité centrale : fonctions qui se recouvrent, licences payées sans usage, comptes d'anciens salariés restés actifs, renouvellements automatiques non arbitrés.<br><b>Cause structurelle</b> : sous un certain seuil budgétaire, souvent quelques milliers d'euros par an, l'achat n'entre dans aucun processus d'approvisionnement et reste invisible.<br><i>Conséquence au-delà du coût : chaque application non recensée est un accès non révoqué et une donnée hors du champ de la conformité.</i>"
+      "verso": "<i>SaaS : Software as a Service.</i><br>Multiplication incontrôlée des abonnements logiciels achetés directement par les métiers, sans visibilité centrale : fonctions qui se recouvrent, licences payées sans usage, comptes d'anciens salariés restés actifs, renouvellements automatiques non arbitrés.<br><b>Cause structurelle</b> : sous un certain seuil budgétaire, souvent quelques milliers d'euros par an, l'achat n'entre dans aucun processus d'approvisionnement et reste invisible.<br><i>Conséquence au-delà du coût : chaque application non recensée est un accès non révoqué et une donnée hors du champ de la conformité.</i>"
     },
     {
       "id": "opt-e42394",
@@ -121,14 +121,14 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Les indicateurs de pilotage de la DSI",
-      "verso": "<b>Coût</b> : ratio run et build, coût par utilisateur, coût par transaction. <b>Qualité de service</b> : disponibilité, délai de rétablissement, volume d'incidents récurrents. <b>Valeur</b> : délai de mise sur le marché, taux d'usage des applications livrées, satisfaction métier.<br><i>Déséquilibre courant : la plupart des DSI mesurent très bien le coût, correctement la qualité de service, et presque jamais la valeur. Or c'est la seule dimension qui intéresse la direction générale.</i><br><i>Indicateur peu utilisé et très parlant : la part des applications livrées dont l'usage réel est inférieur aux prévisions.</i>"
+      "verso": "<b>Coût</b> : ratio run et build, coût par utilisateur, coût par transaction.<br><b>Qualité de service</b> : disponibilité, délai de rétablissement, volume d'incidents récurrents.<br><b>Valeur</b> : délai de mise sur le marché, taux d'usage des applications livrées, satisfaction métier.<br><i>Déséquilibre courant : la plupart des DSI mesurent très bien le coût, correctement la qualité de service, et presque jamais la valeur. Or c'est la seule dimension qui intéresse la direction générale.</i><br><i>Indicateur peu utilisé et très parlant : la part des applications livrées dont l'usage réel est inférieur aux prévisions.</i>"
     },
     {
       "id": "opt-6aaed4",
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Résilience : RTO et RPO",
-      "verso": "<b>RTO</b> : durée maximale d'interruption acceptable avant rétablissement. <b>RPO</b> : volume maximal de données que l'on accepte de perdre, exprimé en temps.<br><b>Ces deux valeurs déterminent l'architecture et le coût</b> : un RPO de zéro impose une réplication synchrone, donc une infrastructure bien plus onéreuse qu'une sauvegarde nocturne.<br><i>Point de méthode : ces seuils se fixent avec le métier, jamais par la DSI seule, et ils se testent. Un plan de reprise jamais éprouvé est une hypothèse, pas une garantie. L'incendie d'un centre de données d'OVHcloud en 2021 a rappelé que beaucoup de clients découvraient leur plan de reprise le jour où ils en avaient besoin.</i>"
+      "verso": "<b>RTO (Recovery Time Objective)</b> : durée maximale d'interruption acceptable avant rétablissement.<br><b>RPO (Recovery Point Objective)</b> : volume maximal de données que l'on accepte de perdre, exprimé en temps.<br><b>Ces deux valeurs déterminent l'architecture et le coût</b> : un RPO de zéro impose une réplication synchrone, donc une infrastructure bien plus onéreuse qu'une sauvegarde nocturne.<br><i>Point de méthode : ces seuils se fixent avec le métier, jamais par la DSI seule, et ils se testent. Un plan de reprise jamais éprouvé est une hypothèse, pas une garantie. L'incendie d'un data center d'OVHcloud en 2021 a rappelé que beaucoup de clients découvraient leur plan de reprise le jour où ils en avaient besoin.</i>"
     },
     {
       "id": "opt-4c9cd5",
@@ -162,8 +162,8 @@
       "id": "opt-c709be",
       "type": "evenement",
       "angle": "economique",
-      "recto": "2010-2020 : la bascule vers le nuage et le modèle de dépense",
-      "verso": "Le passage progressif au nuage transforme un investissement immobilisé et amorti en dépense courante et variable, ce qui déplace le contrôle du moment de l'achat vers un pilotage continu.<br><i>Portée pour l'optimisation : le levier n'est plus la négociation d'un contrat tous les cinq ans, c'est la surveillance permanente de la consommation. C'est l'origine directe de la discipline FinOps, et la raison pour laquelle une part significative de la dépense nuage part en pure perte faute de pilotage.</i>"
+      "recto": "2010-2020 : la bascule vers le cloud et le modèle de dépense",
+      "verso": "Le passage progressif au cloud transforme un investissement immobilisé et amorti en dépense courante et variable, ce qui déplace le contrôle du moment de l'achat vers un pilotage continu.<br><i>Portée pour l'optimisation : le levier n'est plus la négociation d'un contrat tous les cinq ans, c'est la surveillance permanente de la consommation. C'est l'origine directe de la discipline FinOps (Financial Operations), et la raison pour laquelle une part significative de la dépense nuage part en pure perte faute de pilotage.</i>"
     },
     {
       "id": "opt-4b1565",
@@ -198,7 +198,7 @@
       "type": "chiffre",
       "angle": "economique",
       "recto": "La prolifération applicative en chiffres",
-      "verso": "Une entreprise exécute en moyenne de l'ordre de 300 applications en ligne, et seulement environ la moitié des licences provisionnées sont réellement utilisées. Le gaspillage moyen est estimé à une vingtaine de millions de dollars par an et par entreprise, en hausse d'environ 14 % sur un an. Plus d'un tiers des applications sont achetées hors du contrôle de la DSI.<br><i>Source : Zylo, SaaS Management Index, 2025-2026</i>"
+      "verso": "Une entreprise exécute en moyenne de l'ordre de 300 applications en ligne, et seulement environ la moitié des licences provisionnées sont réellement utilisées. Le gaspillage moyen est estimé à une vingtaine de millions de dollars par an et par entreprise, en hausse d'environ 14 % sur un an. Plus d'un tiers des applications sont achetées hors du contrôle de la DSI.<br><i>Source : Zylo, SaaS (Software as a Service) Management Index, 2025-2026</i>"
     },
     {
       "id": "opt-2f9fca",
@@ -211,8 +211,8 @@
       "id": "opt-c01f3f",
       "type": "chiffre",
       "angle": "economique",
-      "recto": "Le gaspillage des dépenses dans le nuage",
-      "verso": "Les organisations européennes estiment gaspiller en moyenne environ 24 % de leurs dépenses annuelles de nuage. Par ailleurs, l'essor de l'IA a entraîné une hausse d'environ 12 % des coûts d'hébergement en une seule année.<br><i>Source : étude Insight sur la souveraineté numérique, 2026</i><br><i>Causes récurrentes : ressources surdimensionnées, environnements de test jamais éteints, stockage jamais purgé, absence d'étiquetage permettant d'attribuer la dépense.</i>"
+      "recto": "Le gaspillage des dépenses dans le cloud",
+      "verso": "Les organisations européennes estiment gaspiller en moyenne environ 24 % de leurs dépenses annuelles de cloud. Par ailleurs, l'essor de l'IA a entraîné une hausse d'environ 12 % des coûts d'hébergement en une seule année.<br><i>Source : étude Insight sur la souveraineté numérique, 2026</i><br><i>Causes récurrentes : ressources surdimensionnées, environnements de test jamais éteints, stockage jamais purgé, absence d'étiquetage permettant d'attribuer la dépense.</i>"
     },
     {
       "id": "opt-1a7435",
@@ -226,7 +226,7 @@
       "type": "chiffre",
       "angle": "technique",
       "recto": "Ce que l'IA change sur les tâches de développement",
-      "verso": "Plus d'un million de développeurs utilisent le principal assistant de code, et les entreprises rapportent une réduction de 30 à 55 % du temps consacré aux tâches de codage répétitives.<br><i>Source : GitHub, 2025</i><br><i>À manier avec la nuance apportée par le rapport DORA : le gain porte sur l'écriture, pas sur la validation. Le goulot d'étranglement se déplace vers la revue et les tests, ce qui limite le gain net à l'échelle d'une organisation.</i>"
+      "verso": "Plus d'un million de développeurs utilisent le principal assistant de code, et les entreprises rapportent une réduction de 30 à 55 % du temps consacré aux tâches de codage répétitives.<br><i>Source : GitHub, 2025</i><br><i>À manier avec la nuance apportée par le rapport DORA (Digital Operational Resilience Act) : le gain porte sur l'écriture, pas sur la validation. Le goulot d'étranglement se déplace vers la revue et les tests, ce qui limite le gain net à l'échelle d'une organisation.</i>"
     },
     {
       "id": "opt-dab399",
@@ -240,14 +240,14 @@
       "type": "acteur",
       "angle": "economique",
       "recto": "La FinOps Foundation et la discipline FinOps",
-      "verso": "Fondation rattachée à la Linux Foundation, elle publie un cadre de référence organisant le pilotage de la dépense en trois phases itératives : informer, optimiser, opérer.<br><b>Principe fondateur</b> : la maîtrise du coût n'est pas une affaire de contrôle de gestion, elle appartient aux équipes qui consomment. Un ingénieur qui voit le coût de son environnement l'éteint le week-end.<br><i>Extension récente à connaître : le cadre s'est élargi au pilotage des dépenses d'IA, dont la structure de coût, facturée à l'usage et très variable, échappe aux méthodes budgétaires classiques.</i>"
+      "verso": "<i>FinOps : Financial Operations.</i><br>Fondation rattachée à la Linux Foundation, elle publie un cadre de référence organisant le pilotage de la dépense en trois phases itératives : informer, optimiser, opérer.<br><b>Principe fondateur</b> : la maîtrise du coût n'est pas une affaire de contrôle de gestion, elle appartient aux équipes qui consomment. Un ingénieur qui voit le coût de son environnement l'éteint le week-end.<br><i>Extension récente à connaître : le cadre s'est élargi au pilotage des dépenses d'IA, dont la structure de coût, facturée à l'usage et très variable, échappe aux méthodes budgétaires classiques.</i>"
     },
     {
       "id": "opt-d96538",
       "type": "acteur",
       "angle": "souverainete",
       "recto": "Le cadre réglementaire qui contraint l'optimisation",
-      "verso": "<b>NIS 2</b> : élargit fortement le périmètre des organisations soumises à des obligations de cybersécurité, avec responsabilité des dirigeants.<br><b>DORA</b> : impose au secteur financier la résilience opérationnelle et la maîtrise du risque lié aux prestataires informatiques critiques.<br><b>Data Act</b> : rend la réversibilité entre fournisseurs de nuage opposable.<br><i>Conséquence pour l'architecte : la réduction de coût n'est plus le seul critère d'arbitrage. Un choix moins cher mais non réversible ou non auditable est devenu un choix non conforme.</i>"
+      "verso": "<b>NIS 2</b> : élargit fortement le périmètre des organisations soumises à des obligations de cybersécurité, avec responsabilité des dirigeants.<br><b>DORA (Digital Operational Resilience Act)</b> : impose au secteur financier la résilience opérationnelle et la maîtrise du risque lié aux prestataires informatiques critiques.<br><b>Data Act</b> : rend la réversibilité entre fournisseurs de cloud opposable.<br><i>Conséquence pour l'architecte : la réduction de coût n'est plus le seul critère d'arbitrage. Un choix moins cher mais non réversible ou non auditable est devenu un choix non conforme.</i>"
     },
     {
       "id": "opt-e6127d",
@@ -275,14 +275,42 @@
       "type": "controverse",
       "angle": "organisationnel",
       "recto": "ITIL freine-t-il l'agilité ?",
-      "verso": "<b>Pour la critique</b> : les comités de validation des changements et la documentation obligatoire allongent les délais ; une organisation qui déploie plusieurs fois par jour ne peut pas soumettre chaque livraison à une instance hebdomadaire.<br><b>Contre</b> : la traçabilité des changements est une obligation d'audit et de conformité ; les travaux DORA montrent que les équipes les plus rapides sont aussi les plus stables, donc la rigueur n'est pas l'ennemie de la vitesse.<br><b>Position tenable</b> : l'opposition portait sur ITIL v3 et sa lecture bureaucratique. La notion de changement standard préautorisé permet d'automatiser la validation des changements à faible risque tout en conservant la trace. Le conflit n'est pas entre gouvernance et vitesse, il est entre gouvernance manuelle et gouvernance automatisée."
+      "verso": "<b>Pour la critique</b> : les comités de validation des changements et la documentation obligatoire allongent les délais ; une organisation qui déploie plusieurs fois par jour ne peut pas soumettre chaque livraison à une instance hebdomadaire.<br><b>Contre</b> : la traçabilité des changements est une obligation d'audit et de conformité ; les travaux DORA (Digital Operational Resilience Act) montrent que les équipes les plus rapides sont aussi les plus stables, donc la rigueur n'est pas l'ennemie de la vitesse.<br><b>Position tenable</b> : l'opposition portait sur ITIL v3 et sa lecture bureaucratique. La notion de changement standard préautorisé permet d'automatiser la validation des changements à faible risque tout en conservant la trace. Le conflit n'est pas entre gouvernance et vitesse, il est entre gouvernance manuelle et gouvernance automatisée."
     },
     {
       "id": "opt-4dbb59",
       "type": "controverse",
       "angle": "economique",
       "recto": "Réduire les coûts informatiques crée-t-il de la valeur ?",
-      "verso": "<b>Pour</b> : le gaspillage est massif et documenté, environ un quart des dépenses de nuage, la moitié des licences non utilisées, un surcoût applicatif de l'ordre de 25 %. Ce sont des économies sans contrepartie négative.<br><b>Contre</b> : une réduction indifférenciée dégrade la qualité, accroît la dette technique et fragilise la sécurité ; les coupes rapides sur les licences produisent un gain au premier trimestre puis un rachat plus cher, la capacité de négociation ayant été perdue avec le volume.<br><b>Position tenable</b> : il faut distinguer l'élimination du gaspillage, qui est un gain net, de la réduction de capacité, qui est un transfert de coût vers l'avenir. La première se mesure en dépense évitée, la seconde en dette contractée. Confondre les deux est l'erreur de pilotage la plus fréquente."
+      "verso": "<b>Pour</b> : le gaspillage est massif et documenté, environ un quart des dépenses de cloud, la moitié des licences non utilisées, un surcoût applicatif de l'ordre de 25 %. Ce sont des économies sans contrepartie négative.<br><b>Contre</b> : une réduction indifférenciée dégrade la qualité, accroît la dette technique et fragilise la sécurité ; les coupes rapides sur les licences produisent un gain au premier trimestre puis un rachat plus cher, la capacité de négociation ayant été perdue avec le volume.<br><b>Position tenable</b> : il faut distinguer l'élimination du gaspillage, qui est un gain net, de la réduction de capacité, qui est un transfert de coût vers l'avenir. La première se mesure en dépense évitée, la seconde en dette contractée. Confondre les deux est l'erreur de pilotage la plus fréquente."
+    },
+    {
+      "id": "opt-9726e8",
+      "type": "definition",
+      "angle": "technique",
+      "recto": "MTBF et MTTR",
+      "verso": "<b>MTBF</b> (Mean Time Between Failures) : durée moyenne de bon fonctionnement entre deux pannes. Mesure la fiabilité.<br><b>MTTR</b> (Mean Time To Repair) : durée moyenne de remise en service après une panne. Mesure la capacité de réaction.<br><i>Ce que la combinaison des deux enseigne : la disponibilité se calcule à partir des deux, et il est presque toujours moins coûteux d'améliorer le MTTR que le MTBF. Empêcher toute panne coûte cher et n'est jamais garanti ; réduire le temps de rétablissement est un investissement en procédures, en automatisation et en entraînement.</i><br><i>C'est exactement le raisonnement des métriques DORA et de la logique Zero Trust : supposer la défaillance plutôt que prétendre l'éviter.</i>"
+    },
+    {
+      "id": "opt-5df21f",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Les sept principes directeurs d'ITIL 4",
+      "verso": "Privilégier la valeur ; partir de l'existant ; progresser par itérations avec des retours ; collaborer et promouvoir la visibilité ; penser et travailler de façon holistique ; opter pour la simplicité et rester pratique ; optimiser et automatiser.<br><i>Deux d'entre eux sont ceux qu'on cite utilement à l'oral. « Partir de l'existant » interdit de faire table rase et de sous-estimer ce qui fonctionne déjà. « Optimiser puis automatiser », dans cet ordre, dit qu'automatiser un processus défaillant ne produit qu'une défaillance plus rapide.</i>"
+    },
+    {
+      "id": "opt-a6aef5",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Les quatre dimensions d'ITIL 4",
+      "verso": "Tout service doit être pensé selon quatre dimensions simultanées : les <b>organisations et les personnes</b>, l'<b>information et la technologie</b>, les <b>partenaires et fournisseurs</b>, et les <b>flux de valeur et processus</b>.<br><i>Utilité concrète : c'est une grille de diagnostic. Un projet qui échoue a presque toujours négligé une dimension, le plus souvent la première. On a choisi l'outil, contractualisé le fournisseur et redessiné le processus, sans traiter les compétences ni l'adhésion des équipes.</i><br><i>C'est aussi une bonne trame de plan pour un oral sur la mise en oeuvre d'un service.</i>"
+    },
+    {
+      "id": "opt-c00cc4",
+      "type": "definition",
+      "angle": "economique",
+      "recto": "Le cycle du hype",
+      "verso": "Modèle publié par Gartner décrivant la trajectoire type d'une technologie émergente en cinq temps : lancement, pic des attentes exagérées, gouffre des désillusions, pente de l'illumination, plateau de productivité.<br><i>Valeur pour un architecte : il justifie de ne pas investir au pic, quand le coût est maximal et le recul nul, ni d'abandonner dans le creux, quand la technologie commence justement à devenir exploitable. Le bon moment se situe sur la pente.</i><br><i>Limite à assumer si on le cite : c'est un modèle qualitatif produit par un cabinet qui vend du conseil, pas un résultat mesuré. Certaines technologies ne sortent jamais du creux, d'autres ne connaissent aucun pic.</i>"
     }
   ]
 }

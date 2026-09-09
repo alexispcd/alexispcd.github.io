@@ -1,7 +1,7 @@
 {
   "themeId": "cloud",
   "theme": "Cloud et virtualisation",
-  "version": "2026-08-12",
+  "version": "2026-09-02",
   "cardCount": 44,
   "cards": [
     {
@@ -9,14 +9,14 @@
       "type": "definition",
       "angle": "technique",
       "recto": "Cloud computing (définition de référence)",
-      "verso": "Modèle qui permet d'accéder à la demande, par le réseau, à des ressources informatiques partagées et configurables : serveurs, stockage, applications.<br>Le NIST, institut de normalisation américain, retient 5 caractéristiques : libre-service à la demande, accès réseau large, mutualisation des ressources, élasticité rapide, service mesuré (on paie ce qu'on consomme).<br><i>Ex. : ouvrir un serveur en deux minutes depuis une console web, sans acheter de matériel.</i><br><i>Source : NIST SP 800-145, 2011</i>"
+      "verso": "Cloud computing. Modèle qui permet d'accéder à la demande, par le réseau, à des ressources informatiques partagées et configurables : serveurs, stockage, applications.<br>Le NIST, institut de normalisation américain, retient 5 caractéristiques : libre-service à la demande, accès réseau large, mutualisation des ressources, élasticité rapide, service mesuré (on paie ce qu'on consomme).<br><i>Ex. : ouvrir un serveur en deux minutes depuis une console web, sans acheter de matériel.</i><br><i>Source : NIST SP 800-145, 2011</i>"
     },
     {
       "id": "cloud-0d9d6b",
       "type": "definition",
       "angle": "technique",
       "recto": "IaaS, PaaS, SaaS : la différence",
-      "verso": "Trois niveaux de délégation croissante.<br><b>IaaS</b> : le fournisseur loue l'infrastructure brute (machines, réseau, stockage), vous gérez le système et les applications. Ex. : AWS EC2, OVHcloud Public Cloud.<br><b>PaaS</b> : il fournit aussi le système et l'environnement d'exécution, vous n'apportez que le code. Ex. : Azure App Service, Scalingo.<br><b>SaaS</b> : il fournit l'application finie, vous ne gérez que vos données et vos utilisateurs. Ex. : Microsoft 365, Salesforce.<br><i>Repère : plus on monte, moins on maîtrise, moins on porte de charge d'exploitation.</i>"
+      "verso": "Trois niveaux de délégation croissante.<br><b>IaaS (Infrastructure as a Service)</b> : le fournisseur loue l'infrastructure brute (machines, réseau, stockage), vous gérez le système et les applications. Ex. : AWS EC2, OVHcloud Public Cloud.<br><b>PaaS (Platform as a Service)</b> : il fournit aussi le système et l'environnement d'exécution, vous n'apportez que le code. Ex. : Azure App Service, Scalingo.<br><b>SaaS (Software as a Service)</b> : il fournit l'application finie, vous ne gérez que vos données et vos utilisateurs. Ex. : Microsoft 365, Salesforce.<br><i>Repère : plus on monte, moins on maîtrise, moins on porte de charge d'exploitation.</i>"
     },
     {
       "id": "cloud-a123c1",
@@ -51,7 +51,7 @@
       "type": "definition",
       "angle": "technique",
       "recto": "Orchestration de conteneurs et Kubernetes",
-      "verso": "Faire tourner dix conteneurs est simple, en faire tourner cinq mille ne l'est pas. L'orchestrateur automatise le placement, le redémarrage en cas de panne, la montée en charge, la mise à jour progressive et le réseau interne.<br>Kubernetes, issu de Google et confié à la fondation CNCF en 2015, est le standard de fait.<br><i>82 % des utilisateurs de conteneurs le font tourner en production, contre 66 % en 2023 (CNCF, enquête annuelle 2025).</i>"
+      "verso": "Faire tourner dix conteneurs est simple, en faire tourner cinq mille ne l'est pas. L'orchestrateur automatise le placement, le redémarrage en cas de panne, la montée en charge, la mise à jour progressive et le réseau interne.<br>Kubernetes, issu de Google et confié à la fondation CNCF (Cloud Native Computing Foundation) en 2015, est le standard de fait.<br><i>82 % des utilisateurs de conteneurs le font tourner en production, contre 66 % en 2023 (CNCF, enquête annuelle 2025).</i>"
     },
     {
       "id": "cloud-cab374",
@@ -72,7 +72,7 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Les 6R de la migration cloud",
-      "verso": "Les six stratégies possibles, à choisir application par application.<br><b>Rehost</b> : déplacer tel quel (lift and shift). <b>Replatform</b> : déplacer avec quelques optimisations. <b>Repurchase</b> : remplacer par un logiciel en SaaS. <b>Refactor</b> : réécrire pour le cloud. <b>Retain</b> : conserver sur place. <b>Retire</b> : décommissionner.<br><i>Argument d'oral : une migration réussie n'applique pas une stratégie unique, elle commence par classer le parc applicatif.</i>"
+      "verso": "Les six stratégies possibles, à choisir application par application.<br><b>Rehost</b> : déplacer tel quel (lift and shift).<br><b>Replatform</b> : déplacer avec quelques optimisations.<br><b>Repurchase</b> : remplacer par un logiciel en SaaS (Software as a Service).<br><b>Refactor</b> : réécrire pour le cloud.<br><b>Retain</b> : conserver sur place.<br><b>Retire</b> : décommissionner.<br><i>Argument d'oral : une migration réussie n'applique pas une stratégie unique, elle commence par classer le parc applicatif.</i>"
     },
     {
       "id": "cloud-dc31b1",
@@ -86,7 +86,7 @@
       "type": "definition",
       "angle": "securite",
       "recto": "Modèle de responsabilité partagée",
-      "verso": "Répartition contractuelle de la sécurité entre le fournisseur et le client. Le fournisseur répond de la sécurité <b>du</b> cloud (matériel, hyperviseur, réseau physique, datacenter), le client de la sécurité <b>dans</b> le cloud (données, identités, configuration, chiffrement).<br>La frontière se déplace selon le modèle : en IaaS le client porte beaucoup, en SaaS très peu.<br><i>Ex. : un espace de stockage laissé ouvert au public est une faute du client. Capital One en 2019 en est le cas d'école.</i>"
+      "verso": "Répartition contractuelle de la sécurité entre le fournisseur et le client. Le fournisseur répond de la sécurité <b>du</b> cloud (matériel, hyperviseur, réseau physique, datacenter), le client de la sécurité <b>dans</b> le cloud (données, identités, configuration, chiffrement).<br>La frontière se déplace selon le modèle : en IaaS (Infrastructure as a Service) le client porte beaucoup, en SaaS (Software as a Service) très peu.<br><i>Ex. : un espace de stockage laissé ouvert au public est une faute du client. Capital One en 2019 en est le cas d'école.</i>"
     },
     {
       "id": "cloud-1b76a9",
@@ -107,7 +107,7 @@
       "type": "definition",
       "angle": "economique",
       "recto": "FinOps",
-      "verso": "Discipline de pilotage de la dépense cloud qui réunit la DSI, la finance et les métiers autour du même tableau de bord. Trois temps : rendre visible (qui consomme quoi), optimiser (redimensionner, éteindre l'inutilisé, réserver à l'avance), gouverner (budgets, alertes, responsabilisation des équipes).<br><i>Le cloud transforme un investissement (CAPEX) en dépense courante (OPEX) : le contrôle ne se fait plus au moment de l'achat mais en continu.</i>"
+      "verso": "<i>FinOps : Financial Operations.</i><br>Discipline de pilotage de la dépense cloud qui réunit la DSI, la finance et les métiers autour du même tableau de bord. Trois temps : rendre visible (qui consomme quoi), optimiser (redimensionner, éteindre l'inutilisé, réserver à l'avance), gouverner (budgets, alertes, responsabilisation des équipes).<br><i>Le cloud transforme un investissement (CAPEX) en dépense courante (OPEX) : le contrôle ne se fait plus au moment de l'achat mais en continu.</i>"
     },
     {
       "id": "cloud-7d3272",
@@ -128,7 +128,7 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "SLA et taux de disponibilité : que valent les « neuf » ?",
-      "verso": "Le SLA, engagement de niveau de service, chiffre la disponibilité garantie et la compensation due en cas de manquement.<br>99,9 % représente environ 8 h 45 d'indisponibilité par an. 99,99 % : 52 minutes. 99,999 % : 5 minutes.<br><i>Piège d'oral : la compensation est presque toujours un avoir proportionnel à l'abonnement, sans rapport avec la perte d'exploitation réelle. Un SLA n'est pas une assurance.</i>"
+      "verso": "Le SLA (Service Level Agreement), engagement de niveau de service, chiffre la disponibilité garantie et la compensation due en cas de manquement.<br>99,9 % représente environ 8 h 45 d'indisponibilité par an. 99,99 % : 52 minutes. 99,999 % : 5 minutes.<br><i>Piège d'oral : la compensation est presque toujours un avoir proportionnel à l'abonnement, sans rapport avec la perte d'exploitation réelle. Un SLA n'est pas une assurance.</i>"
     },
     {
       "id": "cloud-d3d8ed",
@@ -142,7 +142,7 @@
       "type": "evenement",
       "angle": "technique",
       "recto": "2013-2015 : Docker puis Kubernetes",
-      "verso": "2013, Docker rend les conteneurs simples à utiliser. 2014, Google publie le code de Kubernetes, inspiré de son système interne Borg. 2015, Kubernetes est confié à la CNCF, fondation indépendante rattachée à la Linux Foundation.<br><i>Portée : la portabilité applicative devient réelle et le standard reste ouvert au lieu d'appartenir à un fournisseur. C'est l'argument technique central contre le verrouillage.</i>"
+      "verso": "2013, Docker rend les conteneurs simples à utiliser. 2014, Google publie le code de Kubernetes, inspiré de son système interne Borg. 2015, Kubernetes est confié à la CNCF (Cloud Native Computing Foundation), fondation indépendante rattachée à la Linux Foundation.<br><i>Portée : la portabilité applicative devient réelle et le standard reste ouvert au lieu d'appartenir à un fournisseur. C'est l'argument technique central contre le verrouillage.</i>"
     },
     {
       "id": "cloud-6fe9ca",
@@ -205,7 +205,7 @@
       "type": "chiffre",
       "angle": "technique",
       "recto": "Adoption de Kubernetes en production",
-      "verso": "82 % des utilisateurs de conteneurs font tourner Kubernetes en production en 2025, contre 66 % en 2023. 98 % des organisations interrogées déclarent avoir adopté des pratiques cloud native, et 66 % de celles qui hébergent des modèles d'IA générative les font tourner sur Kubernetes.<br><i>Source : CNCF, enquête annuelle 2025, publiée en janvier 2026</i>"
+      "verso": "82 % des utilisateurs de conteneurs font tourner Kubernetes en production en 2025, contre 66 % en 2023. 98 % des organisations interrogées déclarent avoir adopté des pratiques cloud native, et 66 % de celles qui hébergent des modèles d'IA générative les font tourner sur Kubernetes.<br><i>Source : CNCF (Cloud Native Computing Foundation), enquête annuelle 2025, publiée en janvier 2026</i>"
     },
     {
       "id": "cloud-fbd148",
@@ -240,14 +240,14 @@
       "type": "acteur",
       "angle": "souverainete",
       "recto": "Doctrine « cloud au centre » et schéma européen EUCS",
-      "verso": "La doctrine française « cloud au centre » impose aux administrations d'héberger leurs données sensibles sur une offre qualifiée SecNumCloud. C'est ce qui a transformé SecNumCloud en critère structurant des appels d'offres publics, puis de nombreux marchés privés.<br>Au niveau européen, le schéma de certification EUCS devait harmoniser ces exigences, mais il reste bloqué en négociation, notamment sur l'inclusion de critères de souveraineté.<br><i>Argument d'oral : faute d'accord européen, la souveraineté numérique reste aujourd'hui une politique nationale.</i>"
+      "verso": "La doctrine française « cloud au centre » impose aux administrations d'héberger leurs données sensibles sur une offre qualifiée SecNumCloud. C'est ce qui a transformé SecNumCloud en critère structurant des appels d'offres publics, puis de nombreux marchés privés.<br>Au niveau européen, le schéma de certification EUCS (European Union Cybersecurity Certification Scheme for Cloud Services) devait harmoniser ces exigences, mais il reste bloqué en négociation, notamment sur l'inclusion de critères de souveraineté.<br><i>Argument d'oral : faute d'accord européen, la souveraineté numérique reste aujourd'hui une politique nationale.</i>"
     },
     {
       "id": "cloud-6c4e38",
       "type": "acteur",
       "angle": "technique",
-      "recto": "CNCF (Cloud Native Computing Foundation)",
-      "verso": "Fondation rattachée à la Linux Foundation, créée en 2015 pour héberger Kubernetes puis l'écosystème cloud native. Elle garantit la neutralité de ces projets : aucun fournisseur ne les contrôle.<br>Elle héberge aujourd'hui plus de deux cents projets, dont Prometheus pour la supervision, Argo pour le déploiement et OpenTelemetry pour l'observabilité, et publie l'enquête annuelle de référence du secteur.<br><i>Enjeu : c'est la garantie institutionnelle contre le verrouillage technique.</i>"
+      "recto": "CNCF",
+      "verso": "<i>CNCF : Cloud Native Computing Foundation.</i><br>Fondation rattachée à la Linux Foundation, créée en 2015 pour héberger Kubernetes puis l'écosystème cloud native. Elle garantit la neutralité de ces projets : aucun fournisseur ne les contrôle.<br>Elle héberge aujourd'hui plus de deux cents projets, dont Prometheus pour la supervision, Argo pour le déploiement et OpenTelemetry pour l'observabilité, et publie l'enquête annuelle de référence du secteur.<br><i>Enjeu : c'est la garantie institutionnelle contre le verrouillage technique.</i>"
     },
     {
       "id": "cloud-c525fd",
@@ -261,7 +261,7 @@
       "type": "controverse",
       "angle": "economique",
       "recto": "Le cloud coûte-t-il vraiment moins cher que l'interne ?",
-      "verso": "<b>Pour</b> : pas d'investissement initial, pas de surdimensionnement pour absorber les pics, coûts d'exploitation et de renouvellement matériel transférés au fournisseur, délai de mise à disposition réduit à quelques minutes.<br><b>Contre</b> : facture qui dérive sans pilotage FinOps, frais de sortie, surcoût des services managés, et effet de seuil dès que la charge devient stable et prévisible.<br><b>Position tenable</b> : le cloud est rentable sur la variabilité et l'incertitude, pas sur le volume constant. D'où le rapatriement sélectif (plus de 80 % des DSI concernés selon Barclays) et le cas Dropbox, dont la marge brute est passée de 33 % à 67 % après retour sur infrastructure propre."
+      "verso": "<b>Pour</b> : pas d'investissement initial, pas de surdimensionnement pour absorber les pics, coûts d'exploitation et de renouvellement matériel transférés au fournisseur, délai de mise à disposition réduit à quelques minutes.<br><b>Contre</b> : facture qui dérive sans pilotage FinOps (Financial Operations), frais de sortie, surcoût des services managés, et effet de seuil dès que la charge devient stable et prévisible.<br><b>Position tenable</b> : le cloud est rentable sur la variabilité et l'incertitude, pas sur le volume constant. D'où le rapatriement sélectif (plus de 80 % des DSI concernés selon Barclays) et le cas Dropbox, dont la marge brute est passée de 33 % à 67 % après retour sur infrastructure propre."
     },
     {
       "id": "cloud-f6064d",
@@ -289,20 +289,20 @@
       "type": "definition",
       "angle": "securite",
       "recto": "Mauvaise configuration et CSPM",
-      "verso": "La <b>mauvaise configuration</b> est la première cause d'incident en environnement de nuage : espace de stockage ouvert au public, groupe de sécurité laissé grand ouvert, journalisation désactivée, chiffrement non activé.<br>Le <b>CSPM</b> est l'outillage qui analyse en continu la configuration de l'ensemble des comptes et signale les écarts par rapport à un référentiel.<br><i>Pourquoi c'est structurel et non accidentel : dans le nuage, une commande unique expose une ressource au monde entier, sans passer par un pare-feu ni par une équipe réseau. La vitesse de mise à disposition est aussi la vitesse de l'erreur.</i><br><i>Parade la plus efficace : appliquer la configuration par infrastructure déclarée en code, avec des politiques bloquantes, plutôt que corriger après coup.</i>"
+      "verso": "La <b>mauvaise configuration</b> est la première cause d'incident en environnement de cloud : espace de stockage ouvert au public, groupe de sécurité laissé grand ouvert, journalisation désactivée, chiffrement non activé.<br>Le <b>CSPM (Cloud Security Posture Management)</b> est l'outillage qui analyse en continu la configuration de l'ensemble des comptes et signale les écarts par rapport à un référentiel.<br><i>Pourquoi c'est structurel et non accidentel : dans le cloud, une commande unique expose une ressource au monde entier, sans passer par un pare-feu ni par une équipe réseau. La vitesse de mise à disposition est aussi la vitesse de l'erreur.</i><br><i>Parade la plus efficace : appliquer la configuration par infrastructure déclarée en code, avec des politiques bloquantes, plutôt que corriger après coup.</i>"
     },
     {
       "id": "cloud-a16253",
       "type": "definition",
       "angle": "securite",
-      "recto": "Identités et privilèges excessifs dans le nuage",
-      "verso": "Dans une infrastructure de nuage, tout est piloté par des identités : utilisateurs, rôles applicatifs, comptes de service, clés d'accès programmatiques. C'est l'identité qui remplace le périmètre réseau comme mécanisme de contrôle.<br><b>Risque dominant</b> : l'accumulation de droits jamais réduits. Les études de posture montrent qu'une très large majorité des identités de nuage disposent de privilèges nettement supérieurs à ce qu'elles utilisent réellement.<br><i>C'est le mécanisme exact de la fuite Capital One : un rôle applicatif trop permissif a transformé une faille sur un pare-feu applicatif en accès complet au stockage.</i><br><i>Parades : droits accordés à la demande et pour une durée limitée, revue périodique, analyse de l'écart entre droits accordés et droits utilisés.</i>"
+      "recto": "Identités et privilèges excessifs dans le cloud",
+      "verso": "Dans une infrastructure de cloud, tout est piloté par des identités : utilisateurs, rôles applicatifs, comptes de service, passkeys programmatiques. C'est l'identité qui remplace le périmètre réseau comme mécanisme de contrôle.<br><b>Risque dominant</b> : l'accumulation de droits jamais réduits. Les études de posture montrent qu'une très large majorité des identités de cloud disposent de privilèges nettement supérieurs à ce qu'elles utilisent réellement.<br><i>C'est le mécanisme exact de la fuite Capital One : un rôle applicatif trop permissif a transformé une faille sur un pare-feu applicatif en accès complet au stockage.</i><br><i>Parades : droits accordés à la demande et pour une durée limitée, revue périodique, analyse de l'écart entre droits accordés et droits utilisés.</i>"
     },
     {
       "id": "cloud-ede7b5",
       "type": "definition",
       "angle": "securite",
-      "recto": "Chiffrement et maîtrise des clés dans le nuage",
+      "recto": "Chiffrement et maîtrise des clés dans le cloud",
       "verso": "<b>Clés gérées par le fournisseur</b> : le plus simple, mais le fournisseur peut techniquement déchiffrer, donc répondre à une réquisition judiciaire.<br><b>BYOK</b> : le client apporte sa propre clé, tout en la confiant au service de gestion du fournisseur.<br><b>HYOK</b> : la clé reste chez le client, dans son propre module matériel de sécurité, et ne quitte jamais son périmètre.<br><i>Point décisif pour tout sujet mêlant sécurité et souveraineté : chiffrer ne protège du CLOUD Act que si la clé est hors de portée du fournisseur. Un chiffrement dont le fournisseur détient la clé protège des autres clients, pas du fournisseur ni des autorités dont il dépend.</i><br><i>Contrepartie honnête : plus la maîtrise des clés est forte, plus on perd l'usage des services managés qui doivent accéder à la donnée en clair.</i>"
     },
     {
@@ -310,7 +310,7 @@
       "type": "definition",
       "angle": "securite",
       "recto": "Risque de concentration et effet systémique",
-      "verso": "Trois fournisseurs concentrent environ deux tiers du marché mondial de l'infrastructure. Une panne majeure sur une seule région d'un seul opérateur interrompt simultanément des milliers d'organisations sans lien entre elles.<br><b>Traduction en risque</b> : la mutualisation qui réduit le risque individuel de chaque client augmente le risque systémique pour l'ensemble de l'économie.<br><i>C'est précisément ce que traite le règlement DORA en soumettant les prestataires informatiques critiques à une supervision directe des autorités financières européennes, une première.</i><br><i>Réponse au niveau d'une organisation : identifier les charges pour lesquelles une indisponibilité prolongée est inacceptable, et accepter d'en payer la redondance, sur une autre région ou un autre fournisseur.</i>"
+      "verso": "Trois fournisseurs concentrent environ deux tiers du marché mondial de l'infrastructure. Une panne majeure sur une seule région d'un seul opérateur interrompt simultanément des milliers d'organisations sans lien entre elles.<br><b>Traduction en risque</b> : la mutualisation qui réduit le risque individuel de chaque client augmente le risque systémique pour l'ensemble de l'économie.<br><i>C'est précisément ce que traite le règlement DORA (Digital Operational Resilience Act) en soumettant les prestataires informatiques critiques à une supervision directe des autorités financières européennes, une première.</i><br><i>Réponse au niveau d'une organisation : identifier les charges pour lesquelles une indisponibilité prolongée est inacceptable, et accepter d'en payer la redondance, sur une autre région ou un autre fournisseur.</i>"
     }
   ]
 }

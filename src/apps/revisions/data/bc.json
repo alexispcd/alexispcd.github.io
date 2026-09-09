@@ -1,8 +1,8 @@
 {
   "themeId": "bc",
   "theme": "Blockchain",
-  "version": "2026-08-12",
-  "cardCount": 40,
+  "version": "2026-09-07",
+  "cardCount": 41,
   "cards": [
     {
       "id": "bc-efe3fb",
@@ -22,15 +22,15 @@
       "id": "bc-2b84d0",
       "type": "definition",
       "angle": "technique",
-      "recto": "Bloc, empreinte et chaînage",
-      "verso": "Chaque bloc contient un ensemble de transactions, un horodatage et l'<b>empreinte</b> du bloc précédent. Une empreinte est le résultat d'une fonction de hachage : une signature de taille fixe, unique et non réversible.<br><b>Mécanisme d'inviolabilité</b> : modifier une transaction ancienne change son empreinte, donc celle du bloc, donc celle de tous les blocs suivants. Il faudrait recalculer toute la chaîne plus vite que le reste du réseau ne l'allonge.<br><i>C'est de là que vient la propriété d'immuabilité, et elle est probabiliste, pas absolue.</i>"
+      "recto": "Bloc, hash et chaînage",
+      "verso": "<b>Bloc</b> : ensemble de transactions regroupées, accompagnées d'un horodatage et d'une référence au bloc précédent.<br><b>Hash</b> : empreinte cryptographique produite par une fonction de hachage. Signature de taille fixe, unique pour un contenu donné, et non réversible : on ne remonte pas du hash au contenu.<br><b>Chaînage</b> : chaque bloc contient le hash du précédent, ce qui les relie en une chaîne ordonnée depuis l'origine.<br><b>Mécanisme d'inviolabilité</b> : modifier une transaction ancienne change son hash, donc celui de son bloc, donc celui de tous les blocs suivants. Il faudrait recalculer toute la chaîne plus vite que le reste du réseau ne l'allonge.<br><i>C'est de là que vient la propriété d'immuabilité, et elle est probabiliste, pas absolue.</i>"
     },
     {
       "id": "bc-cc92e2",
       "type": "definition",
       "angle": "technique",
       "recto": "Preuve de travail et preuve d'enjeu",
-      "verso": "<b>Preuve de travail</b> : les participants dépensent de la puissance de calcul pour proposer un bloc. La sécurité est adossée à un coût énergétique réel.<br><b>Preuve d'enjeu</b> : les validateurs immobilisent des jetons en garantie et sont sanctionnés en cas de comportement malveillant. La sécurité est adossée à un coût financier.<br><i>Écart d'ordre de grandeur : le passage d'Ethereum de l'une à l'autre en 2022 a réduit sa consommation électrique d'environ 99,9 %.</i><br><i>Critique de la preuve d'enjeu à connaître : elle tend à concentrer le pouvoir de validation chez ceux qui détiennent déjà le plus de jetons.</i>"
+      "verso": "<b>Preuve de travail</b> : les participants dépensent de la puissance de calcul pour proposer un bloc. La sécurité est adossée à un coût énergétique réel.<br><b>Preuve d'enjeu</b> : les validateurs immobilisent des tokens en garantie et sont sanctionnés en cas de comportement malveillant. La sécurité est adossée à un coût financier.<br><i>Écart d'ordre de grandeur : le passage d'Ethereum de l'une à l'autre en 2022 a réduit sa consommation électrique d'environ 99,9 %.</i><br><i>Critique de la preuve d'enjeu à connaître : elle tend à concentrer le pouvoir de validation chez ceux qui détiennent déjà le plus de tokens.</i>"
     },
     {
       "id": "bc-4e9405",
@@ -50,14 +50,14 @@
       "id": "bc-31db85",
       "type": "definition",
       "angle": "economique",
-      "recto": "Jetons fongibles et non fongibles",
-      "verso": "<b>Fongible</b> : chaque unité est interchangeable, comme une monnaie ou une part. Standard usuel : ERC-20.<br><b>Non fongible</b> : chaque jeton est unique et identifié individuellement. Standard usuel : ERC-721.<br><i>Malentendu à corriger explicitement : un jeton non fongible ne contient presque jamais l'oeuvre elle-même, seulement un lien vers un fichier hébergé ailleurs. Il prouve la possession d'une inscription au registre, pas la propriété juridique de l'objet.</i>"
+      "recto": "Tokens fongibles et non fongibles (NFT)",
+      "verso": "<i>NFT : Non-Fungible Token.</i><br><b>Fongible</b> : chaque unité est interchangeable, comme une monnaie ou une part. Standard usuel : ERC-20.<br><b>Non fongible</b> : chaque token est unique et identifié individuellement. Standard usuel : ERC-721.<br><i>Malentendu à corriger explicitement : un token non fongible ne contient presque jamais l'oeuvre elle-même, seulement un lien vers un fichier hébergé ailleurs. Il prouve la possession d'une inscription au registre, pas la propriété juridique de l'objet.</i>"
     },
     {
       "id": "bc-8b84dc",
       "type": "definition",
       "angle": "economique",
-      "recto": "Jeton stable",
+      "recto": "Stablecoin",
       "verso": "Crypto-actif dont la valeur est arrimée à une monnaie officielle, généralement le dollar. Trois modèles : adossé à des réserves réelles auditées, adossé à d'autres crypto-actifs en surgarantie, ou algorithmique.<br><i>Le modèle algorithmique s'est effondré en 2022 avec TerraUSD, entraînant la disparition de dizaines de milliards de dollars.</i><br><i>Usage réel et souvent ignoré : c'est aujourd'hui l'usage le plus massif de la blockchain, comme instrument de règlement transfrontalier et comme refuge en dollar dans les économies à monnaie instable.</i>"
     },
     {
@@ -72,7 +72,7 @@
       "type": "definition",
       "angle": "securite",
       "recto": "Portefeuille, clés et phrase de récupération",
-      "verso": "La <b>clé publique</b> sert d'adresse, la <b>clé privée</b> autorise les dépenses. Le portefeuille ne contient pas les fonds, il détient les clés qui en donnent le contrôle. La <b>phrase de récupération</b> permet de régénérer les clés.<br><b>Portefeuille de dépôt</b> : les clés sont détenues par un prestataire, avec un recours possible mais un risque de contrepartie. <b>Autonome</b> : les clés sont détenues par l'utilisateur, sans aucun recours en cas de perte.<br><i>Conséquence brutale et sans équivalent bancaire : perdre la phrase de récupération, c'est perdre définitivement les fonds. Personne ne peut les restituer.</i>"
+      "verso": "La <b>clé publique</b> sert d'adresse, la <b>clé privée</b> autorise les dépenses. Le portefeuille ne contient pas les fonds, il détient les clés qui en donnent le contrôle. La <b>phrase de récupération</b> permet de régénérer les clés.<br><b>Portefeuille de dépôt</b> : les clés sont détenues par un prestataire, avec un recours possible mais un risque de contrepartie.<br><b>Autonome</b> : les clés sont détenues par l'utilisateur, sans aucun recours en cas de perte.<br><i>Conséquence brutale et sans équivalent bancaire : perdre la phrase de récupération, c'est perdre définitivement les fonds. Personne ne peut les restituer.</i>"
     },
     {
       "id": "bc-df2027",
@@ -85,7 +85,7 @@
       "id": "bc-562eca",
       "type": "definition",
       "angle": "technique",
-      "recto": "Solutions de seconde couche",
+      "recto": "Solutions de seconde couche (layer 2)",
       "verso": "Protocoles construits par-dessus une blockchain principale, qui traitent les transactions hors chaîne puis n'inscrivent qu'une preuve agrégée sur la chaîne principale.<br><b>Deux familles</b> : les <i>rollups optimistes</i>, qui supposent les transactions valides et ouvrent une fenêtre de contestation ; les <i>rollups à divulgation nulle</i>, qui fournissent une preuve cryptographique de validité.<br><i>Objectif : contourner le trilemme en déportant le volume, tout en conservant la sécurité de la couche principale. C'est la principale voie de passage à l'échelle aujourd'hui.</i>"
     },
     {
@@ -121,7 +121,7 @@
       "type": "definition",
       "angle": "souverainete",
       "recto": "Monnaie numérique de banque centrale",
-      "verso": "Version numérique de la monnaie officielle, émise directement par la banque centrale, à distinguer d'un jeton stable privé et d'un crypto-actif.<br><b>Projet d'euro numérique</b> : porté par la Banque centrale européenne, motivé par la souveraineté des paiements face aux réseaux de cartes et aux jetons stables en dollar, avec un plafond de détention envisagé pour éviter la fuite des dépôts bancaires.<br><i>Débat principal : la traçabilité des paiements et le risque de surveillance, la BCE défendant un niveau de confidentialité proche de l'espèce pour les petits montants.</i>"
+      "verso": "Version numérique de la monnaie officielle, émise directement par la banque centrale, à distinguer d'un stablecoin privé et d'un crypto-actif.<br><b>Projet d'euro numérique</b> : porté par la Banque centrale européenne, motivé par la souveraineté des paiements face aux réseaux de cartes et aux stablecoins en dollar, avec un plafond de détention envisagé pour éviter la fuite des dépôts bancaires.<br><i>Débat principal : la traçabilité des paiements et le risque de surveillance, la BCE défendant un niveau de confidentialité proche de l'espèce pour les petits montants.</i>"
     },
     {
       "id": "bc-2de1d4",
@@ -142,7 +142,7 @@
       "type": "evenement",
       "angle": "technique",
       "recto": "2015 : Ethereum et les contrats intelligents",
-      "verso": "Lancement d'une blockchain conçue non pour transférer de la valeur mais pour exécuter des programmes, avec une machine virtuelle capable de calculs arbitraires.<br><i>Portée : la blockchain cesse d'être un registre de paiement pour devenir une plateforme applicative. Toutes les vagues suivantes, jetons non fongibles, finance décentralisée, tokenisation, en découlent directement.</i>"
+      "verso": "Lancement d'une blockchain conçue non pour transférer de la valeur mais pour exécuter des programmes, avec une machine virtuelle capable de calculs arbitraires.<br><i>Portée : la blockchain cesse d'être un registre de paiement pour devenir une plateforme applicative. Toutes les vagues suivantes, tokens non fongibles, finance décentralisée, tokenisation, en découlent directement.</i>"
     },
     {
       "id": "bc-ee8dcf",
@@ -155,7 +155,7 @@
       "id": "bc-ce8844",
       "type": "evenement",
       "angle": "economique",
-      "recto": "2020-2021 : la bulle des jetons non fongibles et de la finance décentralisée",
+      "recto": "2020-2021 : la bulle des tokens non fongibles et de la finance décentralisée",
       "verso": "Explosion des volumes, ventes d'oeuvres numériques à plusieurs dizaines de millions de dollars, multiplication des protocoles de rendement, entrée massive de capitaux spéculatifs.<br><i>Portée : la correction qui a suivi a effacé l'essentiel de la valeur des collections, mais a laissé une infrastructure et des standards durables. C'est un schéma classique de bulle technologique, à comparer avec celle des valeurs internet de 2000.</i>"
     },
     {
@@ -177,21 +177,21 @@
       "type": "evenement",
       "angle": "souverainete",
       "recto": "30 décembre 2024 : le règlement MiCA devient applicable",
-      "verso": "Le règlement (UE) 2023/1114 entre pleinement en application pour les prestataires de services sur crypto-actifs, après un premier volet consacré aux jetons stables. Il est transposé en France par une ordonnance d'octobre 2024 et un décret de février 2025.<br><i>Portée : premier cadre complet au monde pour un marché entier de crypto-actifs, avec agrément unique et passeport européen valable dans les vingt-sept États membres. L'Europe applique ici la même stratégie normative que pour le RGPD.</i>"
+      "verso": "<i>MiCA : Markets in Crypto-Assets.</i><br>Le règlement (UE) 2023/1114 entre pleinement en application pour les prestataires de services sur crypto-actifs, après un premier volet consacré aux stablecoins. Il est transposé en France par une ordonnance d'octobre 2024 et un décret de février 2025.<br><i>Portée : premier cadre complet au monde pour un marché entier de crypto-actifs, avec agrément unique et passeport européen valable dans les vingt-sept États membres. L'Europe applique ici la même stratégie normative que pour le RGPD.</i>"
     },
     {
       "id": "bc-fac229",
       "type": "evenement",
       "angle": "souverainete",
       "recto": "1er juillet 2026 : fin de la période transitoire française",
-      "verso": "L'article 143 du règlement permettait à chaque État de fixer une transition de 6 à 18 mois. La France a retenu la durée maximale, ce qui a repoussé au 1er juillet 2026 l'extinction du régime national d'enregistrement issu de la loi PACTE.<br>Depuis cette date, seuls les prestataires agréés au titre de MiCA, en France ou via le passeport européen, peuvent servir les résidents français. Plusieurs acteurs majeurs, dont Binance France, ont cessé leurs services faute d'agrément.<br><i>Portée : consolidation brutale du secteur, la conformité devenant une barrière à l'entrée.</i>"
+      "verso": "L'article 143 du règlement permettait à chaque État de fixer une transition de 6 à 18 mois. La France a retenu la durée maximale, ce qui a repoussé au 1er juillet 2026 l'extinction du régime national d'enregistrement issu de la loi PACTE.<br>Depuis cette date, seuls les prestataires agréés au titre de MiCA (Markets in Crypto-Assets), en France ou via le passeport européen, peuvent servir les résidents français. Plusieurs acteurs majeurs, dont Binance France, ont cessé leurs services faute d'agrément.<br><i>Portée : consolidation brutale du secteur, la conformité devenant une barrière à l'entrée.</i>"
     },
     {
       "id": "bc-2b5d2a",
       "type": "chiffre",
       "angle": "souverainete",
       "recto": "L'agrément MiCA en chiffres",
-      "verso": "Plus de 170 prestataires agréés dans l'Union début 2026, contre une douzaine début 2025. Le coût de mise en conformité est passé d'environ 10 000 euros sous les anciens régimes nationaux à plus de 60 000 euros, avec des fonds propres minimaux de 50 000 à 150 000 euros selon les services.<br><i>Sources : AMF ; Coincub, 2025</i><br><i>Lecture d'oral : la régulation a produit exactement l'effet attendu, une professionnalisation, et un effet moins commenté, l'élimination des petits acteurs.</i>"
+      "verso": "<i>MiCA : Markets in Crypto-Assets.</i><br>Plus de 170 prestataires agréés dans l'Union début 2026, contre une douzaine début 2025. Le coût de mise en conformité est passé d'environ 10 000 euros sous les anciens régimes nationaux à plus de 60 000 euros, avec des fonds propres minimaux de 50 000 à 150 000 euros selon les services.<br><i>Sources : AMF ; Coincub, 2025</i><br><i>Lecture d'oral : la régulation a produit exactement l'effet attendu, une professionnalisation, et un effet moins commenté, l'élimination des petits acteurs.</i>"
     },
     {
       "id": "bc-69314e",
@@ -233,28 +233,28 @@
       "type": "acteur",
       "angle": "souverainete",
       "recto": "MiCA et l'AMF",
-      "verso": "<b>MiCA</b> : règlement européen couvrant les émetteurs de jetons, les jetons stables et les prestataires de services. Obligations de fonds propres, de gouvernance, de ségrégation des actifs des clients, d'information par un document de référence, et de lutte contre le blanchiment.<br><b>AMF</b> : autorité compétente en France, elle délivre l'agrément et tient la liste blanche des prestataires autorisés.<br><i>Sanction de l'exercice sans agrément : deux ans d'emprisonnement et 30 000 euros d'amende.</i>"
+      "verso": "<b>MiCA (Markets in Crypto-Assets)</b> : règlement européen couvrant les émetteurs de tokens, les stablecoins et les prestataires de services. Obligations de fonds propres, de gouvernance, de ségrégation des actifs des clients, d'information par un document de référence, et de lutte contre le blanchiment.<br><b>AMF</b> : autorité compétente en France, elle délivre l'agrément et tient la liste blanche des prestataires autorisés.<br><i>Sanction de l'exercice sans agrément : deux ans d'emprisonnement et 30 000 euros d'amende.</i>"
     },
     {
       "id": "bc-6b4dd1",
       "type": "acteur",
       "angle": "technique",
       "recto": "Ethereum et son écosystème",
-      "verso": "Principale plateforme de contrats intelligents, socle de la majorité des jetons, des protocoles décentralisés et des actifs tokenisés. Son écosystème comprend les solutions de seconde couche qui absorbent le volume, et une fondation qui coordonne l'évolution du protocole sans le contrôler.<br><i>Point de gouvernance intéressant : les évolutions sont décidées par un processus de propositions publiques et adoptées par les opérateurs de noeuds. Personne ne peut imposer une modification, ce qui explique la lenteur des changements et leur robustesse.</i>"
+      "verso": "Principale plateforme de contrats intelligents, socle de la majorité des tokens, des protocoles décentralisés et des actifs tokenisés. Son écosystème comprend les solutions de seconde couche (layer 2) qui absorbent le volume, et une fondation qui coordonne l'évolution du protocole sans le contrôler.<br><i>Point de gouvernance intéressant : les évolutions sont décidées par un processus de propositions publiques et adoptées par les opérateurs de noeuds. Personne ne peut imposer une modification, ce qui explique la lenteur des changements et leur robustesse.</i>"
     },
     {
       "id": "bc-6a880c",
       "type": "acteur",
       "angle": "organisationnel",
       "recto": "Hyperledger et les blockchains d'entreprise",
-      "verso": "Ensemble de projets hébergés par la Linux Foundation, dont <b>Hyperledger Fabric</b>, conçu pour les consortiums : participants identifiés, canaux privés entre sous-groupes, pas de jeton ni de minage, et débit très supérieur aux chaînes publiques.<br><i>Ex. d'usage : traçabilité alimentaire, documents de commerce international, certification de pièces aéronautiques.</i><br><i>Lucidité à conserver : beaucoup de ces projets ont été abandonnés après leur phase pilote, moins pour des raisons techniques que par difficulté à faire coopérer durablement des concurrents sur une gouvernance commune.</i>"
+      "verso": "Ensemble de projets hébergés par la Linux Foundation, dont <b>Hyperledger Fabric</b>, conçu pour les consortiums : participants identifiés, canaux privés entre sous-groupes, pas de token ni de minage, et débit très supérieur aux chaînes publiques.<br><i>Ex. d'usage : traçabilité alimentaire, documents de commerce international, certification de pièces aéronautiques.</i><br><i>Lucidité à conserver : beaucoup de ces projets ont été abandonnés après leur phase pilote, moins pour des raisons techniques que par difficulté à faire coopérer durablement des concurrents sur une gouvernance commune.</i>"
     },
     {
       "id": "bc-3ac6ec",
       "type": "acteur",
       "angle": "souverainete",
       "recto": "La Banque centrale européenne et l'euro numérique",
-      "verso": "Projet de monnaie numérique de banque centrale motivé par la souveraineté des paiements européens, aujourd'hui largement dépendants de réseaux de cartes non européens, et par la montée des jetons stables adossés au dollar.<br><b>Arbitrages en discussion</b> : plafond de détention pour préserver les dépôts bancaires, niveau de confidentialité des transactions, rôle laissé aux banques dans la distribution.<br><i>Point technique souvent mal compris : rien n'impose qu'un euro numérique repose sur une blockchain, et la BCE n'a pas tranché en faveur d'un registre distribué.</i>"
+      "verso": "Projet de monnaie numérique de banque centrale motivé par la souveraineté des paiements européens, aujourd'hui largement dépendants de réseaux de cartes non européens, et par la montée des stablecoins adossés au dollar.<br><b>Arbitrages en discussion</b> : plafond de détention pour préserver les dépôts bancaires, niveau de confidentialité des transactions, rôle laissé aux banques dans la distribution.<br><i>Point technique souvent mal compris : rien n'impose qu'un euro numérique repose sur une blockchain, et la BCE n'a pas tranché en faveur d'un registre distribué.</i>"
     },
     {
       "id": "bc-870f14",
@@ -282,7 +282,14 @@
       "type": "controverse",
       "angle": "souverainete",
       "recto": "Réguler les crypto-actifs protège-t-il ou étouffe-t-il l'innovation ?",
-      "verso": "<b>Pour la régulation</b> : la faillite de FTX a coûté des milliards à des particuliers non avertis ; le passeport européen ouvre vingt-sept marchés avec un agrément unique ; et la clarté juridique est précisément ce que réclamaient les acteurs institutionnels avant d'investir.<br><b>Contre</b> : le coût de conformité a été multiplié par six, éliminant les petites structures ; la finance décentralisée reste largement hors du champ du texte ; et les acteurs mondiaux arbitrent entre juridictions.<br><b>Position tenable</b> : MiCA a réussi ce qu'il visait, assainir le marché des intermédiaires, et échoue là où il ne pouvait pas grand-chose, sur des protocoles sans personne morale identifiable. C'est la limite structurelle de toute régulation appliquée à une infrastructure décentralisée."
+      "verso": "<b>Pour la régulation</b> : la faillite de FTX a coûté des milliards à des particuliers non avertis ; le passeport européen ouvre vingt-sept marchés avec un agrément unique ; et la clarté juridique est précisément ce que réclamaient les acteurs institutionnels avant d'investir.<br><b>Contre</b> : le coût de conformité a été multiplié par six, éliminant les petites structures ; la finance décentralisée reste largement hors du champ du texte ; et les acteurs mondiaux arbitrent entre juridictions.<br><b>Position tenable</b> : MiCA (Markets in Crypto-Assets) a réussi ce qu'il visait, assainir le marché des intermédiaires, et échoue là où il ne pouvait pas grand-chose, sur des protocoles sans personne morale identifiable. C'est la limite structurelle de toute régulation appliquée à une infrastructure décentralisée."
+    },
+    {
+      "id": "bc-0fa3ff",
+      "type": "definition",
+      "angle": "souverainete",
+      "recto": "De PSAN à CASP",
+      "verso": "<b>PSAN</b> : prestataire de services sur actifs numériques, régime français d'enregistrement auprès de l'AMF issu de la loi PACTE de 2019. <b>CASP</b> (Crypto-Asset Service Provider) : le statut européen d'agrément instauré par MiCA (Markets in Crypto-Assets).<br><b>Différence de nature</b> : le PSAN reposait sur un enregistrement portant surtout sur la lutte contre le blanchiment ; le CASP est un agrément complet, avec fonds propres, gouvernance, ségrégation des actifs des clients, et passeport valable dans les vingt-sept États membres.<br><i>La période transitoire française s'est achevée le 1er juillet 2026 : depuis cette date, l'enregistrement PSAN ne suffit plus pour servir des clients français.</i>"
     }
   ]
 }

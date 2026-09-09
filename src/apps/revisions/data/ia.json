@@ -1,8 +1,8 @@
 {
   "themeId": "ia",
   "theme": "Intelligence artificielle",
-  "version": "2026-08-12",
-  "cardCount": 43,
+  "version": "2026-09-07",
+  "cardCount": 46,
   "cards": [
     {
       "id": "ia-f95f37",
@@ -44,14 +44,14 @@
       "type": "definition",
       "angle": "technique",
       "recto": "Grand modèle de langage (LLM)",
-      "verso": "Modèle entraîné à prédire le mot suivant sur d'immenses corpus de texte. De cette tâche simple émergent des capacités de résumé, de traduction, de raisonnement et de génération de code, sans avoir été programmées explicitement.<br><i>Point à assumer à l'oral : le modèle optimise la vraisemblance statistique d'une suite de mots, pas la vérité. C'est la racine du problème d'hallucination.</i>"
+      "verso": "<i>LLM : Large Language Model.</i><br>Modèle entraîné à prédire le mot suivant sur d'immenses corpus de texte. De cette tâche simple émergent des capacités de résumé, de traduction, de raisonnement et de génération de code, sans avoir été programmées explicitement.<br><i>Point à assumer à l'oral : le modèle optimise la vraisemblance statistique d'une suite de mots, pas la vérité. C'est la racine du problème d'hallucination.</i>"
     },
     {
       "id": "ia-4cfb31",
       "type": "definition",
       "angle": "technique",
-      "recto": "Paramètres, jetons et fenêtre de contexte",
-      "verso": "<b>Paramètres</b> : les poids ajustés pendant l'entraînement, de quelques milliards à plusieurs centaines de milliards. Indicateur grossier de capacité.<br><b>Jeton</b> (token) : unité élémentaire de texte, environ trois quarts d'un mot en français. La facturation des interfaces de programmation se fait au jeton.<br><b>Fenêtre de contexte</b> : le volume de texte que le modèle peut considérer d'un coup. Au-delà, il « oublie » le début.<br><i>Ces trois grandeurs déterminent le coût réel d'un projet, bien plus que le choix du fournisseur.</i>"
+      "recto": "Paramètres, tokens et fenêtre de contexte",
+      "verso": "<b>Paramètres</b> : les poids ajustés pendant l'entraînement, de quelques milliards à plusieurs centaines de milliards. Indicateur grossier de capacité.<br><b>Token</b> (token) : unité élémentaire de texte, environ trois quarts d'un mot en français. La facturation des interfaces de programmation se fait au token.<br><b>Fenêtre de contexte</b> : le volume de texte que le modèle peut considérer d'un coup. Au-delà, il « oublie » le début.<br><i>Ces trois grandeurs déterminent le coût réel d'un projet, bien plus que le choix du fournisseur.</i>"
     },
     {
       "id": "ia-656f1d",
@@ -65,21 +65,21 @@
       "type": "definition",
       "angle": "technique",
       "recto": "Affinage et alignement (fine-tuning, RLHF)",
-      "verso": "L'<b>affinage</b> réentraîne un modèle existant sur un corpus spécialisé pour l'adapter à un domaine ou à un style, sans repartir de zéro.<br>Le <b>RLHF</b>, apprentissage par renforcement à partir de retours humains, est l'étape où des annotateurs classent les réponses du modèle pour lui apprendre à être utile et à refuser les requêtes problématiques.<br><i>C'est le RLHF, pas la taille du modèle, qui a transformé un moteur de complétion de texte en assistant conversationnel utilisable.</i>"
+      "verso": "<b>Affinage (fine-tuning)</b> : réentraîner un modèle existant sur un corpus spécialisé pour l'adapter à un domaine ou à un style, sans repartir de zéro.<br><b>Alignement</b> : ajuster le comportement du modèle pour qu'il soit utile, honnête et qu'il refuse les requêtes problématiques.<br><b>RLHF (Reinforcement Learning from Human Feedback)</b> : la principale méthode d'alignement. Des annotateurs humains classent les réponses du modèle, et ce classement sert de signal d'apprentissage.<br><i>C'est le RLHF, pas la taille du modèle, qui a transformé un moteur de complétion de texte en assistant conversationnel utilisable.</i>"
     },
     {
       "id": "ia-fec25c",
       "type": "definition",
       "angle": "technique",
       "recto": "RAG, génération augmentée par récupération",
-      "verso": "Au lieu de réentraîner un modèle sur les documents de l'entreprise, on va chercher au moment de la question les passages pertinents dans une base documentaire, et on les injecte dans le contexte du modèle qui rédige la réponse à partir d'eux.<br><b>Avantages</b> : mise à jour immédiate du contenu, citation des sources, gestion des droits d'accès document par document, coût très inférieur à un affinage.<br><i>C'est l'architecture dominante des projets IA en entreprise, et la réponse la plus opérationnelle au problème d'hallucination.</i>"
+      "verso": "<i>RAG : Retrieval-Augmented Generation.</i><br>Au lieu de réentraîner un modèle sur les documents de l'entreprise, on va chercher au moment de la question les passages pertinents dans une base documentaire, et on les injecte dans le contexte du modèle qui rédige la réponse à partir d'eux.<br><b>Avantages</b> : mise à jour immédiate du contenu, citation des sources, gestion des droits d'accès document par document, coût très inférieur à un affinage.<br><i>C'est l'architecture dominante des projets IA en entreprise, et la réponse la plus opérationnelle au problème d'hallucination.</i>"
     },
     {
       "id": "ia-a978d8",
       "type": "definition",
       "angle": "securite",
       "recto": "Hallucination",
-      "verso": "Production par un modèle d'une affirmation fausse mais formulée avec la même assurance qu'une affirmation vraie : référence inventée, chiffre plausible mais faux, article de loi inexistant.<br><b>Cause structurelle</b> : le modèle génère la suite la plus vraisemblable, il n'a pas de mécanisme interne de vérification factuelle.<br><i>Atténuations réelles : RAG avec citation des sources, vérification humaine sur les usages à enjeu, restriction du périmètre. Aucune ne supprime le phénomène.</i>"
+      "verso": "Production par un modèle d'une affirmation fausse mais formulée avec la même assurance qu'une affirmation vraie : référence inventée, chiffre plausible mais faux, article de loi inexistant.<br><b>Cause structurelle</b> : le modèle génère la suite la plus vraisemblable, il n'a pas de mécanisme interne de vérification factuelle.<br><i>Atténuations réelles : RAG (Retrieval-Augmented Generation) avec citation des sources, vérification humaine sur les usages à enjeu, restriction du périmètre. Aucune ne supprime le phénomène.</i>"
     },
     {
       "id": "ia-677a7e",
@@ -107,7 +107,7 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "Biais algorithmique",
-      "verso": "Un modèle reproduit et parfois amplifie les régularités de ses données d'entraînement, y compris les discriminations historiques qu'elles contiennent. Le biais n'est pas une défaillance technique, c'est un reflet fidèle d'un passé imparfait.<br><i>Ex. : un outil de tri de candidatures entraîné sur les recrutements passés d'un secteur masculin apprend à écarter les profils féminins sans que le genre soit jamais une variable d'entrée.</i><br><i>C'est précisément pourquoi le règlement européen classe le recrutement en système à haut risque.</i>"
+      "verso": "Un modèle reproduit et parfois amplifie les régularités de ses données d'entraînement, y compris les discriminations historiques qu'elles contiennent. Le biais n'est pas une défaillance technique, c'est un reflet fidèle d'un passé imparfait.<br><i>Ex. : un outil de tri de candidatures entraîné sur les recrutements passés d'un secteur masculin apprend à écarter les profils féminins sans que le genre soit jamais une variable d'entrée.</i><br><i>C'est précisément pourquoi l'AI Act classe le recrutement en système à haut risque.</i>"
     },
     {
       "id": "ia-016465",
@@ -121,14 +121,14 @@
       "type": "definition",
       "angle": "organisationnel",
       "recto": "MLOps",
-      "verso": "Transposition des pratiques DevOps aux modèles d'apprentissage : versionnement des jeux de données et des modèles, automatisation du réentraînement, tests avant mise en production, supervision en continu.<br><b>Spécificité par rapport au logiciel classique</b> : un modèle se dégrade sans qu'on touche à son code, parce que la réalité qu'il modélise change. C'est la <i>dérive</i> (drift), et elle impose une surveillance permanente.<br><i>C'est là que la plupart des projets IA échouent : pas à la démonstration, mais à l'exploitation dans la durée.</i>"
+      "verso": "<i>MLOps : Machine Learning Operations.</i><br>Transposition des pratiques DevOps aux modèles d'apprentissage : versionnement des jeux de données et des modèles, automatisation du réentraînement, tests avant mise en production, supervision en continu.<br><b>Spécificité par rapport au logiciel classique</b> : un modèle se dégrade sans qu'on touche à son code, parce que la réalité qu'il modélise change. C'est la <i>dérive</i> (drift), et elle impose une surveillance permanente.<br><i>C'est là que la plupart des projets IA échouent : pas à la démonstration, mais à l'exploitation dans la durée.</i>"
     },
     {
       "id": "ia-07b809",
       "type": "definition",
       "angle": "technique",
       "recto": "IA frugale, distillation et exécution locale",
-      "verso": "Ensemble d'approches visant à obtenir un résultat suffisant avec beaucoup moins de ressources : <b>distillation</b> (un petit modèle apprend à imiter un grand), <b>quantification</b> (réduction de la précision numérique des poids), exécution sur le terminal plutôt que dans le nuage.<br><b>Gains</b> : coût, latence, confidentialité des données qui ne sortent pas, empreinte énergétique.<br><i>Ex. : les modèles ouverts de Mistral AI ou les petits modèles Llama, exécutables sur un serveur d'entreprise.</i>"
+      "verso": "<b>IA frugale</b> : terme générique pour les approches visant un résultat suffisant avec beaucoup moins de ressources de calcul, de mémoire et d'énergie.<br><b>Distillation</b> : un petit modèle est entraîné à imiter les sorties d'un grand, dont il conserve l'essentiel des performances pour une fraction de la taille.<br><b>Quantification</b> : réduire la précision numérique des poids du modèle, ce qui divise son empreinte mémoire au prix d'une perte de qualité limitée.<br><b>Exécution locale</b> : faire tourner le modèle sur le terminal ou sur un serveur de l'entreprise plutôt que dans le cloud.<br><b>Gains</b> : coût, latence, confidentialité des données qui ne sortent pas, empreinte énergétique.<br><i>Ex. : les modèles ouverts de Mistral AI ou les petits modèles Llama, exécutables sur un serveur d'entreprise.</i>"
     },
     {
       "id": "ia-a48b21",
@@ -169,8 +169,8 @@
       "id": "ia-888003",
       "type": "evenement",
       "angle": "souverainete",
-      "recto": "1er août 2024 : entrée en vigueur du règlement européen sur l'IA",
-      "verso": "Le règlement (UE) 2024/1689 devient le premier cadre juridique complet au monde consacré à l'IA. Il classe les usages en quatre niveaux : risque inacceptable (interdit), haut risque, risque limité (transparence), risque minimal.<br>Application échelonnée : interdictions et obligation de formation du personnel depuis le 2 février 2025, obligations des modèles à usage général depuis le 2 août 2025, transparence et pouvoirs de sanction au 2 août 2026.<br><i>Sanctions : jusqu'à 35 millions d'euros ou 7 % du chiffre d'affaires mondial, le montant le plus élevé étant retenu.</i>"
+      "recto": "1er août 2024 : entrée en vigueur de l'AI Act",
+      "verso": "Le règlement (UE) 2024/1689, dit AI Act, devient le premier cadre juridique complet au monde consacré à l'IA. Il classe les usages en quatre niveaux : risque inacceptable (interdit), haut risque, risque limité (transparence), risque minimal.<br>Application échelonnée : interdictions et obligation de formation du personnel depuis le 2 février 2025, obligations des modèles à usage général depuis le 2 août 2025, transparence et pouvoirs de sanction au 2 août 2026.<br><i>Sanctions : jusqu'à 35 millions d'euros ou 7 % du chiffre d'affaires mondial, le montant le plus élevé étant retenu.</i>"
     },
     {
       "id": "ia-0079bd",
@@ -204,15 +204,15 @@
       "id": "ia-80a29b",
       "type": "chiffre",
       "angle": "economique",
-      "recto": "Consommation électrique mondiale des centres de données",
-      "verso": "415 TWh en 2024, soit environ 1,5 % de la consommation électrique mondiale, et 485 TWh en 2025 (+17 % en un an). L'Agence internationale de l'énergie projette environ 945 TWh à l'horizon 2030, soit plus du double.<br>Les serveurs dédiés à l'IA passeraient de 95 TWh en 2025 à 175 TWh en 2026, et représenteraient près de la moitié de la consommation des centres de données en 2030.<br><i>Sources : AIE ; projections relayées mi-2026</i>"
+      "recto": "Consommation électrique mondiale des data centers",
+      "verso": "415 TWh en 2024, soit environ 1,5 % de la consommation électrique mondiale, et 485 TWh en 2025 (+17 % en un an). L'Agence internationale de l'énergie projette environ 945 TWh à l'horizon 2030, soit plus du double.<br>Les serveurs dédiés à l'IA passeraient de 95 TWh en 2025 à 175 TWh en 2026, et représenteraient près de la moitié de la consommation des data centers en 2030.<br><i>Sources : AIE ; projections relayées mi-2026</i>"
     },
     {
       "id": "ia-a7a96a",
       "type": "chiffre",
       "angle": "souverainete",
-      "recto": "Le poids des centres de données en France",
-      "verso": "352 centres de données en activité recensés par l'ADEME, pour environ 10 TWh d'électricité par an, l'équivalent de la consommation d'une métropole comme Lyon. La prospective ADEME publiée en janvier 2026 envisage une consommation liée aux usages numériques français multipliée par 3,7 d'ici 2035 si les tendances se poursuivent, dont environ deux tiers hors du territoire.<br><i>Argument de souveraineté : ces consommations « importées » n'apparaissent pas dans les bilans nationaux, alors que le mix électrique français est nettement moins carboné que la moyenne.</i>"
+      "recto": "Le poids des data centers en France",
+      "verso": "352 data centers en activité recensés par l'ADEME, pour environ 10 TWh d'électricité par an, l'équivalent de la consommation d'une métropole comme Lyon. La prospective ADEME publiée en janvier 2026 envisage une consommation liée aux usages numériques français multipliée par 3,7 d'ici 2035 si les tendances se poursuivent, dont environ deux tiers hors du territoire.<br><i>Argument de souveraineté : ces consommations « importées » n'apparaissent pas dans les bilans nationaux, alors que le mix électrique français est nettement moins carboné que la moyenne.</i>"
     },
     {
       "id": "ia-bfc94a",
@@ -225,29 +225,29 @@
       "id": "ia-3f657b",
       "type": "chiffre",
       "angle": "souverainete",
-      "recto": "Le régime de sanction du règlement européen sur l'IA",
+      "recto": "Le régime de sanction de l'AI Act",
       "verso": "Jusqu'à 35 millions d'euros ou 7 % du chiffre d'affaires annuel mondial pour les pratiques interdites, le montant le plus élevé étant retenu. Les amendes s'apprécient au niveau du groupe et non de la seule filiale européenne.<br><i>À comparer au RGPD, plafonné à 20 millions d'euros ou 4 %. L'architecture est la même, le curseur est plus haut.</i><br><i>Source : règlement (UE) 2024/1689, articles 99 et suivants</i>"
     },
     {
       "id": "ia-99f26a",
       "type": "acteur",
       "angle": "souverainete",
-      "recto": "Le règlement européen sur l'IA et son approche par les risques",
-      "verso": "Quatre niveaux. <b>Risque inacceptable</b> : interdit (notation sociale, exploitation de vulnérabilités, reconnaissance des émotions au travail et à l'école). <b>Haut risque</b> : autorisé sous conditions lourdes (recrutement, crédit, éducation, biométrie, infrastructures critiques). <b>Risque limité</b> : obligation de transparence, l'utilisateur doit savoir qu'il parle à une IA. <b>Risque minimal</b> : libre.<br><i>L'obligation la moins connue et la plus universelle est l'article 4 : depuis février 2025, toute organisation doit assurer un niveau suffisant de maîtrise de l'IA à son personnel. Elle concerne tout le monde, pas seulement les systèmes à haut risque.</i>"
+      "recto": "L'AI Act et son approche par les risques",
+      "verso": "Quatre niveaux.<br><b>Risque inacceptable</b> : interdit (notation sociale, exploitation de vulnérabilités, reconnaissance des émotions au travail et à l'école).<br><b>Haut risque</b> : autorisé sous conditions lourdes (recrutement, crédit, éducation, biométrie, infrastructures critiques).<br><b>Risque limité</b> : obligation de transparence, l'utilisateur doit savoir qu'il parle à une IA.<br><b>Risque minimal</b> : libre.<br><i>L'obligation la moins connue et la plus universelle est l'article 4 : depuis février 2025, toute organisation doit assurer un niveau suffisant de maîtrise de l'IA à son personnel. Elle concerne tout le monde, pas seulement les systèmes à haut risque.</i>"
     },
     {
       "id": "ia-564ce3",
       "type": "acteur",
       "angle": "souverainete",
       "recto": "Mistral AI et la question de la souveraineté européenne",
-      "verso": "Laboratoire français fondé en 2023, principal acteur européen des modèles de fondation, avec une stratégie assumée de modèles à poids ouverts déployables sur infrastructure propre.<br>Il a levé environ 830 millions de dollars de dette pour un centre de données près de Paris, à Bruyères-le-Châtel, et annoncé viser 200 mégawatts de capacité de calcul en Europe d'ici 2027.<br><i>Argument à double tranchant à l'oral : l'existence d'une alternative européenne crédible est réelle, mais l'écart de moyens avec les acteurs américains reste d'un ordre de grandeur.</i>"
+      "verso": "Laboratoire français fondé en 2023, principal acteur européen des modèles de fondation, avec une stratégie assumée de modèles à poids ouverts déployables sur infrastructure propre.<br>Il a levé environ 830 millions de dollars de dette pour un data center près de Paris, à Bruyères-le-Châtel, et annoncé viser 200 mégawatts de capacité de calcul en Europe d'ici 2027.<br><i>Argument à double tranchant à l'oral : l'existence d'une alternative européenne crédible est réelle, mais l'écart de moyens avec les acteurs américains reste d'un ordre de grandeur.</i>"
     },
     {
       "id": "ia-d94f6b",
       "type": "acteur",
       "angle": "organisationnel",
       "recto": "La CNIL et le RGPD face à l'IA",
-      "verso": "La CNIL a publié des recommandations successives sur l'IA, en admettant que l'intérêt légitime peut fonder l'entraînement d'un modèle sur des données personnelles, sous conditions de proportionnalité et de droits effectifs des personnes.<br>Points de friction structurels : la base légale de la collecte massive sur le web, la minimisation des données face à des modèles qui prospèrent sur le volume, et le droit à l'effacement quand une donnée est diluée dans des milliards de paramètres.<br><i>À retenir : le RGPD s'applique déjà pleinement à l'IA. Le règlement sur l'IA s'y ajoute, il ne le remplace pas.</i>"
+      "verso": "La CNIL a publié des recommandations successives sur l'IA, en admettant que l'intérêt légitime peut fonder l'entraînement d'un modèle sur des données personnelles, sous conditions de proportionnalité et de droits effectifs des personnes.<br>Points de friction structurels : la base légale de la collecte massive sur le web, la minimisation des données face à des modèles qui prospèrent sur le volume, et le droit à l'effacement quand une donnée est diluée dans des milliards de paramètres.<br><i>À retenir : le RGPD s'applique déjà pleinement à l'IA. L'AI Act s'y ajoute, il ne le remplace pas.</i>"
     },
     {
       "id": "ia-58ef74",
@@ -302,8 +302,29 @@
       "id": "ia-f57e3d",
       "type": "definition",
       "angle": "securite",
-      "recto": "Hypertrucages et usurpation par contenus de synthèse",
+      "recto": "Deepfakes et usurpation par contenus de synthèse",
       "verso": "Génération de voix, d'images ou de vidéos imitant une personne réelle avec un réalisme suffisant pour tromper en situation professionnelle courante.<br><b>Usage dominant en entreprise</b> : la fraude au virement, où un dirigeant est imité en visioconférence ou au téléphone pour obtenir un paiement urgent et confidentiel.<br><i>Le rapport IBM 2026 relève qu'une violation malveillante sur quatre implique l'IA, l'usurpation par contenus de synthèse en constituant la forme la plus fréquente.</i><br><i>Conséquence à formuler nettement : la parade classique du contre-appel de vérification ne fonctionne plus, puisque la voix elle-même est falsifiable. Le seul contrôle robuste est procédural, une double validation sur un canal indépendant et un secret partagé convenu à l'avance.</i>"
+    },
+    {
+      "id": "ia-91554a",
+      "type": "definition",
+      "angle": "souverainete",
+      "recto": "Modèle de fondation et GPAI",
+      "verso": "<b>Modèle de fondation</b> : modèle entraîné à très grande échelle sur des données générales, réutilisable pour de nombreuses tâches sans être conçu pour une seule.<br><b>GPAI</b> (General Purpose AI) : la catégorie juridique correspondante dans l'AI Act, qui impose à ces modèles des obligations propres, documentation technique, respect du droit d'auteur, résumé public des données d'entraînement, et des exigences renforcées au-delà d'un seuil de puissance de calcul.<br><i>Ces obligations s'appliquent depuis le 2 août 2025 et n'ont pas été reportées par le Digital Omnibus, contrairement au volet haut risque.</i>"
+    },
+    {
+      "id": "ia-88f08d",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Humain dans la boucle",
+      "verso": "Principe selon lequel une décision produite par un système automatisé est soumise à une validation humaine effective avant de produire ses effets.<br><b>Trois degrés à distinguer</b> : l'humain <i>dans</i> la boucle valide chaque décision ; l'humain <i>sur</i> la boucle supervise et peut intervenir ; l'humain <i>hors</i> de la boucle laisse le système décider seul.<br><i>Piège que le jury peut tendre : une validation humaine purement formelle, où l'opérateur approuve sans moyen réel d'évaluer, ne constitue pas un contrôle. L'AI Act exige un contrôle humain effectif, ce qui suppose compétence, temps et autorité pour contredire la machine.</i>"
+    },
+    {
+      "id": "ia-5f1392",
+      "type": "definition",
+      "angle": "organisationnel",
+      "recto": "Article 22 du RGPD",
+      "verso": "Disposition qui interdit par principe qu'une personne fasse l'objet d'une décision fondée exclusivement sur un traitement automatisé produisant des effets juridiques ou l'affectant de manière significative.<br><b>Exceptions</b> : nécessité contractuelle, autorisation légale, ou consentement explicite. Dans tous les cas, la personne conserve le droit d'obtenir une intervention humaine, d'exprimer son point de vue et de contester la décision.<br><i>À citer par son numéro devant un jury, cela change tout : c'est le fondement juridique qui existait bien avant l'AI Act et qui encadre déjà le scoring de crédit, le tri automatisé de candidatures et les décisions administratives automatisées.</i>"
     }
   ]
 }
