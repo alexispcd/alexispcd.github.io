@@ -366,3 +366,17 @@ rss_feeds (
 - Sync RSS côté client au chargement (fetch CORS via un proxy ou Edge Function)
 - Résumé à la demande uniquement (pas automatique)
 - Sauvegarde fiche en BDD après génération
+
+---
+
+## Déploiement Edge Functions
+
+- Déployer une fonction : `npx supabase functions deploy <nom> --project-ref $SUPABASE_PROJECT_REF --use-api`
+- Ne jamais modifier les secrets Supabase ni la base en prod sans me demander.
+
+---
+
+## Git
+
+- Ne jamais commit ni push sans que je le demande explicitement.
+- Pour committer, utiliser le skill dédié `release` (`.claude/skills/release/SKILL.md`).
