@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm run *)",
+      "Bash(npm show *)",
+      "Bash(npx vite *)",
+      "Bash(npx eslint *)",
+      "Bash(npx supabase functions *)",
+      "Bash(npx supabase migration *)",
+      "Bash(supabase functions *)",
+      "Bash(supabase migration *)",
+      "Bash(deno check *)",
+      "Bash(node src/scripts/generate-icons.js)",
+      "Skill(run)",
+      "WebFetch(domain:registry.npmjs.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  }
+}

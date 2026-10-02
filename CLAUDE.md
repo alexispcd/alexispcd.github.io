@@ -1,82 +1,68 @@
-# Le Cairn — Contexte projet
+# Le Cairn : contexte projet
+
+Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balisent les sentiers), site `alexispcd.github.io`.
 
 ## Stack
-- React 19, Vite 8, MUI 9, React Router v7
+- React 19, Vite 8, MUI 9, React Router v7, Framer Motion, Leaflet (react-leaflet)
 - PWA via vite-plugin-pwa
-- Déployé sur GitHub Pages (statique)
-- Supabase : auth + BDD + Edge Functions
-- API Anthropic via Supabase Edge Functions uniquement (jamais côté client) — utilisée pour generate-plan
-- API Mistral via Supabase Edge Functions — utilisée pour summarize-article (mistral-small-latest, gratuit)
+- Déployé sur GitHub Pages (statique) par GitHub Actions à chaque push sur `main` (`.github/workflows/deploy.yml`)
+- Supabase : auth (magic link) + BDD + Edge Functions (Deno)
+- API Anthropic via Edge Functions uniquement, jamais côté client (`supabase/functions/_shared/anthropic.ts`) : génération, adaptation et analyse des plans Training
+- API Mistral via Edge Functions : `summarize-article` (mistral-small-latest, gratuit)
+
+## Commandes
+- `npm run dev` : serveur de dev Vite
+- `npm run build` : build de prod
+- `npm run lint` : ESLint (voir Pièges techniques, jamais vert globalement)
+- `deno check` sur `supabase/functions/**` pour les Edge Functions
 
 ## Structure src/
-- `apps/home/` — page d'accueil
-- `apps/cotes/` — outil Côtes
-- `apps/training/` — outil Training
-- `apps/veille/` — outil Veille dev
-- `components/AppCard.jsx` — carte outil réutilisable
-- `components/AppHeader.jsx` — header standardisé réutilisable (voir Design system)
-- `styles/theme.js` — thème MUI, accents verts #1D9E75 / #5DCAA5, support sombre + clair
-- `lib/supabase.js` — client Supabase
+- `apps/home/` : page d'accueil, cartes par catégorie
+- `apps/cotes/` : outil Côtes (ex Côtes.Run)
+- `apps/training/` : outil Training (plan d'entraînement course à pied)
+- `apps/veille/` : outil Veille dev (RSS + fiches Mistral)
+- `apps/revisions/` : outil Révisions (cartes en répétition espacée)
+- `components/AppCard.jsx` : carte outil réutilisable
+- `components/AppHeader.jsx` : header standardisé réutilisable (voir Design system)
+- `components/AuthGate.jsx` : protège toutes les routes sauf `/`
+- `hooks/useDarkMode.jsx` : mode sombre (localStorage + classe `body.dark`), passé en props `{ dark, setDark }` à chaque app
+- `styles/theme.js` : thème MUI clair et sombre
+- `lib/supabase.js` : client Supabase ; `lib/training.js` : accès données Training ; `lib/rss.js` : Veille
+
+Routes déclarées dans `src/App.jsx` (titre et cible du bouton retour dans `handle`).
 
 ## Conventions
 - Arrow functions, un composant par fichier
+- Styles via la prop `sx` de MUI (pas de CSS modules, pas de `styled`)
 - Pas de form HTML natif, uniquement handlers React
 - Anglais pour le code, français pour les labels UI
+- App mobile exclusivement (pas de layout desktop)
 
 ---
 
-## Feuille de route
+## État actuel
 
-### Étape 1 — Home catégorisée (à faire en premier)
-- Renommer Côtes.Run → Côtes dans toute la codebase
-- Restructurer Home.jsx avec catégories : Sport (Côtes + Training) et Dev (Veille)
-- Ajouter Training et Veille comme cartes "coming soon"
-- Ajouter bouton retour vers / dans Côtes
-
-### Étape 2 — Auth Supabase
-- Créer src/lib/supabase.js
-- Composant AuthGate qui protège toutes les routes sauf /
-- Login par magic link (email uniquement, usage perso)
-- Variables d'env : VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-
-### Étape 3 — Supabase Edge Functions
-- Fonction generate-plan : vérifie auth Supabase, appelle API Anthropic
-- Fonction coros-data : récupère données Coros via MCP (mcpeu.coros.com/mcp)
-- Clé Anthropic uniquement dans les secrets Supabase, jamais dans le client
-- Clé Mistral (MISTRAL_API_KEY) dans les secrets Supabase — utilisée par summarize-article
-
-### Étape 4 — Training dashboard
-- Route /training
-- Appel Edge Function coros-data au chargement
-- Affichage : stats semaine, 5 dernières séances, semaine type du plan actif
-- Bouton "Générer un plan"
-
-### Étape 5 — Génération et gestion du plan
-- Formulaire de contexte avant génération (voir specs ci-dessous)
-- Appel Edge Function generate-plan avec données Coros + contexte utilisateur
-- Sauvegarde en BDD Supabase table training_plans (jsonb)
-- Affichage plan semaine par semaine, séance par séance
-
-### Étape 6 — Veille dev (futur)
-- Table watch_items en BDD
-- À concevoir plus tard
+La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`). Les séances peuvent être poussées vers intervals.icu (`push-to-intervals`).
 
 ---
 
 ## Design system (toute l'app)
 
 - Material UI exclusivement, style épuré sobre presque pro
-- Pas d'emoji dans l'UI — utiliser `@mui/icons-material`
-- Palette sombre sobre, accents verts `#1D9E75` et `#5DCAA5`
+- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement (la police Tabler est installée mais inutilisée)
+- Typo : DM Serif Display (titres, en italique) + Geist (corps)
+- Couleurs (source de vérité : `styles/theme.js`) :
+  - Clair : fond `#ffffff`, surface `#f7f7f7`, accent `#1D9E75`, accent light `#e6f5ef`, bordure `#ebebeb`
+  - Sombre : fond `#0f0f12`, surface `#161620`, accent `#5DCAA5`, accent light `#0e2018`, bordure `#1e1e2a`
 - Support mode sombre ET clair (toggle dans le menu compte)
 - Coins arrondis, fines bordures, pas de fioritures
 
-### AppHeader — composant réutilisable sur tous les outils
+### AppHeader : composant réutilisable sur tous les outils
 
 3 zones :
-- **Gauche** : bouton retour `ArrowBack` vers la home
-- **Centre** : nom de l'outil — cliquable avec chevron + menu déroulant si actions configurées, sinon simple texte ; actions vides pour l'instant
-- **Droite** : menu compte `AccountCircle` — identique partout y compris sur la home ; contient : identité/email, toggle sombre/clair, se déconnecter
+- **Gauche** : bouton retour `ArrowBack` (cible définie par `handle.backTo` de la route)
+- **Centre** : nom de l'outil, cliquable avec chevron + menu déroulant si actions configurées, sinon simple texte
+- **Droite** : menu compte `AccountCircle`, identique partout y compris sur la home ; contient : identité/email, toggle sombre/clair, se déconnecter
 
 ### Effet Liquid Glass (menus, popups, dialogs UNIQUEMENT)
 
@@ -92,204 +78,135 @@ backdrop-filter: blur(24px) saturate(180%);
 
 ---
 
-## Supabase — schéma BDD
+## Supabase : schéma BDD
 
-### Table training_plans
+Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RLS activée avec une policy `auth.uid() = user_id`.
 
-```sql
-create table training_plans (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  created_at timestamptz default now(),
-  start_date date not null,
-  race_name text,
-  race_date date,
-  race_distance text,          -- libre : "semi", "trail 23km"
-  race_elevation int,          -- D+ mètres, null pour route
-  target_time text,
-  previous_races jsonb,        -- [{year, time, coros_label_id}]
-  fitness_snapshot jsonb,      -- {vo2max, running_level, threshold_pace, vma_derived, predictions, source, captured_at}
-  vma_source text,             -- "coros" | "manuelle" | "test"
-  status text default 'active',-- "active" | "completed" | "archived"
-  notes text
-);
-```
+### Training
 
-Un seul plan `active` à la fois. Les autres sont `completed` ou `archived` (consultables, non modifiables).
+`training_plans` → `training_weeks` → `training_sessions` → `session_steps`
 
-### Table training_sessions
+- **training_plans** : `status` (`active` | `completed` | `archived`), `generation_status` (`generating` | `ready` | `error`), `generation_error`, `race_name`, `race_date`, `race_distance_m`, `race_elevation_m`, `goal_time_sec`, `fitness_snapshot` jsonb (`{ vo2max, threshold_pace, vma, predictions, source }`), `previous_races` jsonb, `notes`, `summary` (résumé IA), `start_date` (ajouté par migration `20260709090000`). Un seul plan `active` par utilisateur (index unique partiel). Les plans dont la course est passée basculent en `completed`.
+- **training_weeks** : `plan_id`, `week_number`, `block` (`construction` | `intensification` | `affutage`), `focus`, `target_km`, `start_date`.
+- **training_sessions** : `plan_id`, `week_id`, `scheduled_date`, `zone` (`A` | `B` | `C` | `renfo`), `type` (`facile` | `fractionne` | `tempo` | `sortie_longue` | `renfo`), `title`, `rationale` (justification des allures), `notes`, `status` (`planned` | `done` | `skipped` | `adapted`), `completed_at`, `coros_activity_id` + `coros_activity_ids` text[], `actual_laps`, `km_laps`, `analysis` jsonb (`{ verdict, advice, comparisons }`), `previous_version` jsonb (snapshot avant adaptation), `adapted_at`, `adapted_by_session_id`, `strength_content` jsonb (renfo : `{ target_duration_min, blocks: [{ name, exercises: [{ name, sets, reps?, duration_sec?, rest_sec }] }] }`), feedback (`rpe` 1 à 10, `pain_areas`, `feedback_note`), intervals.icu (`intervals_event_id`, `pushed_at`).
+- **session_steps** : `session_id`, `order_index`, `step_type` (`warmup` | `run` | `interval` | `recovery` | `cooldown`), `repeat_group` / `repeat_index` (répétitions aplaties, regroupées à l'affichage), `target_pace_sec` (s/km), `pace_tolerance_sec` (défaut 5), `distance_m` ou `duration_sec`.
 
-```sql
-create table training_sessions (
-  id uuid default gen_random_uuid() primary key,
-  plan_id uuid references training_plans on delete cascade not null,
-  user_id uuid references auth.users on delete cascade not null,
-  week_number int,
-  block text,                  -- "construction" | "intensification" | "affutage"
-  zone text,                   -- "A" | "B" | "C" | "renfo"
-  type text,                   -- "facile" | "fractionné" | "tempo" | "sortie_longue" | "renfo"
-  title text,
-  details jsonb,               -- variable selon type (voir exemples ci-dessous)
-  previous_details jsonb,      -- version originale avant adaptation (null si jamais adaptée)
-  day_of_week text,            -- optionnel, rempli à la planification
-  scheduled_date date,         -- optionnel, rempli quand fait/planifié
-  status text default 'à_venir',-- "à_venir" | "faite" | "sautée" | "adaptée"
-  completed_at timestamptz,
-  adapted_at timestamptz,
-  coros_label_id text          -- lien vers séance Coros réelle, à la complétion
-);
-```
-
-Calcul des semaines : pas de table semaines. Semaine N = `start_date + 7*(N-1)`. `day_of_week` et `scheduled_date` NON fixés à la génération — remplis seulement quand l'utilisateur planifie ou valide la séance.
-
-Exemples `details` jsonb :
-- Fractionné : `{"warmup":"15min @ 6:20","reps":6,"distance":"1000m","pace":"4:10","recovery":"90s","cooldown":"10min"}`
-- Renfo : `{"exercises":[{"name":"Gainage planche","sets":3,"duration":"45s","rest":"30s"}]}`
-
-### RLS
-
-```sql
-alter table training_plans enable row level security;
-alter table training_sessions enable row level security;
-create policy "user voit ses plans" on training_plans for all using (auth.uid() = user_id);
-create policy "user voit ses séances" on training_sessions for all using (auth.uid() = user_id);
-grant select, insert, update, delete on training_plans to authenticated;
-grant select, insert, update, delete on training_sessions to authenticated;
-```
-
-### Table watch_items
-
-```sql
-watch_items (
-  id uuid, user_id uuid, url text, title text, source text,
-  published_at timestamp, tags text[],
-  is_read boolean default false, is_favorite boolean default false,
-  summary text, key_points jsonb, note text, read_at timestamp
-)
-```
+### Autres tables
+- **coros_oauth_state** : état OAuth PKCE de la connexion Coros
+- **revision_progress** : `(user_id, card_id)` clé primaire, `theme_id`, `box` (1 à 5), `due_on`, `last_reviewed_at`
+- **watch_items** : `url`, `title`, `source`, `published_at`, `tags` text[], `is_read`, `is_favorite`, `summary`, `key_points` jsonb, `note`, `read_at`
+- **rss_feeds** : `url`, `name`, `theme`
 
 ---
 
-## Specs Training — Génération et suivi de plan
+## Edge Functions
 
-### Données Coros disponibles à la génération (via MCP)
+Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (client Anthropic, client MCP Coros, parsing Coros, extraction JSON, logique Training).
 
-- `queryFitnessAssessmentOverview` — VO2max, running level, threshold pace, prédictions 5k/10k/semi/marathon
-- `querySportRecords` — historique séances (params : startDate/endDate yyyyMMdd, limit, timezone Europe/Paris, sportTypeCodes [100]=running)
-- `queryActivityLapData` — splits intervalle par intervalle (params : labelId + sportType ; donne le détail des fractionnés)
-- `queryDailyHealthData` / `querySleepHrv` / `queryTrainingLoadAssessment` — HRV, sommeil, charge
+| Fonction | Entrée | Rôle |
+|---|---|---|
+| `generate-plan` | contexte wizard (course, snapshot forme, objectif, éditions passées, notes) ; `continue_plan_id` pour reprendre | Génère le plan en asynchrone, refuse (409) si un plan actif existe |
+| `regenerate-plan` | `plan_id` ; `continue_regen` pour reprendre | Régénère la fin du plan |
+| `regenerate-renfo` | `plan_id` | Régénère les séances de renfo |
+| `adapt-sessions` | `session_id` (séance sautée) | Adapte les séances suivantes |
+| `coros-match` | `session_id` | Propose les activités Coros candidates |
+| `complete-session` | `session_id`, activités Coros, `feedback`, `completed_date` | Marque la séance faite, importe les laps, analyse |
+| `coros-fitness` | aucun body | Snapshot forme Coros |
+| `coros-oauth` | flux OAuth | Connexion Coros (PKCE) |
+| `push-to-intervals` | séance(s) | Pousse vers intervals.icu |
+| `fetch-rss` | | Récupère les flux RSS dans `watch_items` |
+| `summarize-article` | `{ articleId, url, title, content }` | Fiche Mistral `{ summary, keyPoints, suggestedTags }` |
 
-### Wizard de génération (5 étapes)
+`verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth) : l'auth y est vérifiée dans le code.
+
+### Déploiement
+
+- Déployer une fonction : `npx supabase functions deploy <nom> --project-ref $SUPABASE_PROJECT_REF --use-api`
+- Ne jamais modifier les secrets Supabase ni la base en prod sans me demander.
+- Secrets serveur (côté Supabase uniquement) : `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, config OAuth Coros (`COROS_*`).
+
+---
+
+## Specs Training : génération et suivi de plan
+
+### Données Coros disponibles (via MCP)
+
+- `queryFitnessAssessmentOverview` : VO2max, running level, threshold pace, prédictions 5k/10k/semi/marathon
+- `querySportRecords` : historique séances (params : startDate/endDate yyyyMMdd, limit, timezone Europe/Paris, sportTypeCodes [100]=running)
+- `queryActivityLapData` : splits intervalle par intervalle (params : labelId + sportType)
+- `queryDailyHealthData` / `querySleepHrv` / `queryTrainingLoadAssessment` : HRV, sommeil, charge
+
+### Wizard de génération (5 étapes, `/training/wizard`)
 
 Multi-étapes mobile, barre de progression, retour à chaque étape, étapes optionnelles skippables, données Coros pré-remplies.
 
-**Étape 1 — La course**
-- Nom + type/distance (10km / semi / marathon / Trail) + date
-- Calcul auto du nombre de semaines depuis aujourd'hui jusqu'à la date
-- Si Trail : afficher champs distance libre + D+
-
-**Étape 2 — Ta forme / VMA**
-- Choix source : Coros (défaut, affiche VO2max / seuil / VMA dérivée / prédiction) ou manuelle ou test programmé (test placé en 1ère séance)
-- VMA dérivée : `VMA ≈ VO2max / 3.5`
-
-**Étape 3 — Objectif**
-- 3 paliers : réaliste / ambitieux / très ambitieux calés sur prédiction Coros et éditions passées
-- Saisie libre possible
-
-**Étape 4 — Éditions précédentes** *(skippable)*
-- Multi-select pour lier éditions passées via `coros_label_id`
-
-**Étape 5 — Remarques + récapitulatif**
-- Champ libre (blessure, contrainte…)
-- Récapitulatif avant génération
+1. **La course** : nom + type/distance (10km / semi / marathon / Trail) + date ; calcul auto du nombre de semaines ; si Trail, distance libre + D+
+2. **Ta forme / VMA** : source Coros (défaut : VO2max, seuil, VMA dérivée `≈ VO2max / 3.5`, prédiction), manuelle, ou test programmé en 1re séance
+3. **Objectif** : 3 paliers (réaliste / ambitieux / très ambitieux) calés sur la prédiction Coros et les éditions passées, saisie libre possible
+4. **Éditions précédentes** *(skippable)* : multi-select des courses passées Coros
+5. **Remarques + récapitulatif** : champ libre (blessure, contrainte…), récapitulatif avant génération
 
 ### Découpage hebdomadaire (zones)
 
-- **Zone A** lundi ou mardi → séance course facile
-- **Zone B** mercredi / jeudi / vendredi → séance qualité (fractionné ou tempo)
-- **Zone C** samedi ou dimanche → sortie longue
+- **Zone A** lundi ou mardi : séance course facile
+- **Zone B** mercredi / jeudi / vendredi : séance qualité (fractionné ou tempo)
+- **Zone C** samedi ou dimanche : sortie longue
 - **+ 1 séance renfo/semaine** (jour flexible, contenu détaillé exercices + séries + repos)
-
-`day_of_week` et `scheduled_date` NON fixés à la génération — l'utilisateur raisonne en zones.
 
 ### Renforcement musculaire
 
 - Matériel : tapis de sol uniquement (chaise possible mais à minimiser)
-- Contenu détaillé : exercices + séries + temps de repos
 - Orienté course à pied (gainage, fessiers, ischio, proprioception)
 
 ### Philosophie du plan
 
 - Basé sur capacités réelles (données Coros : VO2max / seuil / allures / FC / HRV / charge)
-- Pas de copier-coller des séances passées — progressif et adapté à l'objectif
+- Pas de copier-coller des séances passées, progressif et adapté à l'objectif
 - 3 blocs : Construction → Intensification → Affûtage
-- Calibrer zones FC et allures cibles depuis le snapshot Coros (allure seuil = base pour tempo et allure course)
+- Allure seuil = base pour tempo et allure course
 
-### Vue séance détaillée
+### Vue séance détaillée (`/training/plan/:planId/session/:sessionId`)
 
-- En-tête : zone (A/B/C/renfo) + titre + bloc + badge "Séance adaptée" (icône `AutoAwesome`/`Bolt`) si `status = "adaptée"`
-- Si adaptée : comparaison avant/après — `previous_details` original barré vs `details` actuel
-- Détail de la séance formaté selon le type
-- Cible physiologique : zone FC, % VMA depuis snapshot Coros
-- Actions : "Marquer comme faite" et "Je saute"
-
-### Actions sur séance
-
-Disponibles depuis la liste ET la vue détaillée.
-
-**VALIDER**
-- Popup de confirmation
-- Statut → "faite" + liaison séance Coros (`coros_label_id`) en arrière-plan pour analyse post-séance
-
-**SAUTER**
-- Popup de confirmation
-- État de chargement "Adaptation en cours" — mention : "tu peux fermer, ça continue en arrière-plan"
-- Popup de résultat : "Séance sautée, X séances adaptées" + lien "Voir les changements"
+- En-tête : zone + titre + bloc + badge "Séance adaptée" (icône `AutoAwesome` / `Bolt`) si `status = adapted`
+- Si adaptée : comparaison avant/après, `previous_version` barré vs version actuelle
+- Détail formaté selon le type, cible physiologique (zone FC, % VMA)
+- Actions (aussi depuis la liste) : "Marquer comme faite" (popup de confirmation, liaison activité Coros, feedback, analyse) et "Je saute" (popup, état "Adaptation en cours" avec mention "tu peux fermer, ça continue en arrière-plan", puis résultat "Séance sautée, X séances adaptées" + lien "Voir les changements")
 
 ### Logique d'adaptation (fenêtre glissante)
 
-Mécanisme unique déclenché manuellement par "Je saute". Pas de bilan de fin de semaine.
+Déclenchée uniquement par "Je saute", pas de bilan de fin de semaine.
 
 1. Marquer la séance sautée
-2. Compter les séances récemment sautées parmi les ~4 dernières prévues
-3. Dimensionner la fenêtre :
-   - 1 sautée → adapter 2-3 séances suivantes
-   - 2 sautées rapprochées → fenêtre 4-5 séances + réduction charge globale
-   - 3+ rapprochées → proposer régénération de la fin du plan
-4. Appeler l'IA avec : séance sautée (zone, type, objectif) + séances à venir + objectif du plan
-5. Séances ajustées passent en statut "adaptée"
+2. Compter les séances sautées parmi les ~4 dernières prévues
+3. Fenêtre : 1 sautée → 2-3 séances suivantes ; 2 rapprochées → 4-5 séances + réduction de charge ; 3+ → proposer la régénération de la fin du plan
+4. Appeler l'IA avec la séance sautée, les séances à venir et l'objectif du plan
+5. Les séances ajustées passent en `adapted`
 
-**Règles IA dans le prompt d'adaptation :**
-- Séance sautée = qualité (fractionné/tempo) → préserver une qualité dans la fenêtre quitte à transformer une séance facile
-- Séance sautée = sortie longue → reporter une partie du volume sur la sortie longue suivante (max +15%)
-- Séance sautée = facile ou renfo → ne rien compenser
+Règles IA :
+- Qualité sautée (fractionné/tempo) → préserver une qualité dans la fenêtre, quitte à transformer une séance facile
+- Sortie longue sautée → reporter une partie du volume sur la suivante (max +15 %)
+- Facile ou renfo sautée → ne rien compenser
 - Ne JAMAIS empiler deux séances dures consécutives pour rattraper
-
-### Edge Functions
-
-- `generate-plan` : vérifie auth, reçoit contexte wizard + données Coros, appelle l'IA, retourne plan structuré (plan + séances), sauvegarde en BDD
-- `adapt-sessions` : vérifie auth, reçoit séance sautée + séances à venir + objectif, appelle l'IA, retourne séances ajustées
-- Modèle IA : à trancher (Anthropic payant ou Mistral gratuit comme pour la Veille)
 
 ### Statut Trail
 
-Structure de données prête (`race_elevation`, `elevation` dans `details`, `race_distance` libre, type Trail dans le wizard). La logique de génération trail (séances en côtes, D+ dans sorties longues, renfo descente, objectif basé effort) est une **évolution future**. Premier focus : plan route Auray-Vannes semi.
+Structure de données prête (`race_elevation_m`, distance libre, type Trail dans le wizard). La logique de génération trail (côtes, D+ dans les sorties longues, renfo descente, objectif à l'effort) est une évolution future.
 
 ---
 
-## Contexte utilisateur
-- Coros Pace 3, connecté via MCP EU (mcpeu.coros.com/mcp)
-- Objectif actuel : Auray-Vannes 2026 (semi-marathon), déjà couru en 2024 et 2025
-- Coureur régulier, pratique aussi tennis et aviron
-- App mobile exclusivement (pas de layout desktop nécessaire)
+## Specs Révisions
+
+- Répétition espacée Leitner 5 boîtes (`leitner.js`, `useProgress.js`)
+- Contenu des cartes dans le bundle front (`apps/revisions/data/*.json`, un fichier par thème), jamais en base
+- Progression dans `revision_progress` ; absence de ligne = carte neuve, boîte 1, due immédiatement
+- Routes : `/revisions` (accueil, filtres, stats) et `/revisions/session` (session de révision)
 
 ---
 
-## Specs Veille — Outil de veille informatique
+## Specs Veille : outil de veille informatique
 
 ### Concept
-Agrégateur RSS personnel avec génération de fiches par Claude.
-Les articles arrivent automatiquement via les flux RSS configurés.
+Agrégateur RSS personnel avec génération de fiches par Mistral. Les articles arrivent automatiquement via les flux RSS configurés.
 
 ### Flux RSS pré-chargés
 - Le Monde Informatique : https://www.lemondeinformatique.fr/flux-rss/thematique/toute-l-informatique/1.xml
@@ -323,60 +240,40 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 ### Fonctionnalités
 - Sync RSS via cron Supabase (pg_cron, toutes les 6h) + bouton refresh manuel
 - Filtrage par thème (chips horizontaux)
-- Statut lu / non lu
-- Favoris
-- Résumé à la demande via Mistral (bouton sur chaque article)
+- Statut lu / non lu, favoris
+- Résumé à la demande via Mistral (bouton sur chaque article), sauvegardé en BDD
 
-### Fiche générée par Mistral (mistral-small-latest)
+### Fiche générée (mistral-small-latest)
 - Résumé (5 lignes max)
 - 3 points clés
 - Tags thèmes suggérés automatiquement
 - Champ note perso (éditable, sauvegardé en BDD)
 
-### Supabase — tables
-watch_items (
-  id uuid,
-  user_id uuid,
-  url text,
-  title text,
-  source text,
-  published_at timestamp,
-  tags text[],
-  is_read boolean default false,
-  is_favorite boolean default false,
-  summary text,
-  key_points jsonb,
-  note text,
-  read_at timestamp
-)
-
-rss_feeds (
-  id uuid,
-  user_id uuid,
-  url text,
-  name text,
-  theme text
-)
-
-### Edge Functions
-- fetch-rss : récupère et parse les flux RSS, insère les nouveaux articles dans watch_items
-- summarize-article : reçoit { url, title, content }, appelle Mistral (mistral-small-latest), retourne { summary, keyPoints, suggestedTags }
-
-### Architecture
-- Sync RSS côté client au chargement (fetch CORS via un proxy ou Edge Function)
-- Résumé à la demande uniquement (pas automatique)
-- Sauvegarde fiche en BDD après génération
-
 ---
 
-## Déploiement Edge Functions
+## Pièges techniques (déjà payés, ne pas refaire)
 
-- Déployer une fonction : `npx supabase functions deploy <nom> --project-ref $SUPABASE_PROJECT_REF --use-api`
-- Ne jamais modifier les secrets Supabase ni la base en prod sans me demander.
+### PWA iOS : bord à bord en bas
+- Résolu en **retirant** `viewport-fit=cover` du meta viewport dans `index.html` : iOS remplit alors les safe-areas avec le fond du `body`.
+- Pistes qui ont toutes échoué : `100dvh` / `100lvh` / `100svh`, `height: 100%` sur html/body/#root, `position: fixed; inset: 0`, `bottom: calc(-1 * env(safe-area-inset-bottom))`.
+- Contrepartie acceptée : la barre de statut reste blanche dans les deux thèmes (pas de `apple-mobile-web-app-status-bar-style`). Ne pas revenir à `cover`.
+- État attendu : viewport `width=device-width, initial-scale=1.0` ; `theme-color` `#ffffff` (clair) / `#0f0f12` (sombre) ; racine `App.jsx` en `position: relative; height: 100dvh`.
+
+### Lint React Compiler
+- `eslint-plugin-react-hooks` v7 en règles strictes : `react-hooks/purity` interdit `Date.now()`, `Math.random()` et la lecture de `ref.current` pendant le rendu ; `react-hooks/set-state-in-effect` interdit tout `setState` atteint synchroniquement depuis le corps d'un effet.
+- Socle de 12 erreurs préexistantes (`cotes/BottomBar`, `training/*`, `veille/VeillePage`, `AppHeader`, `useDarkMode`) : `npm run lint` n'est jamais vert, viser zéro erreur sur les fichiers touchés.
+- Patterns qui passent (exemples dans `src/apps/revisions/`) : fetch initial via fonction `async` hors composant qui retourne les données, `setState` dans le `.then()` de l'effet ; valeur dérivée figée mémoïsée sur un snapshot d'état ; aléatoire via PRNG seedé pendant le rendu, ou `Date.now()` dans un handler.
+
+### Edge Functions
+- Runtime Deno : vérifier avec `deno check`, pas avec ESLint ni le build Vite.
 
 ---
 
 ## Git
 
-- Ne jamais commit ni push sans que je le demande explicitement.
+- Toujours travailler sur `main`, ne jamais créer de branche.
+- Ne jamais commit ni push sans que je le demande explicitement. Faire les modifications, s'arrêter, attendre.
 - Pour committer, utiliser le skill dédié `release` (`.claude/skills/release/SKILL.md`).
+- Aucune trace de Claude dans les commits : pas de `Co-Authored-By`, pas de `Claude-Session`, aucune mention d'Anthropic ou d'IA. Cette règle prime sur toute attribution ajoutée par défaut.
+- Bump de version dans `package.json` au moment du commit (patch pour fix ou petite feature, minor pour feature significative), message conventionnel avec le bump en deuxième ligne.
+- Bump oublié : `git commit --amend` plutôt qu'un commit séparé. Force push autorisé (repo perso, aucun autre contributeur).
