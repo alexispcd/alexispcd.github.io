@@ -194,6 +194,34 @@ Structure de données prête (`race_elevation_m`, distance libre, type Trail dan
 
 ---
 
+## Specs Côtes
+
+Outil de détection de côtes pour séances de running, route `/cotes`.
+
+### Flow en 4 phases
+`idle` → `placed` → `searching` → `results`, géré dans `useSearch.js` avec un `AbortController` pour annuler proprement une recherche.
+
+### Fichiers
+| Fichier | Rôle |
+|---|---|
+| `Cotes.jsx` | Carte Leaflet, overlay de chargement, orchestration |
+| `useSearch.js` | Recherche, phases, appels API, annulation |
+| `utils.js` | `haversine`, `pathLen`, `samplePath`, `slopeColor`, `DEFAULT_PARAMS`, `SLIDERS` |
+| `FilterDialog.jsx` | Dialog des filtres (sliders) |
+| `ResultCard.jsx` | Carte résultat flottante (Framer Motion `AnimatePresence`, drag/swipe) |
+| `BottomBar.jsx` | Barre du bas adaptée à chaque phase |
+
+### APIs externes (sans clé)
+- **Overpass** (`overpass-api.de/api/interpreter`) : voies OSM dans un bbox calculé depuis le centre et le rayon
+- **racemap** (`racemap.com/api/v1/elevations`) : altitudes par lots de 500 points
+
+### Paramètres et rendu
+- Filtres par défaut : rayon 1500 m, dénivelé 20 à 150 m, pente 4 à 20 %, longueur 100 à 3000 m
+- Tuiles CartoDB `dark_all` / `light_all` selon le thème
+- Couleur par pente (`slopeColor`) : `#ff6b6b` ≥ 8 %, `#ffd166` ≥ 5 %, `#06d6a0` ≥ 4 %, `#4ecdc4` < 4 %
+
+---
+
 ## Specs Révisions
 
 - Répétition espacée Leitner 5 boîtes (`leitner.js`, `useProgress.js`)
