@@ -24,32 +24,33 @@ const categories = [
       },
     ],
   },
-  {
-    label: 'Études',
-    apps: [
-      {
-        id: 'revisions',
-        name: 'Révisions',
-        desc: 'Cartes de révision',
-        icon: 'ti-cards',
-        status: 'active',
-        href: '/revisions',
-      },
-    ],
-  },
-  {
-    label: 'Dev',
-    apps: [
-      {
-        id: 'veille',
-        name: 'Veille',
-        desc: 'Ressources tech à suivre',
-        icon: 'ti-rss',
-        status: 'active',
-        href: '/veille',
-      },
-    ],
-  },
+  // Révisions et Veille désactivées (accès coupé, code conservé).
+  // {
+  //   label: 'Études',
+  //   apps: [
+  //     {
+  //       id: 'revisions',
+  //       name: 'Révisions',
+  //       desc: 'Cartes de révision',
+  //       icon: 'ti-cards',
+  //       status: 'active',
+  //       href: '/revisions',
+  //     },
+  //   ],
+  // },
+  // {
+  //   label: 'Dev',
+  //   apps: [
+  //     {
+  //       id: 'veille',
+  //       name: 'Veille',
+  //       desc: 'Ressources tech à suivre',
+  //       icon: 'ti-rss',
+  //       status: 'active',
+  //       href: '/veille',
+  //     },
+  //   ],
+  // },
 ]
 
 const Home = () => {

@@ -5,15 +5,17 @@ import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import Cotes from './apps/cotes/Cotes'
-import VeillePage from './apps/veille/VeillePage'
-import ArticleDetail from './apps/veille/ArticleDetail'
+// Veille désactivée (accès coupé, code conservé).
+// import VeillePage from './apps/veille/VeillePage'
+// import ArticleDetail from './apps/veille/ArticleDetail'
 import TrainingHome from './apps/training/TrainingHome'
 import PlanDashboard from './apps/training/dashboard/PlanDashboard'
 import SessionPage from './apps/training/session/SessionPage'
 import PlanWizard from './apps/training/wizard/PlanWizard'
 import SettingsPage from './apps/training/SettingsPage'
-import RevisionsHome from './apps/revisions/RevisionsHome'
-import ReviewSession from './apps/revisions/ReviewSession'
+// Révisions désactivées (accès coupé, code conservé).
+// import RevisionsHome from './apps/revisions/RevisionsHome'
+// import ReviewSession from './apps/revisions/ReviewSession'
 import AuthGate from './components/AuthGate'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import supabase from './lib/supabase'
@@ -90,15 +92,15 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Home />, handle: { showBack: false } },
       { path: '/cotes', element: <Cotes />, handle: { title: 'Côtes', backTo: '/' } },
-      { path: '/veille', element: <VeillePage />, handle: { title: 'Veille', backTo: '/' } },
-      { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
+      // { path: '/veille', element: <VeillePage />, handle: { title: 'Veille', backTo: '/' } },
+      // { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
       { path: '/training', element: <TrainingHome />, handle: { title: 'Training', backTo: '/' } },
       { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
       { path: '/training/settings', element: <SettingsPage />, handle: { title: 'Réglages', backTo: '/training' } },
       { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/' } },
       { path: '/training/plan/:planId/session/:sessionId', element: <SessionPage />, handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
-      { path: '/revisions', element: <RevisionsHome />, handle: { title: 'Révisions', backTo: '/' } },
-      { path: '/revisions/session', element: <ReviewSession />, handle: { title: 'Révision', backTo: '/revisions' } },
+      // { path: '/revisions', element: <RevisionsHome />, handle: { title: 'Révisions', backTo: '/' } },
+      // { path: '/revisions/session', element: <ReviewSession />, handle: { title: 'Révision', backTo: '/revisions' } },
     ],
   },
 ])
