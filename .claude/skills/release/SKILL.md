@@ -3,12 +3,13 @@ name: release
 description: Bump la version, commit et push le travail en cours. À utiliser quand l'utilisateur demande d'incrémenter la version puis committer/pusher (ex. "release", "incrémente et push"). Argument optionnel patch|minor|major (défaut patch).
 ---
 
-# release — bump version + commit + push
+# release : bump version + commit + push
 
 Workflow de release du Cairn. Déclenché manuellement par l'utilisateur.
 
 ## Étapes
 
+0. **Vérifier l'identité git** : `git config user.email` doit valoir `alexis.pocard@gmail.com`. Sinon, s'arrêter et le signaler sans committer.
 1. **Vérifier l'état** : `git status --short` pour voir les fichiers modifiés à committer.
 2. **Bump la version** dans `package.json` :
    - `patch` (défaut) : 0.8.17 → 0.8.18
