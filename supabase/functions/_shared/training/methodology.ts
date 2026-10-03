@@ -3,8 +3,9 @@
 
 import { CATALOG_SUMMARY } from "./exercises.ts"
 
-/** Règles renfo (structure 4 blocs, catalogue, parité, progression) — partagées
- *  par TRAINING_RULES et par la régénération dédiée regenerate-renfo. */
+/** Règles renfo (structure 4 blocs, catalogue, parité, progression). Utilisées
+ *  uniquement par la régénération dédiée regenerate-renfo : le plan course n'en
+ *  génère plus. Conservées pour le futur module Renfo autonome. */
 export const RENFO_RULES = `RENFO (renforcement musculaire) — FORMAT CIRCUIT
 - La séance renfo n'a AUCUN step. Elle porte "strength_content" :
   { "target_duration_min": 45, "blocks": [ { "theme": string, "rounds": number, "exercises": [ { "slug": string, "reps"?: number, "duration_sec"?: number } ] } ] }
@@ -39,16 +40,16 @@ export const RENFO_RULES = `RENFO (renforcement musculaire) — FORMAT CIRCUIT
 CATALOGUE D'EXERCICES RENFO (slug · mode · equipment · dosage de référence ; "unilat" = travaillé côté par côté, dosage par côté) :
 ${CATALOG_SUMMARY}`
 
-/** Règles de coaching réutilisables (méthodologie + allures + steps + renfo),
+/** Règles de coaching réutilisables (méthodologie + allures + steps),
  *  sans le schéma de sortie — partagées entre génération et adaptation. */
 export const TRAINING_RULES = `MÉTHODOLOGIE
 - 3 blocs successifs : construction → intensification → affûtage. L'affûtage occupe les 2-3 dernières semaines (volume réduit, intensité préservée).
-- Chaque semaine complète = exactement 4 séances, réparties par ZONE (plage de jours), pas par jour précis :
+- Chaque semaine complète = exactement 3 séances de course (zones A, B, C), réparties par ZONE (plage de jours), pas par jour précis :
   - Zone A (type "facile") : plage lundi-mardi, course facile en endurance.
   - Zone B (type "fractionne" ou "tempo") : plage mercredi-vendredi, séance de qualité.
   - Zone C (type "sortie_longue") : plage samedi-dimanche, sortie longue progressive.
-  - Renfo (zone "renfo", type "renfo") : n'importe quel jour de la semaine, tapis de sol uniquement, orienté course (gainage, fessiers, ischios, proprioception).
-- Raisonne en zones, jamais en jour fixe. La "scheduled_date" de chaque séance est INDICATIVE : elle sert seulement au tri et doit simplement tomber DANS la plage de jours de sa zone (renfo : n'importe où dans la semaine). Ne cherche pas à optimiser le jour exact.
+- Raisonne en zones, jamais en jour fixe. La "scheduled_date" de chaque séance est INDICATIVE : elle sert seulement au tri et doit simplement tomber DANS la plage de jours de sa zone. Ne cherche pas à optimiser le jour exact.
+- AUCUNE séance de renforcement musculaire : n'émets jamais de zone "renfo" ni de type "renfo". Le plan ne contient que des séances de course.
 - Progression logique de semaine en semaine, jamais deux séances dures consécutives.
 - Ne copie pas des séances passées : calibre l'intensité sur les données de forme fournies.
 
@@ -72,9 +73,7 @@ STEPS (séances de course uniquement) — FORMAT COMPACT
   2. Bloc de répétitions (fractionné) : { "repeat": N (≥2), "interval": { "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }, "recovery": { ("duration_sec" OU "distance_m"), "target_pace_sec"? } }. Un seul bloc "repeat" vaut N répétitions ; NE les recopie PAS une par une. La récup est répétée après chaque répétition, y compris la dernière (géré automatiquement).
 - Fractionné : warmup (step simple) + un bloc "repeat" + cooldown (step simple). Exemple 6x1000m = un bloc { "repeat": 6, "interval": { distance_m 1000, allure }, "recovery": { duration_sec 90 } }.
 - Facile / sortie longue : généralement un seul step simple "run" (distance_m ou duration_sec + allure).
-- Tempo : warmup + un ou plusieurs "run" au seuil (ou un bloc "repeat" si intervalles au seuil) + cooldown.
-
-${RENFO_RULES}`
+- Tempo : warmup + un ou plusieurs "run" au seuil (ou un bloc "repeat" si intervalles au seuil) + cooldown.`
 
 /** System prompt commun (coach + méthodologie + schéma de sortie). */
 export function buildPlanSystemPrompt(): string {
@@ -129,22 +128,6 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "steps": [
             { "step_type": "run", "target_pace_sec": 345, "pace_tolerance_sec": 10, "distance_m": 15000 }
           ]
-        },
-        {
-          "scheduled_date": "2026-07-17",
-          "zone": "renfo",
-          "type": "renfo",
-          "title": "Renforcement course",
-          "rationale": "chaîne postérieure, gainage et proprioception (semaine 1, bloc bonus proprio/pied)",
-          "strength_content": {
-            "target_duration_min": 45,
-            "blocks": [
-              { "theme": "Échauffement", "rounds": 2, "exercises": [ { "slug": "rotations_hanches", "duration_sec": 30 }, { "slug": "chat_vache", "duration_sec": 30 }, { "slug": "squats_air", "reps": 15 } ] },
-              { "theme": "Force", "rounds": 3, "exercises": [ { "slug": "pont_fessier", "reps": 15 }, { "slug": "squat_bulgare", "reps": 10 }, { "slug": "souleve_terre_unipodal", "reps": 10 }, { "slug": "fente_arriere", "reps": 10 } ] },
-              { "theme": "Gainage", "rounds": 3, "exercises": [ { "slug": "planche", "duration_sec": 45 }, { "slug": "planche_laterale", "duration_sec": 30 }, { "slug": "dead_bug", "reps": 12 } ] },
-              { "theme": "Proprioception et pied", "rounds": 2, "exercises": [ { "slug": "corde_imaginaire", "duration_sec": 40 }, { "slug": "montees_mollets_unipodal", "reps": 12 }, { "slug": "sauts_unipodaux", "reps": 10 } ] }
-            ]
-          }
         }
       ]
     }

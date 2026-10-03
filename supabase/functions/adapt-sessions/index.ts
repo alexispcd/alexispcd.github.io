@@ -155,8 +155,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .gte("scheduled_date", historyStart)
     .lte("scheduled_date", skipped.scheduled_date)
     .order("scheduled_date", { ascending: true })
+  // Les renfos sont hors du plan course : exclus de l'historique envoyé au modèle.
   const feedbackHistory = (feedbackRows ?? []).filter(
-    (r) => r.rpe != null || (Array.isArray(r.pain_areas) && r.pain_areas.length) || r.feedback_note,
+    (r) => !isStrengthSession(r as Pick<PlanSession, "type" | "zone">) &&
+      (r.rpe != null || (Array.isArray(r.pain_areas) && r.pain_areas.length) || r.feedback_note),
   ) as FeedbackHistoryRow[]
 
   // 4. Fenêtre : séances suivantes 'planned' dans [date sautée, +10 jours]
@@ -171,7 +173,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .order("scheduled_date", { ascending: true })
   if (winErr) return json(500, { error: "Lecture de la fenêtre impossible", detail: winErr.message })
 
-  const windowSessions = (windowRows ?? []).map((r) => toSessionContent(r as Record<string, unknown>))
+  // Les renfos ne sont jamais adaptés : exclus de la fenêtre et du prompt.
+  const windowSessions = (windowRows ?? [])
+    .map((r) => toSessionContent(r as Record<string, unknown>))
+    .filter((s) => !isStrengthSession(s as Pick<PlanSession, "type" | "zone">))
   if (windowSessions.length === 0) return json(200, { sessions: [] })
 
   const byId = new Map(windowSessions.map((s) => [s.id, s]))

@@ -50,6 +50,8 @@ La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions,
 
 Révisions et Veille sont désactivées : routes commentées dans `src/App.jsx`, code conservé.
 
+Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
+
 Deux chantiers en cadrage, dans cet ordre : la création des séances directement sur Coros via MCP, puis Renfo en module autonome.
 
 ---
@@ -115,7 +117,7 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 |---|---|---|
 | `generate-plan` | contexte wizard (course, snapshot forme, objectif, éditions passées, notes) ; `continue_plan_id` pour reprendre | Génère le plan en asynchrone, refuse (409) si un plan actif existe |
 | `regenerate-plan` | `plan_id` ; `continue_regen` pour reprendre | Régénère la fin du plan |
-| `regenerate-renfo` | `plan_id` | Régénère les séances de renfo |
+| `regenerate-renfo` | `plan_id` | Régénère les séances de renfo. Conservée mais plus appelée depuis l'UI |
 | `adapt-sessions` | `session_id` (séance sautée) | Adapte les séances suivantes |
 | `coros-match` | `session_id` | Propose les activités Coros candidates |
 | `complete-session` | `session_id`, activités Coros, `feedback`, `completed_date` | Marque la séance faite, importe les laps, analyse |
@@ -160,9 +162,8 @@ Une zone est un **créneau de jours**, pas un niveau d'intensité :
 - **Zone A** : lundi-mardi
 - **Zone B** : mercredi-vendredi
 - **Zone C** : samedi-dimanche
-- **Renfo** : 1 séance par semaine, jour libre
 
-Répartition par défaut à la génération : A = course facile, B = séance qualité (fractionné ou tempo), C = sortie longue, renfo = exercices + séries + repos.
+Chaque semaine complète compte exactement 3 séances. Répartition par défaut à la génération : A = course facile, B = séance qualité (fractionné ou tempo), C = sortie longue. Une séance renfo dans un plan généré est rejetée par `validatePlan` (erreur bloquante, retry).
 
 L'intensité est portée par `type`, pas par `zone`. Le rendu (couleur, sous-libellé) dérive de `intensityOf(type)` (`src/apps/training/constants.js:78`), jamais de la lettre de zone : après une adaptation, une séance de qualité peut occuper la zone A et doit s'afficher comme une qualité.
 
@@ -172,6 +173,7 @@ Couleurs, définies dans `ZONE_STYLE` (`src/apps/training/constants.js:4`) et in
 
 ### Renforcement musculaire
 
+- Training ne génère plus de renfo (ni génération, ni adaptation, ni régénération depuis l'UI). Le code renfo partagé est conservé pour le futur module autonome : `RENFO_RULES` (`methodology.ts`), `strength.ts`, `exercises.ts`, `estimator.ts`, le player, et la valeur `renfo` en base (zone et type).
 - Matériel disponible : tapis de sol, élastiques de 10, 15, 20, 30 et 40 kg, barre de traction. Chaise possible mais à minimiser.
 - État du code : le type `Equipment` ne connaît que `"none" | "chair"` (`supabase/functions/_shared/training/exercises.ts:22`). Élastiques et barre ne sont pas encore intégrés.
 - Décision actée : Renfo deviendra un module autonome avec son propre planning, indépendant du plan course. Chantier non commencé, ne rien anticiper dans le code.

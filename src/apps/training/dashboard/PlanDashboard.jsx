@@ -9,7 +9,6 @@ import Autorenew from '@mui/icons-material/Autorenew'
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
 import History from '@mui/icons-material/History'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
-import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -18,7 +17,7 @@ import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
   skipSession, unskipSession, adaptSessions,
-  regeneratePlan, regenerateRenfo, archivePlan, deletePlan, generatePlan,
+  regeneratePlan, archivePlan, deletePlan, generatePlan,
 } from '../../../lib/training'
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
@@ -58,8 +57,6 @@ const PlanDashboard = () => {
   const [removeDialog, setRemoveDialog] = useState(null)
   const [watchChoice, setWatchChoice] = useState(null) // séance déjà poussée : renvoyer / retirer
   const [confirmRegen, setConfirmRegen] = useState(false)
-  const [confirmRenfo, setConfirmRenfo] = useState(false)
-  const [renfoBusy, setRenfoBusy] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [snack, setSnack] = useState(null)
@@ -155,14 +152,13 @@ const PlanDashboard = () => {
     const actions = []
     if (!readOnly) {
       actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true) })
-      actions.push({ label: 'Régénérer les renfos', icon: <FitnessCenter fontSize="small" />, onClick: () => setConfirmRenfo(true), disabled: renfoBusy })
       actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
     }
     actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history') })
     actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings') })
     setHeaderActions(actions)
     return () => setHeaderActions([])
-  }, [plan, readOnly, renfoBusy, navigate, setHeaderActions])
+  }, [plan, readOnly, navigate, setHeaderActions])
 
   // ── Handlers séance ───────────────────────────────────────────────────────────
   const handleSkip = async (session) => {
@@ -235,20 +231,6 @@ const PlanDashboard = () => {
     }
   }
 
-  const doRegenRenfo = async () => {
-    setConfirmRenfo(false)
-    setRenfoBusy(true)
-    try {
-      const { updated } = await regenerateRenfo(planId)
-      await reloadSessions()
-      const n = updated ?? 0
-      flash(n > 0 ? `${n} renfo${n > 1 ? 's' : ''} régénéré${n > 1 ? 's' : ''}` : 'Renfos régénérés', 'success')
-    } catch (e) {
-      flash(e.message)
-    } finally {
-      setRenfoBusy(false)
-    }
-  }
 
   const doArchive = async () => {
     setConfirmArchive(false)
@@ -596,16 +578,6 @@ const PlanDashboard = () => {
         onConfirm={doRegen}
         title="Régénérer les semaines restantes ?"
         text="Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées."
-        confirmLabel="Régénérer"
-      />
-
-      {/* Dialog régénération des renfos */}
-      <ConfirmDialog
-        open={confirmRenfo}
-        onClose={() => setConfirmRenfo(false)}
-        onConfirm={doRegenRenfo}
-        title="Régénérer les renfos ?"
-        text="Seules les séances de renforcement à venir et non réalisées seront remplacées par du nouveau contenu. Les séances faites ou sautées restent intactes."
         confirmLabel="Régénérer"
       />
 

@@ -248,6 +248,12 @@ export function validatePlan(
 
     w.sessions.forEach((s, si) => {
       const tag = `semaine ${wn} séance ${si + 1}`
+      // Niveau plan : le plan course ne contient plus de renfo (module autonome à venir).
+      // Volontairement hors de validateSessionContent, partagée avec regenerate-renfo.
+      if (isStrengthSession(s)) {
+        errors.push(`${tag} : séance renfo interdite dans un plan course`)
+        return
+      }
       const ts = dayTs(s.scheduled_date)
       if (Number.isNaN(ts)) errors.push(`${tag} : scheduled_date invalide "${s.scheduled_date}"`)
       else if (ts < lo || ts > hi) errors.push(`${tag} : scheduled_date ${s.scheduled_date} hors [${todayStr}, ${raceDateStr}]`)
