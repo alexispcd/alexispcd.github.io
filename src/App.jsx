@@ -1,22 +1,12 @@
 import { createBrowserRouter, RouterProvider, Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
-import { ThemeProvider, CssBaseline, Box } from '@mui/material'
+import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
-import Cotes from './apps/cotes/Cotes'
-// Veille désactivée (accès coupé, code conservé).
-// import VeillePage from './apps/veille/VeillePage'
-// import ArticleDetail from './apps/veille/ArticleDetail'
-import TrainingHome from './apps/training/TrainingHome'
-import PlanDashboard from './apps/training/dashboard/PlanDashboard'
-import SessionPage from './apps/training/session/SessionPage'
-import PlanWizard from './apps/training/wizard/PlanWizard'
-import SettingsPage from './apps/training/SettingsPage'
-// Révisions désactivées (accès coupé, code conservé).
-// import RevisionsHome from './apps/revisions/RevisionsHome'
-// import ReviewSession from './apps/revisions/ReviewSession'
+import { enabledRoutes } from './apps/registry'
 import AuthGate from './components/AuthGate'
+import RouteError from './components/RouteError'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
@@ -40,11 +30,10 @@ const AppLayout = () => {
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
-      {/* La webview passe sous la barre de statut iOS (viewport-fit=cover). Le contenu
-          descend de l'inset haut pour le header. En bas, pas d'inset ni d'aplat : le fond
-          de page va jusqu'au bord physique (bord a bord iOS standard), et chaque page gere
-          sa propre marge basse pour degager sa derniere carte au-dessus de l'indicateur
-          d'accueil. Chaque page scrolle dans son propre conteneur en height 100%. */}
+      {/* Pas de viewport-fit=cover (voir CLAUDE.md, section PWA iOS) : iOS remplit les
+          safe-areas (barre de statut, indicateur d'accueil) avec le fond du body, et les
+          env(safe-area-inset-*) valent 0. Ils ne servent que de garde-fou. Chaque page gere
+          sa propre marge basse et scrolle dans son propre conteneur en height 100%. */}
       <Box sx={{
         height: '100%', overflow: 'hidden',
         pt: 'env(safe-area-inset-top, 0px)',
@@ -89,18 +78,17 @@ const AppLayout = () => {
 const router = createBrowserRouter([
   {
     element: <AppLayout />,
+    errorElement: <RouteError />,
+    // Premier chargement d'une route lazy (lien profond, retour OAuth Coros) :
+    // meme loader que AuthGate tant que le chunk de la page n'est pas arrive.
+    hydrateFallbackElement: (
+      <Box sx={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
+        <CircularProgress size={32} sx={{ color: 'primary.main' }} />
+      </Box>
+    ),
     children: [
       { path: '/', element: <Home />, handle: { showBack: false } },
-      { path: '/cotes', element: <Cotes />, handle: { title: 'Côtes', backTo: '/' } },
-      // { path: '/veille', element: <VeillePage />, handle: { title: 'Veille', backTo: '/' } },
-      // { path: '/veille/article/:articleId', element: <ArticleDetail />, handle: { title: 'Veille', backTo: '/veille' } },
-      { path: '/training', element: <TrainingHome />, handle: { title: 'Training', backTo: '/' } },
-      { path: '/training/wizard', element: <PlanWizard />, handle: { title: 'Nouveau plan', backTo: '/training' } },
-      { path: '/training/settings', element: <SettingsPage />, handle: { title: 'Réglages', backTo: '/training' } },
-      { path: '/training/plan/:planId', element: <PlanDashboard />, handle: { title: 'Training', backTo: '/' } },
-      { path: '/training/plan/:planId/session/:sessionId', element: <SessionPage />, handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
-      // { path: '/revisions', element: <RevisionsHome />, handle: { title: 'Révisions', backTo: '/' } },
-      // { path: '/revisions/session', element: <ReviewSession />, handle: { title: 'Révision', backTo: '/revisions' } },
+      ...enabledRoutes(),
     ],
   },
 ])

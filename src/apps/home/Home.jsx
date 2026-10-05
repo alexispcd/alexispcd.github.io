@@ -1,57 +1,9 @@
 import { Box, Typography, Divider } from '@mui/material'
 import AppCard from '../../components/AppCard'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
+import { enabledByCategory } from '../registry'
 
-const categories = [
-  {
-    label: 'Sport',
-    apps: [
-      {
-        id: 'cotes',
-        name: 'Côtes',
-        desc: 'Dénivelé pour séances running',
-        icon: 'ti-trending-up',
-        status: 'active',
-        href: '/cotes',
-      },
-      {
-        id: 'training',
-        name: 'Training',
-        desc: 'Plans et suivi Coros',
-        icon: 'ti-run',
-        status: 'active',
-        href: '/training',
-      },
-    ],
-  },
-  // Révisions et Veille désactivées (accès coupé, code conservé).
-  // {
-  //   label: 'Études',
-  //   apps: [
-  //     {
-  //       id: 'revisions',
-  //       name: 'Révisions',
-  //       desc: 'Cartes de révision',
-  //       icon: 'ti-cards',
-  //       status: 'active',
-  //       href: '/revisions',
-  //     },
-  //   ],
-  // },
-  // {
-  //   label: 'Dev',
-  //   apps: [
-  //     {
-  //       id: 'veille',
-  //       name: 'Veille',
-  //       desc: 'Ressources tech à suivre',
-  //       icon: 'ti-rss',
-  //       status: 'active',
-  //       href: '/veille',
-  //     },
-  //   ],
-  // },
-]
+const categories = enabledByCategory()
 
 const Home = () => {
   return (
@@ -102,8 +54,8 @@ const Home = () => {
                 <Divider sx={{ flex: 1 }} />
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-                {cat.apps.map(app => (
-                  <AppCard key={app.id} app={app} />
+                {cat.modules.map(module => (
+                  <AppCard key={module.id} module={module} />
                 ))}
               </Box>
             </Box>

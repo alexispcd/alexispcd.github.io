@@ -1,24 +1,23 @@
 import { Card, CardContent, Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
+import { useNavigate } from 'react-router-dom'
 
-const AppCard = ({ app }) => {
+const AppCard = ({ module }) => {
   const theme = useTheme()
-  const isActive = app.status === 'active'
+  const navigate = useNavigate()
+  const Icon = module.icon
 
   return (
     <Card
-      onClick={() => app.href && (window.location.href = app.href)}
+      onClick={() => navigate(module.path)}
       sx={{
-        cursor: app.href ? 'pointer' : 'default',
-        opacity: isActive ? 1 : 0.45,
-        border: isActive
-          ? `2px solid ${theme.palette.primary.main}`
-          : `1px solid ${theme.palette.divider}`,
+        cursor: 'pointer',
+        border: `2px solid ${theme.palette.primary.main}`,
         transition: 'all 0.2s',
-        '&:hover': app.href ? {
+        '&:hover': {
           borderColor: theme.palette.primary.main,
           transform: 'translateY(-2px)',
-        } : {},
+        },
       }}
     >
       <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -32,20 +31,20 @@ const AppCard = ({ app }) => {
           alignItems: 'center',
           justifyContent: 'center',
           mb: 1.5,
-          background: isActive ? theme.palette.primary.light : theme.palette.divider,
-          color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
+          background: theme.palette.primary.light,
+          color: theme.palette.primary.main,
         }}>
-          <i className={`ti ${app.icon}`} style={{ fontSize: 16 }} aria-hidden="true" />
+          <Icon sx={{ fontSize: 16 }} aria-hidden="true" />
         </Box>
 
         {/* Nom */}
         <Typography variant="body2" fontWeight={600} mb={0.5}>
-          {app.name}
+          {module.name}
         </Typography>
 
         {/* Description */}
         <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.4}>
-          {app.desc}
+          {module.description}
         </Typography>
 
       </CardContent>

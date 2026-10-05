@@ -17,19 +17,27 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `deno check` sur `supabase/functions/**` pour les Edge Functions
 
 ## Structure src/
-- `apps/home/` : page d'accueil, cartes par catégorie
+- `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `enabledModules`, `enabledRoutes`, `enabledByCategory`) ; routes et home en dérivent
+- `apps/<id>/module.js` : descripteur d'un module (`id`, `name`, `description`, `category`, `enabled`, `icon` MUI, `path`, `routes: [{ path, load, handle }]`)
+- `apps/home/` : page d'accueil, cartes par catégorie construites depuis le registre
 - `apps/cotes/` : outil Côtes (ex Côtes.Run)
 - `apps/training/` : outil Training (plan d'entraînement course à pied)
 - `apps/veille/` : outil Veille dev (RSS + fiches Mistral)
 - `apps/revisions/` : outil Révisions (cartes en répétition espacée)
-- `components/AppCard.jsx` : carte outil réutilisable
+- `components/AppCard.jsx` : carte module de la home (navigation React Router, icône MUI)
+- `components/RouteError.jsx` : `errorElement` de la route racine (chunk introuvable après déploiement, ou erreur générique), bouton « Recharger »
 - `components/AppHeader.jsx` : header standardisé réutilisable (voir Design system)
 - `components/AuthGate.jsx` : protège toutes les routes sauf `/`
 - `hooks/useDarkMode.jsx` : mode sombre (localStorage + classe `body.dark`), passé en props `{ dark, setDark }` à chaque app
 - `styles/theme.js` : thème MUI clair et sombre
 - `lib/supabase.js` : client Supabase ; `lib/training.js` : accès données Training ; `lib/rss.js` : Veille
 
-Routes déclarées dans `src/App.jsx` (titre et cible du bouton retour dans `handle`).
+Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Un module `enabled: false` n'a ni route ni carte ; ses chunks restent compilés mais sont exclus du précache PWA (`collectDisabledChunks` dans `vite.config.js`).
+
+### Ajouter un module
+1. Créer le dossier `src/apps/<id>/` avec ses pages (export par défaut).
+2. Créer `src/apps/<id>/module.js` : descripteur avec icône importée par chemin (`import X from '@mui/icons-material/X'`) et routes en `load: () => import('./Page')`.
+3. Ajouter l'import et l'entrée dans la liste `modules` de `src/apps/registry.js` (et la catégorie dans `categoryOrder` si elle est nouvelle).
 
 ## Conventions
 - Arrow functions, un composant par fichier
@@ -48,7 +56,7 @@ Routes déclarées dans `src/App.jsx` (titre et cible du bouton retour dans `han
 
 La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`). Les séances peuvent être poussées vers intervals.icu (`push-to-intervals`).
 
-Révisions et Veille sont désactivées : routes commentées dans `src/App.jsx`, code conservé.
+Révisions et Veille sont désactivées : `enabled: false` dans leur `module.js`, code conservé.
 
 Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
 
@@ -59,7 +67,7 @@ Deux chantiers en cadrage, dans cet ordre : la création des séances directemen
 ## Design system (toute l'app)
 
 - Material UI exclusivement, style épuré sobre presque pro
-- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement (la police Tabler est installée mais inutilisée)
+- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement, importées par chemin (police Tabler retirée)
 - Typo : DM Serif Display (titres, en italique) + Geist (corps)
 - Couleurs (source de vérité : `styles/theme.js`) :
   - Clair : fond `#ffffff`, surface `#f7f7f7`, accent `#1D9E75`, accent light `#e6f5ef`, bordure `#ebebeb`
