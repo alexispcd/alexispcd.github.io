@@ -134,6 +134,8 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 - Déployer une fonction : `npx supabase functions deploy <nom> --project-ref $SUPABASE_PROJECT_REF --use-api`
 - Ne jamais modifier les secrets Supabase ni la base en prod sans me demander.
 - Secrets serveur (côté Supabase uniquement) : `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, config OAuth Coros (`COROS_*`).
+- Sessions cloud : pas d'accès TCP à Postgres (proxy HTTPS uniquement, hôte direct en IPv6 seul). `supabase db push` et `migration list` y échouent en timeout.
+- Migrations : passer par le MCP Supabase. Lecture avec `list_migrations` et `list_tables`, application avec `apply_migration` uniquement après mon accord explicite. Le nom passé à `apply_migration` reprend celui du fichier local (sans horodatage), pour que les versions restent alignées.
 
 ---
 
