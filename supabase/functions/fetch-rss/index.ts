@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts"
 
 const CORS = {
@@ -225,6 +226,8 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
     }
+    const denied = await requireModule(createClient(supabaseUrl, serviceRoleKey), user.id, "veille", CORS)
+    if (denied) return denied
     userId = user.id
     feeds = Array.isArray(body?.feeds) ? body.feeds : SYSTEM_FEEDS
     depth = 0

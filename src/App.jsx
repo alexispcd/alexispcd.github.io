@@ -1,18 +1,21 @@
 import { createBrowserRouter, RouterProvider, Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
-import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material'
+import { ThemeProvider, CssBaseline, Box } from '@mui/material'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import { enabledRoutes } from './apps/registry'
 import AuthGate from './components/AuthGate'
+import AccessGate from './components/AccessGate'
+import FullScreenLoader from './components/FullScreenLoader'
 import RouteError from './components/RouteError'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
+import { fetchAccess, publishAccess, clearAccess } from './lib/access'
 
 const AppLayout = () => {
-  const { dark, setDark, user, headerActions, overlay } = useAppCtx()
+  const { dark, setDark, user, access, headerActions, overlay } = useAppCtx()
   const matches = useMatches()
   const lastMatch = matches.at(-1)
   const handle = lastMatch?.handle ?? {}
@@ -65,6 +68,7 @@ const AppLayout = () => {
           dark={dark}
           setDark={setDark}
           user={user}
+          isAdmin={access?.role === 'admin'}
           // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
           // pt : le header porte l'inset haut et ne passe plus sous l'heure (py:1.5 = 12px conservés).
           sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
@@ -79,13 +83,9 @@ const router = createBrowserRouter([
   {
     element: <AppLayout />,
     errorElement: <RouteError />,
-    // Premier chargement d'une route lazy (lien profond, retour OAuth Coros) :
-    // meme loader que AuthGate tant que le chunk de la page n'est pas arrive.
-    hydrateFallbackElement: (
-      <Box sx={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-        <CircularProgress size={32} sx={{ color: 'primary.main' }} />
-      </Box>
-    ),
+    // Premier chargement d'une route (lien profond, retour OAuth Coros) : loader
+    // plein ecran tant que l'acces et le chunk de la page ne sont pas arrives.
+    hydrateFallbackElement: <FullScreenLoader />,
     children: [
       { path: '/', element: <Home />, handle: { showBack: false } },
       ...enabledRoutes(),
@@ -100,6 +100,10 @@ const App = () => {
   // Vrai quand un overlay plein écran est monté : le header applicatif s'efface.
   const [overlay, setOverlay] = useState(false)
   const theme = useMemo(() => createTheme(dark), [dark])
+  // Droits du compte connecté ({ userId, role, modules } ou { userId, error }).
+  const [loadedAccess, setLoadedAccess] = useState(null)
+  // Ignoré tant qu'il appartient à un autre compte : rechargé à chaque changement d'utilisateur.
+  const access = loadedAccess?.userId === user?.id ? loadedAccess : null
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
@@ -109,12 +113,35 @@ const App = () => {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    // Les loaders de route attendent le nouvel accès plutôt que de lire l'ancien.
+    clearAccess()
+    if (!user?.id) return
+    let cancelled = false
+    fetchAccess(user.id).then(
+      (next) => {
+        if (cancelled) return
+        publishAccess(next)
+        setLoadedAccess(next)
+        // Le router survit au changement de compte : on rejoue les gardes de route.
+        router.revalidate()
+      },
+      (err) => {
+        console.error('fetchAccess error:', err)
+        if (!cancelled) setLoadedAccess({ userId: user.id, error: true })
+      },
+    )
+    return () => { cancelled = true }
+  }, [user?.id])
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user, headerActions, setHeaderActions, overlay, setOverlay }}>
+      <AppCtx.Provider value={{ dark, setDark, user, access, headerActions, setHeaderActions, overlay, setOverlay }}>
         <AuthGate>
-          <RouterProvider router={router} />
+          <AccessGate>
+            <RouterProvider router={router} />
+          </AccessGate>
         </AuthGate>
       </AppCtx.Provider>
     </ThemeProvider>

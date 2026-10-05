@@ -6,6 +6,7 @@ const revisions = {
   description: 'Cartes de révision',
   category: 'Études',
   enabled: false,
+  adminOnly: false,
   icon: Style,
   path: '/revisions',
   routes: [

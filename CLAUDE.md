@@ -17,27 +17,33 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `deno check` sur `supabase/functions/**` pour les Edge Functions
 
 ## Structure src/
-- `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `enabledModules`, `enabledRoutes`, `enabledByCategory`) ; routes et home en dérivent
-- `apps/<id>/module.js` : descripteur d'un module (`id`, `name`, `description`, `category`, `enabled`, `icon` MUI, `path`, `routes: [{ path, load, handle }]`)
+- `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `enabledModules`, `canAccess`, `assignableModules`, `enabledRoutes`, `homeCategories`) ; routes et home en dérivent
+- `apps/<id>/module.js` : descripteur d'un module (`id`, `name`, `description`, `category`, `enabled`, `adminOnly`, `icon` MUI, `path`, `routes: [{ path, load, handle }]`)
+- `apps/admin/` : module Administration (`adminOnly`), gestion des comptes et de leurs modules via l'Edge Function `admin-users`
 - `apps/home/` : page d'accueil, cartes par catégorie construites depuis le registre
 - `apps/cotes/` : outil Côtes (ex Côtes.Run)
 - `apps/training/` : outil Training (plan d'entraînement course à pied)
 - `apps/veille/` : outil Veille dev (RSS + fiches Mistral)
 - `apps/revisions/` : outil Révisions (cartes en répétition espacée)
 - `components/AppCard.jsx` : carte module de la home (navigation React Router, icône MUI)
-- `components/RouteError.jsx` : `errorElement` de la route racine (chunk introuvable après déploiement, ou erreur générique), bouton « Recharger »
+- `components/RouteError.jsx` : `errorElement` de la route racine : « Page introuvable » (404, y compris module non attribué) avec retour à l'accueil, chunk introuvable après déploiement ou erreur générique avec « Recharger »
 - `components/AppHeader.jsx` : header standardisé réutilisable (voir Design system)
-- `components/AuthGate.jsx` : protège toutes les routes sauf `/`
+- `components/AuthGate.jsx` : écran de connexion OTP tant qu'il n'y a pas de session
+- `components/AccessGate.jsx` : loader tant que les droits du compte ne sont pas chargés
+- `components/FullScreenLoader.jsx` : loader plein écran partagé
 - `hooks/useDarkMode.jsx` : mode sombre (localStorage + classe `body.dark`), passé en props `{ dark, setDark }` à chaque app
 - `styles/theme.js` : thème MUI clair et sombre
 - `lib/supabase.js` : client Supabase ; `lib/training.js` : accès données Training ; `lib/rss.js` : Veille
+- `lib/access.js` : rôle et modules du compte connecté, `hasModule` (miroir de `_shared/access.ts`), accès publié pour les loaders de route ; `lib/admin.js` : appels à `admin-users`
 
-Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Un module `enabled: false` n'a ni route ni carte ; ses chunks restent compilés mais sont exclus du précache PWA (`collectDisabledChunks` dans `vite.config.js`).
+Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Chaque route de module a un `loader` qui attend l'accès publié par `App` et lève un 404 si le compte n'a pas le module (`canAccess` du registre) : la page n'est jamais rendue. Le router est créé une seule fois ; `App` appelle `router.revalidate()` quand l'accès change (changement de compte). Un module `enabled: false` n'a ni route ni carte ; ses chunks restent compilés mais sont exclus du précache PWA (`collectDisabledChunks` dans `vite.config.js`).
 
 ### Ajouter un module
 1. Créer le dossier `src/apps/<id>/` avec ses pages (export par défaut).
 2. Créer `src/apps/<id>/module.js` : descripteur avec icône importée par chemin (`import X from '@mui/icons-material/X'`) et routes en `load: () => import('./Page')`.
 3. Ajouter l'import et l'entrée dans la liste `modules` de `src/apps/registry.js` (et la catégorie dans `categoryOrder` si elle est nouvelle).
+4. Si le module est attribuable (pas `adminOnly`), ajouter son id dans `supabase/functions/_shared/modules.ts`, sinon l'Admin ne pourra pas l'attribuer.
+5. Ses Edge Functions appellent `requireModule` (voir Edge Functions).
 
 ## Conventions
 - Arrow functions, un composant par fichier
@@ -57,6 +63,8 @@ Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres 
 La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`). Les séances peuvent être poussées vers intervals.icu (`push-to-intervals`).
 
 Révisions et Veille sont désactivées : `enabled: false` dans leur `module.js`, code conservé.
+
+Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Prochain chantier : retrait d'Intervals.icu.
 
 Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
 
@@ -80,7 +88,7 @@ Deux chantiers en cadrage, dans cet ordre : la création des séances directemen
 3 zones :
 - **Gauche** : bouton retour `ArrowBack` (cible définie par `handle.backTo` de la route)
 - **Centre** : nom de l'outil, cliquable avec chevron + menu déroulant si actions configurées, sinon simple texte
-- **Droite** : menu compte `AccountCircle`, identique partout y compris sur la home ; contient : identité/email, toggle sombre/clair, se déconnecter
+- **Droite** : menu compte `AccountCircle`, identique partout y compris sur la home ; contient : identité/email, « Administration » (admin uniquement), toggle sombre/clair, se déconnecter
 
 ### Effet Liquid Glass (menus, popups, dialogs UNIQUEMENT)
 
@@ -98,7 +106,12 @@ backdrop-filter: blur(24px) saturate(180%);
 
 ## Supabase : schéma BDD
 
-Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RLS activée avec une policy `auth.uid() = user_id`.
+Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RLS activée avec une policy `auth.uid() = user_id`, sauf `profiles` et `user_modules` (lecture seule de ses propres lignes, aucune écriture hors service_role).
+
+### Comptes et droits (migration `20261005133606_user_roles_modules.sql`)
+- **profiles** : `id` (PK, FK `auth.users` on delete cascade), `email`, `role` (`user` | `admin`, défaut `user`). Policy de lecture de sa propre ligne pour `authenticated` ; insert, update, delete et truncate révoqués pour `anon` et `authenticated` : personne ne change son propre rôle. Le passage admin se fait à la main, hors repo.
+- **user_modules** : `(user_id, module_id)` clé primaire, `granted_at`. Lecture de ses propres lignes uniquement, écriture par `admin-users` (service_role). `module_id` validé côté serveur contre `_shared/modules.ts`.
+- Trigger `on_auth_user_created` (after insert on `auth.users`) : `private.handle_new_user()` crée la ligne `profiles`. Fonction `security definer`, `search_path = ''`, dans le schéma `private` non exposé par l'API (aucun droit pour anon et authenticated).
 
 ### Training
 
@@ -134,8 +147,17 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 | `push-to-intervals` | séance(s) | Pousse vers intervals.icu |
 | `fetch-rss` | | Récupère les flux RSS dans `watch_items` |
 | `summarize-article` | `{ articleId, url, title, content }` | Fiche Mistral `{ summary, keyPoints, suggestedTags }` |
+| `admin-users` | `{ action, ... }` : `list`, `create { email, modules }`, `set_modules { user_id, modules }`, `disable` / `enable { user_id }`, `delete { user_id }` | Gestion des comptes, réservée au rôle admin (lu côté serveur). Refuse disable, delete et set_modules sur un compte admin. 409 si l'email existe déjà |
 
-`verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth) : l'auth y est vérifiée dans le code.
+Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`) ne passent pas par ce contrôle.
+
+**Règle** : toute Edge Function rattachée à un module appelle `requireModule(supabaseAdmin, user.id, '<module>', CORS)` juste après `getUser`.
+
+`verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth, admin-users) : l'auth y est vérifiée dans le code.
+
+### Auth
+- Connexion par code OTP email (`AuthGate`), `shouldCreateUser: false` : un email sans compte reçoit « Ce compte n'existe pas. Demande une invitation. ».
+- Inscriptions fermées : les comptes sont créés depuis le module Administration (`admin-users`, `createUser` avec `email_confirm`). Désactivation par `ban_duration`, suppression en cascade de toutes les données.
 
 ### Déploiement
 
@@ -143,7 +165,8 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 - Ne jamais modifier les secrets Supabase ni la base en prod sans me demander.
 - Secrets serveur (côté Supabase uniquement) : `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, config OAuth Coros (`COROS_*`).
 - Sessions cloud : pas d'accès TCP à Postgres (proxy HTTPS uniquement, hôte direct en IPv6 seul). `supabase db push` et `migration list` y échouent en timeout.
-- Migrations : passer par le MCP Supabase. Lecture avec `list_migrations` et `list_tables`, application avec `apply_migration` uniquement après mon accord explicite. Le nom passé à `apply_migration` reprend celui du fichier local (sans horodatage), pour que les versions restent alignées.
+- Migrations : passer par le MCP Supabase. Lecture avec `list_migrations` et `list_tables`, application avec `apply_migration` uniquement après mon accord explicite. Le nom passé à `apply_migration` reprend celui du fichier local (sans horodatage). Supabase horodate lui-même la version à l'application : renommer ensuite le fichier local avec la version renvoyée par `list_migrations` pour garder l'alignement.
+- Si `apply_migration` du MCP expire (vu le 2026-10-05 : rien n'atteint la base), même migration via l'API de gestion : `POST https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/migrations` avec `{ name, query }` et `SUPABASE_ACCESS_TOKEN`. Elle s'inscrit dans l'historique comme `apply_migration`.
 
 ---
 
@@ -321,7 +344,7 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 
 ### Lint React Compiler
 - `eslint-plugin-react-hooks` v7 en règles strictes : `react-hooks/purity` interdit `Date.now()`, `Math.random()` et la lecture de `ref.current` pendant le rendu ; `react-hooks/set-state-in-effect` interdit tout `setState` atteint synchroniquement depuis le corps d'un effet.
-- Socle de 12 erreurs préexistantes (`cotes/BottomBar`, `training/*`, `veille/VeillePage`, `AppHeader`, `useDarkMode`) : `npm run lint` n'est jamais vert, viser zéro erreur sur les fichiers touchés.
+- Socle de 11 erreurs préexistantes (`cotes/BottomBar`, `training/*`, `veille/VeillePage`, `useDarkMode`) : `npm run lint` n'est jamais vert, viser zéro erreur sur les fichiers touchés.
 - Patterns qui passent (exemples dans `src/apps/revisions/`) : fetch initial via fonction `async` hors composant qui retourne les données, `setState` dans le `.then()` de l'effet ; valeur dérivée figée mémoïsée sur un snapshot d'état ; aléatoire via PRNG seedé pendant le rendu, ou `Date.now()` dans un handler.
 
 ### Edge Functions

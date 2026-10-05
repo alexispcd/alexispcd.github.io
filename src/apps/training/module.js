@@ -6,6 +6,7 @@ const training = {
   description: 'Plans et suivi Coros',
   category: 'Sport',
   enabled: true,
+  adminOnly: false,
   icon: DirectionsRun,
   path: '/training',
   routes: [

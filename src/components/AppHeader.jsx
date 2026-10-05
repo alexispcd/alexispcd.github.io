@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Box, IconButton, Typography, Menu, MenuItem,
   Divider, ListItemIcon, ListItemText, Avatar,
@@ -9,6 +9,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore'
 import DarkMode from '@mui/icons-material/DarkMode'
 import LightMode from '@mui/icons-material/LightMode'
 import Logout from '@mui/icons-material/Logout'
+import AdminPanelSettings from '@mui/icons-material/AdminPanelSettings'
 import supabase from '../lib/supabase'
 import { glassSx } from '../styles/glass'
 
@@ -23,17 +24,24 @@ const AppHeader = ({
   dark,
   setDark,
   user,
+  isAdmin = false,
   sx = {},
 }) => {
   const [accountAnchor, setAccountAnchor] = useState(null)
   const [actionsAnchor, setActionsAnchor] = useState(null)
 
-  // Ferme les menus au changement de route (AppHeader n'est jamais démonté)
+  const navigate = useNavigate()
+
+  // Ferme les menus au changement de route (AppHeader n'est jamais démonté).
+  // Ajustement pendant le rendu plutôt qu'un effet : pas de rendu intermédiaire
+  // avec un menu ouvert sur la nouvelle page.
   const { pathname } = useLocation()
-  useEffect(() => {
+  const [menuPathname, setMenuPathname] = useState(pathname)
+  if (menuPathname !== pathname) {
+    setMenuPathname(pathname)
     setAccountAnchor(null)
     setActionsAnchor(null)
-  }, [pathname])
+  }
 
   const hasActions = actions.length > 0
   const userInitial = user?.email?.[0]?.toUpperCase() ?? '?'
@@ -51,7 +59,7 @@ const AppHeader = ({
       ...sx,
     }}>
 
-      {/* Gauche — bouton retour */}
+      {/* Gauche : bouton retour */}
       <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center' }}>
         {showBack ? (
           <IconButton
@@ -65,7 +73,7 @@ const AppHeader = ({
         )}
       </Box>
 
-      {/* Centre — nom de l'outil */}
+      {/* Centre : nom de l'outil */}
       <Box sx={{ pointerEvents: 'all' }}>
         {hasActions ? (
           <>
@@ -114,7 +122,7 @@ const AppHeader = ({
         )}
       </Box>
 
-      {/* Droite — menu compte */}
+      {/* Droite : menu compte */}
       <Box sx={{ pointerEvents: 'all', display: 'flex', alignItems: 'center' }}>
         <IconButton
           onClick={(e) => setAccountAnchor(e.currentTarget)}
@@ -147,6 +155,12 @@ const AppHeader = ({
             </Box>
           </Box>
           <Divider />
+          {isAdmin && (
+            <MenuItem onClick={() => { setAccountAnchor(null); navigate('/admin') }}>
+              <ListItemIcon><AdminPanelSettings fontSize="small" /></ListItemIcon>
+              <ListItemText>Administration</ListItemText>
+            </MenuItem>
+          )}
           <MenuItem onClick={() => { setDark(!dark); setAccountAnchor(null) }}>
             <ListItemIcon>
               {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}

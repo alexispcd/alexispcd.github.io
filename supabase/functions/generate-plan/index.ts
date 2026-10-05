@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import {
   buildSystemPrompt, buildRetryPrompt, buildChunkUserPrompt,
@@ -290,6 +291,8 @@ async function handleRequest(req: Request): Promise<Response> {
   )
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return json(401, { error: "Unauthorized" })
+  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  if (denied) return denied
 
   const inputError = validateInput(body)
   if (inputError) return json(400, { error: inputError })

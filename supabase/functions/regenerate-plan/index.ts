@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { buildPlanSystemPrompt, buildRetryPrompt } from "../_shared/training/methodology.ts"
@@ -250,6 +251,8 @@ async function handleRequest(req: Request): Promise<Response> {
   )
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return json(401, { error: "Unauthorized" })
+  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  if (denied) return denied
 
   const planId = body.plan_id as string
   if (!planId) return json(400, { error: "plan_id requis" })

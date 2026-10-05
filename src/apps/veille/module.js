@@ -6,6 +6,7 @@ const veille = {
   description: 'Ressources tech à suivre',
   category: 'Dev',
   enabled: false,
+  adminOnly: false,
   icon: RssFeed,
   path: '/veille',
   routes: [

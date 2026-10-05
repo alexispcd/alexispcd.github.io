@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,12 @@ Deno.serve(async (req) => {
   if (authError || !user) {
     return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
   }
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  )
+  const denied = await requireModule(supabaseAdmin, user.id, "veille", CORS)
+  if (denied) return denied
 
   const { articleId, url, title, content } = await req.json()
   if (!url || !title) {

@@ -1,11 +1,13 @@
 import { Box, Typography, Divider } from '@mui/material'
 import AppCard from '../../components/AppCard'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { enabledByCategory } from '../registry'
-
-const categories = enabledByCategory()
+import { homeCategories } from '../registry'
+import { useAppCtx } from '../../lib/context'
 
 const Home = () => {
+  const { access } = useAppCtx()
+  const categories = homeCategories(access)
+
   return (
     <Box sx={{ height: '100%', overflowY: 'auto' }}>
       <Box sx={{ maxWidth: 720, mx: 'auto', px: 4, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }}>
@@ -39,6 +41,12 @@ const Home = () => {
             </Typography>
           </Box>
         </Box>
+
+        {categories.length === 0 && (
+          <Typography variant="body2" color="text.secondary">
+            Aucun module pour l'instant. Demande l'accès à l'administrateur.
+          </Typography>
+        )}
 
         {/* Catégories */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { type FitnessOverview, parseFitnessOverview } from "../_shared/coros-parse.ts"
@@ -27,6 +28,8 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
+  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  if (denied) return denied
 
   let corosToken: string
   try {

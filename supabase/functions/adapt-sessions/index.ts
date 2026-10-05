@@ -1,5 +1,6 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
@@ -109,6 +110,8 @@ async function handleRequest(req: Request): Promise<Response> {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
+  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  if (denied) return denied
 
   // 2. Corps
   let sessionId: string

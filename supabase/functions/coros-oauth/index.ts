@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { requireModule } from "../_shared/access.ts"
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -95,6 +96,8 @@ Deno.serve(async (req) => {
 async function handleAction(req: Request): Promise<Response> {
   const userId = await authenticate(req)
   if (!userId) return json(401, { error: "Unauthorized" })
+  const denied = await requireModule(adminClient(), userId, "training", CORS)
+  if (denied) return denied
 
   let action: string
   try {

@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import supabase from '../lib/supabase'
+import FullScreenLoader from './FullScreenLoader'
+
+// Inscriptions fermées : Supabase refuse l'OTP d'un email sans compte (code otp_disabled).
+const isUnknownAccount = (error) =>
+  error.code === 'otp_disabled' || /signups? not allowed/i.test(error.message ?? '')
 
 const AuthGate = ({ children }) => {
   const theme = useTheme()
@@ -26,11 +31,12 @@ const AuthGate = ({ children }) => {
     setErrorMsg('')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: true },
+      // Comptes créés uniquement depuis le module Admin.
+      options: { shouldCreateUser: false },
     })
     setLoading(false)
     if (error) {
-      setErrorMsg(error.message)
+      setErrorMsg(isUnknownAccount(error) ? 'Ce compte n\'existe pas. Demande une invitation.' : error.message)
     } else {
       setStep('code')
     }
@@ -52,13 +58,7 @@ const AuthGate = ({ children }) => {
     }
   }
 
-  if (session === undefined) {
-    return (
-      <Box sx={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-        <CircularProgress size={32} sx={{ color: 'primary.main' }} />
-      </Box>
-    )
-  }
+  if (session === undefined) return <FullScreenLoader />
 
   if (session) return children
 
