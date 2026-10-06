@@ -1,13 +1,8 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts"
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
 
 // SYNC: cette liste doit rester identique à RSS_FEEDS dans src/lib/rss.js
 // (impossible de partager le fichier : Supabase Edge Functions ne remonte pas les imports hors du répertoire de la fonction)
@@ -187,14 +182,10 @@ async function processFeed(
   return { feed: feed.name, inserted }
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS })
-  }
-
+Deno.serve(withCors(async (req) => {
   const authHeader = req.headers.get("Authorization")
   if (!authHeader) {
-    return Response.json({ error: "Missing authorization" }, { status: 401, headers: CORS })
+    return Response.json({ error: "Missing authorization" }, { status: 401 })
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!
@@ -214,7 +205,7 @@ Deno.serve(async (req) => {
     supabase = createClient(supabaseUrl, serviceRoleKey)
     userId = Deno.env.get("CRON_USER_ID") ?? ""
     if (!userId) {
-      return Response.json({ error: "CRON_USER_ID not configured" }, { status: 500, headers: CORS })
+      return Response.json({ error: "CRON_USER_ID not configured" }, { status: 500 })
     }
     feeds = SYSTEM_FEEDS
     depth = body.depth ?? 0
@@ -224,9 +215,9 @@ Deno.serve(async (req) => {
     })
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
-    const denied = await requireModule(createClient(supabaseUrl, serviceRoleKey), user.id, "veille", CORS)
+    const denied = await requireModule(createClient(supabaseUrl, serviceRoleKey), user.id, "veille")
     if (denied) return denied
     userId = user.id
     feeds = Array.isArray(body?.feeds) ? body.feeds : SYSTEM_FEEDS
@@ -258,5 +249,5 @@ Deno.serve(async (req) => {
     }).catch((err) => console.error("Self-invoke error:", err))
   }
 
-  return Response.json({ processed: batch.length, inserted, hasMore, nextOffset, feeds: results, errors }, { headers: CORS })
-})
+  return Response.json({ processed: batch.length, inserted, hasMore, nextOffset, feeds: results, errors })
+}))

@@ -33,7 +33,7 @@ export async function requireModule(
   admin: SupabaseClient,
   userId: string,
   moduleId: string,
-  headers: Record<string, string>,
+  headers: Record<string, string> = {},
 ): Promise<Response | null> {
   const access = await loadAccess(admin, userId)
   if (hasModule(access, moduleId)) return null

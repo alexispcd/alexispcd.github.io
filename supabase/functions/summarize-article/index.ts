@@ -1,11 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+import { withCors } from "../_shared/cors.ts"
 
 const THEMES = [
   "SI et environnement",
@@ -20,14 +16,10 @@ const THEMES = [
   "Optimisation du SI",
 ]
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS })
-  }
-
+Deno.serve(withCors(async (req) => {
   const authHeader = req.headers.get("Authorization")
   if (!authHeader) {
-    return Response.json({ error: "Missing authorization" }, { status: 401, headers: CORS })
+    return Response.json({ error: "Missing authorization" }, { status: 401 })
   }
 
   const supabase = createClient(
@@ -38,18 +30,18 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const denied = await requireModule(supabaseAdmin, user.id, "veille", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "veille")
   if (denied) return denied
 
   const { articleId, url, title, content } = await req.json()
   if (!url || !title) {
-    return Response.json({ error: "Missing url or title" }, { status: 400, headers: CORS })
+    return Response.json({ error: "Missing url or title" }, { status: 400 })
   }
 
   const userMessage = content
@@ -89,7 +81,7 @@ Réponds avec un objet JSON contenant exactement ces clés :
   if (!mistralRes.ok) {
     const errText = await mistralRes.text()
     console.error("Mistral error:", mistralRes.status, errText)
-    return Response.json({ error: "Mistral API error", status: mistralRes.status, detail: errText }, { status: 502, headers: CORS })
+    return Response.json({ error: "Mistral API error", status: mistralRes.status, detail: errText }, { status: 502 })
   }
 
   const mistralData = await mistralRes.json()
@@ -100,7 +92,7 @@ Réponds avec un objet JSON contenant exactement ces clés :
     parsed = JSON.parse(rawText)
   } catch {
     console.error("Failed to parse Mistral response:", rawText)
-    return Response.json({ error: "Invalid JSON from Mistral" }, { status: 502, headers: CORS })
+    return Response.json({ error: "Invalid JSON from Mistral" }, { status: 502 })
   }
 
   const result = {
@@ -121,5 +113,5 @@ Réponds avec un objet JSON contenant exactement ces clés :
       .eq("user_id", user.id)
   }
 
-  return Response.json(result, { headers: CORS })
-})
+  return Response.json(result)
+}))

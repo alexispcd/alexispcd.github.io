@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { buildPlanSystemPrompt, buildRetryPrompt } from "../_shared/training/methodology.ts"
@@ -11,17 +12,12 @@ import { computeWeekBounds, dayTs, todayISO, type WeekBounds } from "../_shared/
 import type { GeneratedPlan } from "../_shared/training/types.ts"
 import { buildRegenChunkPrompt, formatHistory } from "./prompt.ts"
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
 const MODEL = "claude-sonnet-4-6"
 const CHUNK_WEEKS = 4
 const MAX_TOKENS = 8000
 const TASK_TIMEOUT_MS = 120_000
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Promise<T> {
   const t0 = Date.now()
@@ -251,7 +247,7 @@ async function handleRequest(req: Request): Promise<Response> {
   )
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return json(401, { error: "Unauthorized" })
-  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "training")
   if (denied) return denied
 
   const planId = body.plan_id as string
@@ -308,8 +304,7 @@ async function handleRequest(req: Request): Promise<Response> {
   return json(200, { plan_id: planId })
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
+Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
@@ -317,4 +312,4 @@ Deno.serve(async (req) => {
     console.error("[regenerate-plan] uncaught:", message)
     return json(500, { error: "Internal server error", detail: message })
   }
-})
+}))

@@ -2,19 +2,15 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { loadAccess } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { isModuleId, type ModuleId } from "../_shared/modules.ts"
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
 
 // Bannissement "permanent" (100 ans) pour désactiver un compte, "none" pour le réactiver.
 const BAN_FOREVER = "876000h"
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 function adminClient(): SupabaseClient {
   return createClient(
@@ -44,17 +40,16 @@ function parseModules(value: unknown): ModuleId[] | null {
   return [...new Set(value)]
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
+Deno.serve(withCors(async (req) => {
   if (req.method !== "POST") return json(405, { error: "Méthode non autorisée" })
   try {
     return await handleRequest(req)
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
     console.error("[admin-users] uncaught:", detail)
-    return json(500, { error: "Internal server error", detail })
+    return json(500, { error: "Internal server error" })
   }
-})
+}))
 
 async function handleRequest(req: Request): Promise<Response> {
   const userId = await authenticate(req)
@@ -161,14 +156,9 @@ async function setModules(admin: SupabaseClient, userId: string, value: unknown)
   const modules = parseModules(value)
   if (!modules) return json(400, { error: "Module inconnu" })
 
-  const { error: delError } = await admin.from("user_modules").delete().eq("user_id", userId)
-  if (delError) throw new Error(`user_modules delete: ${delError.message}`)
-  if (modules.length > 0) {
-    const { error } = await admin
-      .from("user_modules")
-      .insert(modules.map((module_id) => ({ user_id: userId, module_id })))
-    if (error) throw new Error(`user_modules insert: ${error.message}`)
-  }
+  // Remplacement atomique (delete puis insert dans une seule transaction SQL).
+  const { error } = await admin.rpc("set_user_modules", { p_user_id: userId, p_modules: modules })
+  if (error) throw new Error(`set_user_modules: ${error.message}`)
   return json(200, { ok: true, modules })
 }
 

@@ -2,11 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+import { withCors } from "../_shared/cors.ts"
 
 const COROS_AUTHORIZE = "https://mcpeu.coros.com/oauth2/authorize"
 const COROS_TOKEN = "https://mcpeu.coros.com/oauth2/token"
@@ -16,7 +12,7 @@ const REDIRECT_URI = "https://fdijofhfrtsipsjxinbo.supabase.co/functions/v1/coro
 const APP_RETURN_URL = "https://alexispcd.github.io/training/settings"
 const STATE_TTL_MS = 10 * 60 * 1000
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 /** Redirection navigateur vers la PWA, avec le resultat en parametre de requete. */
 const redirectToApp = (result: "ok" | "error") =>
@@ -64,9 +60,7 @@ async function authenticate(req: Request): Promise<string | null> {
   return user.id
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
-
+Deno.serve(withCors(async (req) => {
   const pathname = new URL(req.url).pathname
 
   // Route publique : c'est Coros qui redirige le navigateur ici, sans JWT.
@@ -90,13 +84,13 @@ Deno.serve(async (req) => {
   }
 
   return json(404, { error: "Not found" })
-})
+}))
 
 /** Routes authentifiees : status et start. */
 async function handleAction(req: Request): Promise<Response> {
   const userId = await authenticate(req)
   if (!userId) return json(401, { error: "Unauthorized" })
-  const denied = await requireModule(adminClient(), userId, "training", CORS)
+  const denied = await requireModule(adminClient(), userId, "training")
   if (denied) return denied
 
   let action: string

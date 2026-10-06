@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { buildCorosCourse, CorosCourseError } from "../_shared/training/coros-course.ts"
 import {
@@ -21,11 +22,6 @@ import type { PlanStep } from "../_shared/training/types.ts"
 // renvoient l'utilisateur vers l'app Coros. Le texte des erreurs Coros n'est
 // jamais renvoyé au client.
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
 /** Coros accepte une date d'aujourd'hui à J+90 inclus. */
 const PUSH_WINDOW_DAYS = 90
 const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pace_sec, pace_tolerance_sec, distance_m, duration_sec"
@@ -35,7 +31,7 @@ const NOT_CONNECTED = {
   code: "coros_not_connected",
 }
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 const hasCorosToken = async (admin: SupabaseClient, userId: string): Promise<boolean> => {
   const { data } = await admin.from("coros_tokens").select("user_id").eq("user_id", userId).maybeSingle()
@@ -148,7 +144,7 @@ async function handleRequest(req: Request): Promise<Response> {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "training")
   if (denied) return denied
 
   // 2. Corps
@@ -165,8 +161,7 @@ async function handleRequest(req: Request): Promise<Response> {
   return json(400, { error: "Action inconnue" })
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
+Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
@@ -174,4 +169,4 @@ Deno.serve(async (req) => {
     console.error("[coros-push] uncaught:", message)
     return json(500, { error: "Internal server error" })
   }
-})
+}))

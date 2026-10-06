@@ -1,20 +1,14 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { type FitnessOverview, parseFitnessOverview } from "../_shared/coros-parse.ts"
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
-
+Deno.serve(withCors(async (req) => {
   const authHeader = req.headers.get("Authorization")
-  if (!authHeader) return Response.json({ error: "Missing authorization" }, { status: 401, headers: CORS })
+  if (!authHeader) return Response.json({ error: "Missing authorization" }, { status: 401 })
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -22,13 +16,13 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } },
   )
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401, headers: CORS })
+  if (authError || !user) return Response.json({ error: "Unauthorized" }, { status: 401 })
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "training")
   if (denied) return denied
 
   let corosToken: string
@@ -36,7 +30,7 @@ Deno.serve(async (req) => {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err)
-    return Response.json({ error: "Coros authentication required", detail }, { status: 503, headers: CORS })
+    return Response.json({ error: "Coros authentication required", detail }, { status: 503 })
   }
 
   // Appel MCP direct : queryFitnessAssessmentOverview ne prend aucun parametre.
@@ -51,7 +45,7 @@ Deno.serve(async (req) => {
     console.error("[coros-fitness] échec:", detail, "raw:", text.slice(0, 500))
     return Response.json(
       { error: "Données de forme Coros indisponibles", detail },
-      { status: 502, headers: CORS },
+      { status: 502 },
     )
   }
 
@@ -65,5 +59,5 @@ Deno.serve(async (req) => {
     captured_at: new Date().toISOString(),
   }
 
-  return Response.json(result, { headers: CORS })
-})
+  return Response.json(result)
+}))

@@ -1,27 +1,22 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { parseSportRecords } from "../_shared/coros-parse.ts"
 import { dayTs, mondayOf, sundayOf, todayISO } from "../_shared/training/weeks.ts"
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
 // 100 = course à pied, 102 = trail : on veut les deux comme candidats à la liaison.
 // Doit rester un TABLEAU : un scalaire fait échouer l'appel Coros.
 const SPORT_CODES = [100, 102]
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 /** yyyy-MM-dd → yyyyMMdd (format Coros). */
 const toCompact = (iso: string) => iso.replace(/-/g, "")
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
+Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
@@ -29,7 +24,7 @@ Deno.serve(async (req) => {
     console.error("[coros-match] uncaught:", message)
     return json(500, { error: "Internal server error", detail: message })
   }
-})
+}))
 
 async function handleRequest(req: Request): Promise<Response> {
   // 1. Auth
@@ -48,7 +43,7 @@ async function handleRequest(req: Request): Promise<Response> {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "training")
   if (denied) return denied
 
   // 2. Corps + séance

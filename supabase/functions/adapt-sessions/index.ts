@@ -1,6 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
+import { withCors } from "../_shared/cors.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
@@ -17,17 +18,12 @@ import {
   type SessionContent,
 } from "./prompt.ts"
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
-
 const MODEL = "claude-sonnet-4-6"
 const WINDOW_DAYS = 10
 const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pace_sec, pace_tolerance_sec, distance_m, duration_sec"
 const SESSION_COLS = `id, scheduled_date, zone, type, title, rationale, notes, strength_content, session_steps(${STEP_COLS})`
 
-const json = (status: number, body: unknown) => Response.json(body, { status, headers: CORS })
+const json = (status: number, body: unknown) => Response.json(body, { status })
 
 interface AdaptedOut {
   id: string
@@ -111,7 +107,7 @@ async function handleRequest(req: Request): Promise<Response> {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   )
-  const denied = await requireModule(supabaseAdmin, user.id, "training", CORS)
+  const denied = await requireModule(supabaseAdmin, user.id, "training")
   if (denied) return denied
 
   // 2. Corps
@@ -307,8 +303,7 @@ async function handleRequest(req: Request): Promise<Response> {
   return json(200, { sessions })
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS })
+Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
@@ -316,4 +311,4 @@ Deno.serve(async (req) => {
     console.error("[adapt-sessions] uncaught:", message)
     return json(500, { error: "Internal server error", detail: message })
   }
-})
+}))
