@@ -60,11 +60,11 @@ Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres 
 
 ## État actuel
 
-La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`). Les séances peuvent être poussées vers intervals.icu (`push-to-intervals`).
+La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`).
 
 Révisions et Veille sont désactivées : `enabled: false` dans leur `module.js`, code conservé.
 
-Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Prochain chantier : retrait d'Intervals.icu.
+Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Prochain chantier : cadrage de la création des séances directement sur Coros via MCP.
 
 Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
 
@@ -119,7 +119,7 @@ Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RL
 
 - **training_plans** : `status` (`active` | `completed` | `archived`), `generation_status` (`generating` | `ready` | `error`), `generation_error`, `race_name`, `race_date`, `race_distance_m`, `race_elevation_m`, `goal_time_sec`, `fitness_snapshot` jsonb (`{ vo2max, threshold_pace, vma, predictions, source }`), `previous_races` jsonb, `notes`, `summary` (résumé IA), `start_date` (ajouté par migration `20260709090000`). Un seul plan `active` par utilisateur (index unique partiel). Les plans dont la course est passée basculent en `completed`.
 - **training_weeks** : `plan_id`, `week_number`, `block` (`construction` | `intensification` | `affutage`), `focus`, `target_km`, `start_date`.
-- **training_sessions** : `plan_id`, `week_id`, `scheduled_date`, `zone` (`A` | `B` | `C` | `renfo`), `type` (`facile` | `fractionne` | `tempo` | `sortie_longue` | `renfo`), `title`, `rationale` (justification des allures), `notes`, `status` (`planned` | `done` | `skipped` | `adapted`), `completed_at`, `coros_activity_id` + `coros_activity_ids` text[], `actual_laps`, `km_laps`, `analysis` jsonb (`{ verdict, advice, comparisons }`), `previous_version` jsonb (snapshot avant adaptation), `adapted_at`, `adapted_by_session_id`, `strength_content` jsonb (renfo : `{ target_duration_min, blocks: [{ name, exercises: [{ name, sets, reps?, duration_sec?, rest_sec }] }] }`), feedback (`rpe` 1 à 10, `pain_areas`, `feedback_note`), intervals.icu (`intervals_event_id`, `pushed_at`).
+- **training_sessions** : `plan_id`, `week_id`, `scheduled_date`, `zone` (`A` | `B` | `C` | `renfo`), `type` (`facile` | `fractionne` | `tempo` | `sortie_longue` | `renfo`), `title`, `rationale` (justification des allures), `notes`, `status` (`planned` | `done` | `skipped` | `adapted`), `completed_at`, `coros_activity_id` + `coros_activity_ids` text[], `actual_laps`, `km_laps`, `analysis` jsonb (`{ verdict, advice, comparisons }`), `previous_version` jsonb (snapshot avant adaptation), `adapted_at`, `adapted_by_session_id`, `strength_content` jsonb (renfo : `{ target_duration_min, blocks: [{ name, exercises: [{ name, sets, reps?, duration_sec?, rest_sec }] }] }`), feedback (`rpe` 1 à 10, `pain_areas`, `feedback_note`).
 - **session_steps** : `session_id`, `order_index`, `step_type` (`warmup` | `run` | `interval` | `recovery` | `cooldown`), `repeat_group` / `repeat_index` (répétitions aplaties, regroupées à l'affichage), `target_pace_sec` (s/km), `pace_tolerance_sec` (défaut 5), `distance_m` ou `duration_sec`.
 
 ### Autres tables
@@ -144,7 +144,6 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 | `complete-session` | `session_id`, activités Coros, `feedback`, `completed_date` | Marque la séance faite, importe les laps, analyse |
 | `coros-fitness` | aucun body | Snapshot forme Coros |
 | `coros-oauth` | flux OAuth | Connexion Coros (PKCE) |
-| `push-to-intervals` | séance(s) | Pousse vers intervals.icu |
 | `fetch-rss` | | Récupère les flux RSS dans `watch_items` |
 | `summarize-article` | `{ articleId, url, title, content }` | Fiche Mistral `{ summary, keyPoints, suggestedTags }` |
 | `admin-users` | `{ action, ... }` : `list`, `create { email, modules }`, `set_modules { user_id, modules }`, `disable` / `enable { user_id }`, `delete { user_id }` | Gestion des comptes, réservée au rôle admin (lu côté serveur). Refuse disable, delete et set_modules sur un compte admin. 409 si l'email existe déjà |

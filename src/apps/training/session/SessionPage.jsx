@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box, Typography, Button, CircularProgress, Alert, Snackbar, Collapse,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  Menu, MenuItem,
 } from '@mui/material'
 import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
 import Bolt from '@mui/icons-material/BoltOutlined'
@@ -18,7 +17,6 @@ import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
 import PlayArrow from '@mui/icons-material/PlayArrow'
-import Watch from '@mui/icons-material/WatchOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
@@ -36,8 +34,6 @@ import {
 import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
-import PushDialog from './PushDialog'
-import RemoveDialog from './RemoveDialog'
 import RpeForm from './RpeForm'
 import RenfoPlayer from './player/RenfoPlayer'
 import { createBeeps } from './player/beeps'
@@ -82,9 +78,6 @@ const SessionPage = () => {
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
-  const [pushOpen, setPushOpen] = useState(false)
-  const [removeOpen, setRemoveOpen] = useState(false)
-  const [watchAnchor, setWatchAnchor] = useState(null) // menu "sur la montre"
 
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
@@ -202,18 +195,6 @@ const SessionPage = () => {
     } catch (e) { flash(e.message) } finally { setBusy(false) }
   }
 
-  const onPushed = () => {
-    setPushOpen(false)
-    flash('Séance envoyée vers la montre', 'success')
-    reload().catch((e) => flash(e.message))
-  }
-
-  const onRemoved = () => {
-    setRemoveOpen(false)
-    flash('Séance retirée de la montre', 'success')
-    reload().catch((e) => flash(e.message))
-  }
-
   // ── États de rendu ────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -236,8 +217,6 @@ const SessionPage = () => {
   const isSkipped = status === 'skipped'
   const isAdapted = status === 'adapted'
   const canComplete = status === 'planned' || status === 'adapted'
-  const canPush = !isRenfo && canComplete
-  const isPushed = Boolean(session.pushed_at)
 
   // Couleur dérivée de l'intensité du type ; le chip garde ZONE_LABEL[zone] :
   // la lettre reste le repère temporel, seule la couleur suit l'intensité.
@@ -341,46 +320,6 @@ const SessionPage = () => {
             <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
               <StepsList steps={steps} type={type} />
             </Box>
-
-            {/* Envoi vers la montre (via Intervals.icu) */}
-            {canPush && (
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<Watch />}
-                  endIcon={isPushed ? <ExpandMore /> : undefined}
-                  onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
-                  disabled={busy}
-                  sx={{
-                    height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
-                    boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
-                  }}
-                >
-                  {isPushed ? 'Sur la montre' : 'Envoyer vers la montre'}
-                </Button>
-                {isPushed && shortDayLabel(session.pushed_at) && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
-                    {`Envoyée ${shortDayLabel(session.pushed_at)}`}
-                  </Typography>
-                )}
-                <Menu
-                  anchorEl={watchAnchor}
-                  open={Boolean(watchAnchor)}
-                  onClose={() => setWatchAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                  slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
-                >
-                  <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }}>
-                    Renvoyer vers la montre
-                  </MenuItem>
-                  <MenuItem onClick={() => { setWatchAnchor(null); setRemoveOpen(true) }} sx={{ color: 'error.main' }}>
-                    Retirer de la montre
-                  </MenuItem>
-                </Menu>
-              </Box>
-            )}
 
             {/* Justification */}
             {session.rationale && (
@@ -486,20 +425,6 @@ const SessionPage = () => {
         scheduledDate={session.scheduled_date}
         onClose={() => setCompleteOpen(false)}
         onDone={() => { setCompleteOpen(false); reload().catch((e) => flash(e.message)) }}
-      />
-
-      <PushDialog
-        open={pushOpen}
-        session={session}
-        onClose={() => setPushOpen(false)}
-        onDone={onPushed}
-      />
-
-      <RemoveDialog
-        open={removeOpen}
-        session={session}
-        onClose={() => setRemoveOpen(false)}
-        onDone={onRemoved}
       />
 
       <Dialog

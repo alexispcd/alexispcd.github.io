@@ -283,20 +283,6 @@ export const adaptSessions = (sessionId) => callFunction('adapt-sessions', { ses
 export const corosMatch = (sessionId) => callFunction('coros-match', { session_id: sessionId })
 
 /**
- * Envoie une séance de course vers Intervals.icu (puis la montre). pushDate
- * (yyyy-MM-dd) fixe la date sur la montre. → { intervals_event_id, pushed_at }
- */
-export const pushToIntervals = (sessionId, pushDate = null) =>
-  callFunction('push-to-intervals', {
-    session_id: sessionId,
-    ...(pushDate ? { push_date: pushDate } : {}),
-  })
-
-/** Retire une séance déjà poussée d'Intervals.icu. → { intervals_event_id, pushed_at } */
-export const removeFromIntervals = (sessionId) =>
-  callFunction('push-to-intervals', { session_id: sessionId, action: 'remove' })
-
-/**
  * Complète une séance (avec ou sans activité Coros). → { session }
  * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou
  * null si aucune activité (renfo, délier). Le serveur les trie par start_timestamp

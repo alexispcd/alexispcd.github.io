@@ -26,8 +26,6 @@ import {
   groupSessionsByZone, cleanText,
 } from '../constants'
 import SessionRow from './SessionRow'
-import PushDialog from '../session/PushDialog'
-import RemoveDialog from '../session/RemoveDialog'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
@@ -53,9 +51,6 @@ const PlanDashboard = () => {
 
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
-  const [pushDialog, setPushDialog] = useState(null)
-  const [removeDialog, setRemoveDialog] = useState(null)
-  const [watchChoice, setWatchChoice] = useState(null) // séance déjà poussée : renvoyer / retirer
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [retrying, setRetrying] = useState(false)
@@ -198,25 +193,6 @@ const PlanDashboard = () => {
 
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
-
-  // Swipe vers la montre : si la séance n'est pas encore poussée, on ouvre
-  // directement la popup d'envoi ; sinon un choix renvoyer / retirer.
-  const handlePush = (session) => {
-    if (session.pushed_at) setWatchChoice(session)
-    else setPushDialog(session)
-  }
-
-  const onPushed = () => {
-    setPushDialog(null)
-    flash('Séance envoyée vers la montre', 'success')
-    reloadSessions().catch((e) => flash(e.message))
-  }
-
-  const onRemoved = () => {
-    setRemoveDialog(null)
-    flash('Séance retirée de la montre', 'success')
-    reloadSessions().catch((e) => flash(e.message))
-  }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
   const doRegen = async () => {
@@ -495,7 +471,6 @@ const PlanDashboard = () => {
                   readOnly={readOnly}
                   onSkip={handleSkip}
                   onOpen={handleOpen}
-                  onPush={handlePush}
                 />
               ))}
             </Box>
@@ -530,46 +505,6 @@ const PlanDashboard = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Choix renvoyer / retirer pour une séance déjà poussée */}
-      <Dialog
-        open={Boolean(watchChoice)}
-        onClose={() => setWatchChoice(null)}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Sur la montre</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {`« ${cleanText(watchChoice?.title)} » est déjà sur la montre. Que veux-tu faire ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button onClick={() => setWatchChoice(null)} color="inherit">Annuler</Button>
-          <Box sx={{ flex: 1 }} />
-          <Button onClick={() => { setRemoveDialog(watchChoice); setWatchChoice(null) }} color="error">
-            Retirer
-          </Button>
-          <Button onClick={() => { setPushDialog(watchChoice); setWatchChoice(null) }} variant="contained">
-            Renvoyer
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Popup unique d'envoi vers la montre (choix de date + appel) */}
-      <PushDialog
-        open={Boolean(pushDialog)}
-        session={pushDialog}
-        onClose={() => setPushDialog(null)}
-        onDone={onPushed}
-      />
-
-      {/* Retrait de la montre */}
-      <RemoveDialog
-        open={Boolean(removeDialog)}
-        session={removeDialog}
-        onClose={() => setRemoveDialog(null)}
-        onDone={onRemoved}
-      />
 
       {/* Dialog régénération */}
       <ConfirmDialog
@@ -616,7 +551,7 @@ const Metric = ({ value, label }) => (
 
 /** Groupe d'une zone : en-tête (pastille + plage de jours + compteur) et cartes
  *  reliées par un filet vertical coloré. */
-const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
+const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
   const { zone, sessions, done, total } = group
   // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
   // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
@@ -648,10 +583,8 @@ const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
             key={s.id}
             session={s}
             canSkip={!readOnly && s.status !== 'done'}
-            canPush={!readOnly && s.type !== 'renfo' && (s.status === 'planned' || s.status === 'adapted')}
             onSkip={onSkip}
             onOpen={onOpen}
-            onPush={onPush}
           />
         ))}
       </Box>
