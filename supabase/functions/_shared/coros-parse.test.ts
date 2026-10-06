@@ -147,6 +147,10 @@ Deno.test("parseSportRecords : zero enregistrement annonce donne un tableau vide
   assertEquals(parseSportRecords(empty), [])
 })
 
+Deno.test("parseSportRecords : message Coros sans resultat donne un tableau vide", () => {
+  assertEquals(parseSportRecords("No sport records found from 2026-10-05 to 2026-10-05."), [])
+})
+
 Deno.test("parseSportRecords : format illisible leve une Error, il n'est pas confondu avec zero resultat", () => {
   assertThrows(() => parseSportRecords("Service temporarily unavailable, retry later."), Error)
 })

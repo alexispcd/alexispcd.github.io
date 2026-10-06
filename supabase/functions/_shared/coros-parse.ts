@@ -66,6 +66,8 @@ export interface SportRecord {
 const RECORD_START = /^\s*\d+\.\s+\S/
 /** Nombre d'enregistrements annonce par l'en-tete : "(6 records)". */
 const ANNOUNCED_COUNT = /\((\d+)\s+records?\)/
+/** Reponse reelle de Coros quand la plage est vide : "No sport records found from ... to ...". */
+const NO_RECORDS = /^\s*No sport records found\b/i
 
 /**
  * "57:37" ou "1:04:21" vers un nombre de secondes. Le format bascule de mm:ss a
@@ -141,7 +143,8 @@ export function parseSportRecords(text: string): SportRecord[] {
 
   if (starts.length === 0) {
     // Zero resultat est un cas normal, mais il faut le distinguer d'un format
-    // devenu illisible : seul un en-tete annoncant explicitement 0 le prouve.
+    // devenu illisible : seul un message Coros annoncant explicitement 0 le prouve.
+    if (NO_RECORDS.test(text)) return []
     const announced = text.match(ANNOUNCED_COUNT)
     if (announced && Number(announced[1]) === 0) return []
     throw new Error("Format Coros inattendu : aucun enregistrement lisible et aucun en-tete annoncant zero resultat")
