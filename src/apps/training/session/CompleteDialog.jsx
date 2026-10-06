@@ -231,8 +231,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
                   label="Date de la séance"
                   value={manualDate}
                   onChange={(e) => setManualDate(e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  inputProps={{ max: new Date().toLocaleDateString('en-CA') }}
+                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: new Date().toLocaleDateString('en-CA') } }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
                   Sans activité Coros, précise le jour où tu as fait la séance.

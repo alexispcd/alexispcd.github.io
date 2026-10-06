@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import supabase from '../lib/supabase'
@@ -16,6 +16,9 @@ const AuthGate = ({ children }) => {
   const [step, setStep] = useState('email') // email | code
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  // Verrou : la vérification automatique ne part qu'une fois par code complet,
+  // même si l'autocomplétion iOS déclenche plusieurs onChange de suite.
+  const verifyingRef = useRef(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -42,20 +45,34 @@ const AuthGate = ({ children }) => {
     }
   }
 
-  const handleVerifyCode = async () => {
-    if (code.length !== 8) return
+  const verifyCode = async (token) => {
+    if (token.length !== 8 || verifyingRef.current) return
+    verifyingRef.current = true
     setLoading(true)
     setErrorMsg('')
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim(),
-      token: code.trim(),
+      token,
       type: 'email',
     })
     setLoading(false)
+    verifyingRef.current = false
     if (error) {
       setErrorMsg('Code invalide ou expiré')
       setCode('')
     }
+  }
+
+  const handleVerifyCode = () => verifyCode(code)
+
+  // Chiffres uniquement (un code collé ou proposé par le clavier peut contenir des
+  // espaces), tronqués à 8. Pas de maxLength sur l'input : le navigateur couperait
+  // un collage « 1234 5678 » avant ce filtrage. Vérification lancée dès que le code
+  // devient complet.
+  const handleCodeChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+    setCode(digits)
+    if (digits.length === 8 && code.length !== 8) verifyCode(digits)
   }
 
   if (session === undefined) return <FullScreenLoader />
@@ -120,15 +137,16 @@ const AuthGate = ({ children }) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Code à 8 chiffres"
-              type="number"
+              type="text"
               value={code}
-              onChange={e => setCode(e.target.value.slice(0, 8))}
+              onChange={handleCodeChange}
               onKeyDown={e => e.key === 'Enter' && handleVerifyCode()}
               disabled={loading}
               size="small"
               fullWidth
               autoFocus
-              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+              autoComplete="one-time-code"
+              slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*' } }}
             />
             {errorMsg && <Typography variant="caption" color="error">{errorMsg}</Typography>}
             <Button
