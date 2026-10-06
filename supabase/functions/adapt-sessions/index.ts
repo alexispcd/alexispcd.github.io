@@ -8,6 +8,7 @@ import { buildStepRows } from "../_shared/training/persist.ts"
 import { finalizeStrengthContent } from "../_shared/training/strength.ts"
 import { expandSteps } from "../_shared/training/expand.ts"
 import { addDaysISO } from "../_shared/training/weeks.ts"
+import { corosTokenProvider, syncCorosCopy } from "../_shared/training/coros-sync.ts"
 import type { CompactStep, PlanSession, PlanStep } from "../_shared/training/types.ts"
 import {
   buildAdaptSystemPrompt,
@@ -168,7 +169,7 @@ async function handleRequest(req: Request): Promise<Response> {
   const windowEnd = addDaysISO(skipped.scheduled_date, WINDOW_DAYS)
   const { data: windowRows, error: winErr } = await supabaseAdmin
     .from("training_sessions")
-    .select(SESSION_COLS)
+    .select(`${SESSION_COLS}, coros_workout_id`)
     .eq("plan_id", planId)
     .eq("status", "planned")
     .gt("scheduled_date", skipped.scheduled_date)
@@ -183,6 +184,10 @@ async function handleRequest(req: Request): Promise<Response> {
   if (windowSessions.length === 0) return json(200, { sessions: [] })
 
   const byId = new Map(windowSessions.map((s) => [s.id, s]))
+  // Séances de la fenêtre déjà envoyées sur la montre : leur copie Coros suit l'adaptation.
+  const onWatch = new Set(
+    (windowRows ?? []).filter((r) => r.coros_workout_id).map((r) => r.id as string),
+  )
 
   // 5. Appel Sonnet (synchrone, mode simple)
   const system = buildAdaptSystemPrompt()
@@ -225,6 +230,7 @@ async function handleRequest(req: Request): Promise<Response> {
   // 7. Application (snapshot previous_version, update, remplacement des steps)
   const now = new Date().toISOString()
   const changedIds: string[] = []
+  const getCorosToken = corosTokenProvider(supabaseAdmin, user.id)
   for (const a of adapted) {
     const cur = byId.get(a.id)!
     const nextType = a.type ?? cur.type
@@ -269,6 +275,17 @@ async function handleRequest(req: Request): Promise<Response> {
       if (rows.length) {
         const { error: stepsErr } = await supabaseAdmin.from("session_steps").insert(rows)
         if (stepsErr) console.error("[adapt-sessions] insert steps échec", a.id, stepsErr.message)
+      }
+    }
+
+    // Copie Coros : mise à jour automatique. syncCorosCopy n'échoue jamais, un
+    // problème est seulement noté dans coros_sync_error ; on blinde quand même
+    // pour qu'aucune erreur imprévue n'interrompe l'adaptation.
+    if (!isRenfo && onWatch.has(a.id)) {
+      try {
+        await syncCorosCopy(supabaseAdmin, user.id, a.id, getCorosToken)
+      } catch (err) {
+        console.error("[adapt-sessions] synchro Coros échec", a.id, err instanceof Error ? err.message : err)
       }
     }
     changedIds.push(a.id)

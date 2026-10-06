@@ -13,10 +13,10 @@ import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../styles/glass'
-import { getActivePlan, getPlans, deletePlan } from '../../lib/training'
+import { getActivePlan, getPlans, deletePlan, countUpcomingOnWatch } from '../../lib/training'
 import { useAppCtx } from '../../lib/context'
 import {
-  PLAN_STATUS_LABEL, raceDistanceLabel, formatGoalTime,
+  PLAN_STATUS_LABEL, raceDistanceLabel, formatGoalTime, onWatchWarning,
 } from './constants'
 
 // Radius unifié des cartes de la liste des plans (hero actif/vide + plans passés).
@@ -39,6 +39,8 @@ const TrainingHome = () => {
   const [menuPlan, setMenuPlan] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  // Séances envoyées sur la montre que la suppression du plan y laissera.
+  const [deleteOnWatch, setDeleteOnWatch] = useState({ planId: null, count: 0 })
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +65,17 @@ const TrainingHome = () => {
     ])
     return () => setHeaderActions([])
   }, [navigate, setHeaderActions])
+
+  const deleteId = confirmDelete?.id ?? null
+  useEffect(() => {
+    if (!deleteId) return
+    let cancelled = false
+    countUpcomingOnWatch(deleteId)
+      .then((count) => { if (!cancelled) setDeleteOnWatch({ planId: deleteId, count }) })
+      .catch((e) => console.error('[TrainingHome]', e.message))
+    return () => { cancelled = true }
+  }, [deleteId])
+  const onWatchCount = deleteOnWatch.planId === deleteId ? deleteOnWatch.count : 0
 
   const openMenu = (e, plan) => {
     e.stopPropagation()
@@ -219,6 +232,7 @@ const TrainingHome = () => {
         <DialogContent>
           <DialogContentText>
             « {confirmDelete?.race_name} » et toutes ses séances seront définitivement supprimés.
+            {onWatchCount > 0 && ` ${onWatchWarning(onWatchCount)}`}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

@@ -17,15 +17,16 @@ import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
   skipSession, unskipSession, adaptSessions,
-  regeneratePlan, archivePlan, deletePlan, generatePlan,
+  regeneratePlan, archivePlan, deletePlan, generatePlan, countUpcomingOnWatch,
 } from '../../../lib/training'
 import {
   BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
   ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS, intensityOf,
   formatGoalTime, formatKm, daysUntil, currentWeekNumber, formatWeekRange,
-  groupSessionsByZone, cleanText,
+  groupSessionsByZone, cleanText, onWatchWarning,
 } from '../constants'
 import SessionRow from './SessionRow'
+import CorosPushDialog from '../session/CorosPushDialog'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
@@ -52,6 +53,8 @@ const PlanDashboard = () => {
   const [skipDialog, setSkipDialog] = useState(null)
   const [adapting, setAdapting] = useState(false)
   const [confirmRegen, setConfirmRegen] = useState(false)
+  const [regenOnWatch, setRegenOnWatch] = useState(0) // séances envoyées qui vont disparaître
+  const [pushDialog, setPushDialog] = useState(null)
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [snack, setSnack] = useState(null)
@@ -155,6 +158,17 @@ const PlanDashboard = () => {
     return () => setHeaderActions([])
   }, [plan, readOnly, navigate, setHeaderActions])
 
+  // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
+  // Même borne que regenerate-plan : semaines à partir de la courante incluse.
+  useEffect(() => {
+    if (!confirmRegen || !plan?.weeks?.length) return
+    let cancelled = false
+    countUpcomingOnWatch(planId, currentWeekNumber(plan.weeks))
+      .then((n) => { if (!cancelled) setRegenOnWatch(n) })
+      .catch((e) => console.error('[PlanDashboard]', e.message))
+    return () => { cancelled = true }
+  }, [confirmRegen, planId, plan])
+
   // ── Handlers séance ───────────────────────────────────────────────────────────
   const handleSkip = async (session) => {
     setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: 'skipped' } : s))
@@ -172,7 +186,10 @@ const PlanDashboard = () => {
     const s = skipDialog
     setSkipDialog(null)
     setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: 'planned' } : x))
-    try { await unskipSession(s.id) } catch (e) { flash(e.message) }
+    try {
+      const { corosError } = await unskipSession(s.id)
+      if (corosError) flash(`Séance restaurée, mais pas sur la montre : ${corosError}`, 'warning')
+    } catch (e) { flash(e.message) }
   }
 
   const handleAdapt = async () => {
@@ -194,9 +211,22 @@ const PlanDashboard = () => {
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
 
+  // Swipe "Envoyer" : popup d'envoi vers la montre (séance pas encore envoyée).
+  const handlePush = (session) => setPushDialog(session)
+
+  const onPushed = () => {
+    setPushDialog(null)
+    flash('Séance envoyée vers la montre', 'success')
+    reloadSessions().catch((e) => flash(e.message))
+  }
+
   // ── Handlers plan ─────────────────────────────────────────────────────────────
-  const doRegen = async () => {
+  const closeRegen = () => {
     setConfirmRegen(false)
+    setRegenOnWatch(0)
+  }
+  const doRegen = async () => {
+    closeRegen()
     setRegenBusy(true)
     try {
       await regeneratePlan(planId)
@@ -471,6 +501,7 @@ const PlanDashboard = () => {
                   readOnly={readOnly}
                   onSkip={handleSkip}
                   onOpen={handleOpen}
+                  onPush={handlePush}
                 />
               ))}
             </Box>
@@ -479,7 +510,7 @@ const PlanDashboard = () => {
 
         {!readOnly && (sessions?.length ?? 0) > 0 && (
           <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1, px: 2 }}>
-            Tape une séance pour l'ouvrir · glisse à droite pour la sauter
+            Tape une séance pour l'ouvrir · glisse à droite pour la sauter, à gauche pour l'envoyer
           </Typography>
         )}
       </Box>
@@ -509,11 +540,20 @@ const PlanDashboard = () => {
       {/* Dialog régénération */}
       <ConfirmDialog
         open={confirmRegen}
-        onClose={() => setConfirmRegen(false)}
+        onClose={closeRegen}
         onConfirm={doRegen}
         title="Régénérer les semaines restantes ?"
-        text="Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées."
+        text={'Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées.'
+          + (regenOnWatch > 0 ? ` ${onWatchWarning(regenOnWatch)}` : '')}
         confirmLabel="Régénérer"
+      />
+
+      {/* Popup d'envoi vers la montre (swipe) */}
+      <CorosPushDialog
+        open={Boolean(pushDialog)}
+        session={pushDialog}
+        onClose={() => setPushDialog(null)}
+        onDone={onPushed}
       />
 
       {/* Dialog archivage */}
@@ -551,7 +591,7 @@ const Metric = ({ value, label }) => (
 
 /** Groupe d'une zone : en-tête (pastille + plage de jours + compteur) et cartes
  *  reliées par un filet vertical coloré. */
-const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
+const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
   const { zone, sessions, done, total } = group
   // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
   // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
@@ -583,8 +623,10 @@ const ZoneGroup = ({ group, readOnly, onSkip, onOpen }) => {
             key={s.id}
             session={s}
             canSkip={!readOnly && s.status !== 'done'}
+            canPush={!readOnly && s.type !== 'renfo' && (s.status === 'planned' || s.status === 'adapted')}
             onSkip={onSkip}
             onOpen={onOpen}
+            onPush={onPush}
           />
         ))}
       </Box>

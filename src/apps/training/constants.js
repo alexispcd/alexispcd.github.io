@@ -218,6 +218,35 @@ const midnight = (d) => {
   return x
 }
 
+/** Date calendaire du jour (yyyy-MM-dd) dans le fuseau du navigateur. */
+export const todayISO = () => new Date().toLocaleDateString('en-CA')
+
+/** Décale une date yyyy-MM-dd de `days` jours. */
+export const addDaysISO = (iso, days) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10)
+}
+
+/** Fenêtre d'envoi vers la montre acceptée par Coros : aujourd'hui à J+90. */
+export const COROS_PUSH_WINDOW_DAYS = 90
+
+/** Vrai si la copie Coros d'une séance est datée d'aujourd'hui ou plus tard. */
+export const isCorosCopyUpcoming = (session, today = todayISO()) =>
+  Boolean(session?.coros_workout_id && session.coros_workout_date && session.coros_workout_date >= today)
+
+/** Avertissement : séances envoyées qu'une suppression laissera sur la montre. */
+export const onWatchWarning = (n) =>
+  `${n} séance${n > 1 ? 's' : ''} déjà envoyée${n > 1 ? 's' : ''} ${n > 1 ? 'resteront' : 'restera'} sur ta montre, à supprimer dans l'app Coros.`
+
+/** yyyy-MM-dd → "jeudi 8 octobre". */
+export const formatLongDay = (iso) => {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('fr-FR', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
+  })
+}
+
 /** Jours calendaires jusqu'à la course (peut être négatif si passée). */
 export const daysUntil = (raceDate) => {
   if (!raceDate) return null

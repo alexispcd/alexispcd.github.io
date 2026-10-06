@@ -150,6 +150,24 @@ export const archivePlan = async (planId) => {
   if (error) throw error
 }
 
+/**
+ * Nombre de séances d'un plan envoyées sur la montre avec une copie encore à
+ * venir. fromWeek limite aux semaines de numéro >= fromWeek (régénération).
+ */
+export const countUpcomingOnWatch = async (planId, fromWeek = null) => {
+  const today = new Date().toLocaleDateString('en-CA')
+  let query = supabase
+    .from('training_sessions')
+    .select('id, training_weeks!inner(week_number)', { count: 'exact', head: true })
+    .eq('plan_id', planId)
+    .not('coros_workout_id', 'is', null)
+    .gte('coros_workout_date', today)
+  if (fromWeek != null) query = query.gte('training_weeks.week_number', fromWeek)
+  const { count, error } = await query
+  if (error) throw error
+  return count ?? 0
+}
+
 export const deletePlan = async (planId) => {
   const { error } = await supabase
     .from('training_plans')
@@ -175,13 +193,15 @@ export const skipSession = async (sessionId) => {
 
 /**
  * Annule un saut / une adaptation.
- * - status 'adapted' + previous_version → restaure le contenu original.
+ * - status 'adapted' + previous_version → restaure le contenu original, et sa
+ *   copie Coros si la séance est sur la montre.
  * - sinon → simple retour à 'planned'.
+ * → { corosError } : message si la mise à jour de la montre a échoué, sinon null.
  */
 export const unskipSession = async (sessionId) => {
   const { data: s, error } = await supabase
     .from('training_sessions')
-    .select('status, previous_version')
+    .select('status, previous_version, coros_workout_id')
     .eq('id', sessionId)
     .single()
   if (error) throw error
@@ -224,7 +244,18 @@ export const unskipSession = async (sessionId) => {
       }))
       if (rows.length) await supabase.from('session_steps').insert(rows)
     }
-    return
+
+    // Copie sur la montre : on y remet la version d'origine. Un échec ne bloque
+    // pas la restauration, il est renvoyé pour être signalé à l'utilisateur.
+    if (s.coros_workout_id) {
+      try {
+        const res = await updateOnCoros(sessionId)
+        return { corosError: res?.error ?? null }
+      } catch (e) {
+        return { corosError: e.message || 'Mise à jour de la montre impossible.' }
+      }
+    }
+    return { corosError: null }
   }
 
   const { error: updErr } = await supabase
@@ -232,6 +263,7 @@ export const unskipSession = async (sessionId) => {
     .update({ status: 'planned' })
     .eq('id', sessionId)
   if (updErr) throw updErr
+  return { corosError: null }
 }
 
 /** Persiste le contenu renfo recomposé (durée + blocs). */
@@ -298,6 +330,18 @@ export const completeSession = (sessionId, corosActivities = null, feedback = nu
     feedback,
     ...(completedDate ? { completed_date: completedDate } : {}),
   })
+
+/**
+ * Envoie une séance de course sur la montre via Coros, à la date choisie
+ * (yyyy-MM-dd). → { coros_workout_id, coros_workout_date, coros_pushed_at, previous_copy }
+ * Coros non connecté : erreur avec status 409 et body.code 'coros_not_connected'.
+ */
+export const pushToCoros = (sessionId, date) =>
+  callFunction('coros-push', { action: 'push', session_id: sessionId, date })
+
+/** Met à jour la copie Coros d'une séance déjà envoyée. → { status, error } */
+export const updateOnCoros = (sessionId) =>
+  callFunction('coros-push', { action: 'update', session_id: sessionId })
 
 /** Bilan de forme Coros pour le wizard. */
 export const getCorosFitness = () => callFunction('coros-fitness', undefined)

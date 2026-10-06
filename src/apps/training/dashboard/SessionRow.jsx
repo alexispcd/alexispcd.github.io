@@ -3,6 +3,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Box, Typography } from '@mui/material'
 import Check from '@mui/icons-material/Check'
 import Redo from '@mui/icons-material/Redo'
+import Watch from '@mui/icons-material/WatchOutlined'
 import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, formatMin, shortDayLabel, cleanText } from '../constants'
 
 // Déclenchement franc : il faut dépasser ce déplacement horizontal du doigt pour
@@ -69,7 +70,7 @@ const pillBase = {
   fontVariantNumeric: 'tabular-nums',
 }
 
-const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
+const SessionRow = ({ session, onSkip, onOpen, onPush, canSkip, canPush }) => {
   const x = useMotionValue(0)
   // Révélations d'arrière-plan pilotées par le déplacement réel.
   const skipOpacity = useTransform(x, [8, 60], [0, 1])
@@ -83,10 +84,16 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
   const realized = isDone && session.type !== 'renfo' ? realizedSubtitle(session) : null
   const verdictColor = realized ? VERDICT[session.analysis?.verdict]?.color : null
 
+  // Swipe gauche : "Envoyer" vers la montre si la séance est éligible et pas
+  // encore envoyée, sinon "Ouvrir". Le tap sur la carte ouvre toujours la séance.
+  const isPushed = Boolean(session.coros_workout_id)
+  const pushable = canPush && !isPushed
+  const leftAction = pushable ? 'Envoyer' : 'Ouvrir'
+
   const handleDragEnd = (_e, info) => {
     const dx = info.offset.x
     if (dx > SWIPE_THRESHOLD && canSkip) onSkip(session)
-    else if (dx < -SWIPE_THRESHOLD) onOpen(session)
+    else if (dx < -SWIPE_THRESHOLD) (pushable ? onPush : onOpen)(session)
     // Un tick avant de rouvrir le tap, pour ne pas enchaîner drag → tap.
     requestAnimationFrame(() => { draggingRef.current = false })
   }
@@ -101,7 +108,7 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
           </Typography>
         )}
         <Typography component={motion.p} style={{ opacity: openOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', ml: 'auto' }}>
-          Ouvrir
+          {leftAction}
         </Typography>
       </Box>
 
@@ -144,6 +151,12 @@ const SessionRow = ({ session, onSkip, onOpen, canSkip }) => {
           <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, fontVariantNumeric: 'tabular-nums' }}>
             {realized ?? subtitle(session)}
           </Typography>
+          {isPushed && (
+            <Watch
+              titleAccess="Sur la montre"
+              sx={{ fontSize: 14, flexShrink: 0, color: session.coros_sync_error ? 'warning.main' : 'text.disabled' }}
+            />
+          )}
         </Box>
       </Box>
     </Box>
