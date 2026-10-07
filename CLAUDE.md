@@ -116,6 +116,12 @@ backdrop-filter: blur(24px) saturate(180%);
 
 Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RLS activée avec une policy `auth.uid() = user_id`, sauf `profiles` et `user_modules` (lecture seule de ses propres lignes, aucune écriture hors service_role).
 
+Droits sur les tables (migration `20261007141949_fix_table_grants.sql`) :
+- `anon` : aucun droit sur les tables du schéma `public`.
+- `authenticated` : `select, insert, update, delete` seulement (jamais TRUNCATE, qui contourne la RLS), filtrés par la RLS ; lecture seule sur `profiles` et `user_modules` ; aucun droit sur `coros_tokens` et `coros_oauth_state`, réservées à la service_role.
+- `service_role` : tous les droits.
+- Privilèges par défaut de `postgres` sur `public` alignés : une nouvelle table naît sans droit pour `anon` et avec `select, insert, update, delete` pour `authenticated`. Toute nouvelle table garde sa RLS et sa policy explicites.
+
 ### Comptes et droits (migration `20261005133606_user_roles_modules.sql`)
 - **profiles** : `id` (PK, FK `auth.users` on delete cascade), `email`, `role` (`user` | `admin`, défaut `user`). Policy de lecture de sa propre ligne pour `authenticated` ; insert, update, delete et truncate révoqués pour `anon` et `authenticated` : personne ne change son propre rôle. Le passage admin se fait à la main, hors repo.
 - **user_modules** : `(user_id, module_id)` clé primaire, `granted_at`. Lecture de ses propres lignes uniquement, écriture par `admin-users` (service_role). `module_id` validé côté serveur contre `_shared/modules.ts`.
@@ -135,7 +141,7 @@ Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RL
 - **revision_progress** : `(user_id, card_id)` clé primaire, `theme_id`, `box` (1 à 5), `due_on`, `last_reviewed_at`
 - **watch_items** : `url` (unique sur toute la table), `title`, `source`, `published_at`, `tags` text[], `is_read`, `is_favorite`, `summary`, `key_points` text[], `note`, `read_at`
 - **rss_feeds** : `url`, `name`, `theme`
-- `coros_tokens`, `user_preferences`, `watch_items` et `rss_feeds` ont été créées hors migrations ; la migration de rattrapage `20261007125515_baseline_untracked_tables.sql` les recrée à l'identique de la prod (colonnes, contraintes, RLS, policies, droits, anomalies de droits comprises).
+- `coros_tokens`, `user_preferences`, `watch_items` et `rss_feeds` ont été créées hors migrations ; la migration de rattrapage `20261007125515_baseline_untracked_tables.sql` les recrée à l'identique de la prod (colonnes, contraintes, RLS, policies, droits, anomalies de droits comprises), puis `20261007141949_fix_table_grants.sql` corrige ces droits.
 
 ### Hors migrations (à connaître)
 - Cron `fetch-rss-daily` (pg_cron, tous les jours à 7h UTC, `0 7 * * *`) : appelle `fetch-rss` en service role. Sa commande contient un JWT en dur : jamais dans le repo.
