@@ -17,9 +17,13 @@ Deno.test("hasModule : user sans aucun module", () => {
   assertEquals(hasModule({ role: "user", modules: [] }, "cotes"), false)
 })
 
-Deno.test("hasModule : admin a implicitement tout", () => {
-  assertEquals(hasModule({ role: "admin", modules: [] }, "veille"), true)
-  assertEquals(hasModule({ role: "admin", modules: [] }, "admin"), true)
+Deno.test("hasModule : admin sans le module, refusé", () => {
+  assertEquals(hasModule({ role: "admin", modules: ["cotes"] }, "veille"), false)
+  assertEquals(hasModule({ role: "admin", modules: [] }, "training"), false)
+})
+
+Deno.test("hasModule : admin avec le module, accepté", () => {
+  assertEquals(hasModule({ role: "admin", modules: ["cotes", "veille"] }, "veille"), true)
 })
 
 Deno.test("isModuleId : admin n'est jamais attribuable", () => {

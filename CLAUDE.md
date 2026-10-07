@@ -25,8 +25,8 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - Le déploiement des Edge Functions reste manuel, hors CI.
 
 ## Structure src/
-- `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `enabledModules`, `canAccess`, `assignableModules`, `enabledRoutes`, `homeCategories`) ; routes et home en dérivent
-- `apps/<id>/module.js` : descripteur d'un module (`id`, `name`, `description`, `category`, `enabled`, `adminOnly`, `icon` MUI, `path`, `routes: [{ path, load, handle }]`)
+- `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `canAccess`, `assignableModules`, `moduleRoutes`, `homeCategories`) ; routes et home en dérivent. Aucun module n'est désactivé dans le code : seuls les droits du compte (`user_modules`) décident de ce qui est visible et accessible, admin compris
+- `apps/<id>/module.js` : descripteur d'un module (`id`, `name`, `description`, `category`, `adminOnly`, `icon` MUI, `path`, `routes: [{ path, load, handle }]`)
 - `apps/admin/` : module Administration (`adminOnly`), gestion des comptes et de leurs modules via l'Edge Function `admin-users`
 - `apps/home/` : page d'accueil, cartes par catégorie construites depuis le registre
 - `apps/cotes/` : outil Côtes (ex Côtes.Run)
@@ -44,7 +44,7 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `lib/supabase.js` : client Supabase ; `lib/training.js` : accès données Training ; `lib/rss.js` : Veille
 - `lib/access.js` : rôle et modules du compte connecté, `hasModule` (miroir de `_shared/access.ts`), accès publié pour les loaders de route ; `lib/admin.js` : appels à `admin-users`
 
-Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Chaque route de module a un `loader` qui attend l'accès publié par `App` et lève un 404 si le compte n'a pas le module (`canAccess` du registre) : la page n'est jamais rendue. Le router est créé une seule fois ; `App` appelle `router.revalidate()` quand l'accès change (changement de compte). Un module `enabled: false` n'a ni route ni carte ; ses chunks restent compilés mais sont exclus du précache PWA (`collectDisabledChunks` dans `vite.config.js`).
+Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Chaque route de module a un `loader` qui attend l'accès publié par `App` et lève un 404 si le compte n'a pas le module (`canAccess` du registre) : la page n'est jamais rendue. Le router est créé une seule fois ; `App` appelle `router.revalidate()` quand l'accès change : changement de compte, ou admin qui modifie ses propres modules (`refreshAccess` du contexte, appelé par la page Administration). Tous les modules ont leurs routes et leurs chunks précachés ; un module non attribué n'a pas de carte et ses routes renvoient un 404.
 
 ### Ajouter un module
 1. Créer le dossier `src/apps/<id>/` avec ses pages (export par défaut).
@@ -52,6 +52,8 @@ Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres 
 3. Ajouter l'import et l'entrée dans la liste `modules` de `src/apps/registry.js` (et la catégorie dans `categoryOrder` si elle est nouvelle).
 4. Si le module est attribuable (pas `adminOnly`), ajouter son id dans `supabase/functions/_shared/modules.ts`, sinon l'Admin ne pourra pas l'attribuer.
 5. Ses Edge Functions appellent `requireModule` (voir Edge Functions).
+
+Un module en cours de développement s'ajoute au registre et n'est attribué qu'à l'admin (depuis l'Administration) tant qu'il n'est pas prêt.
 
 ## Conventions
 - Arrow functions, un composant par fichier
@@ -70,7 +72,7 @@ Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres 
 
 La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions, dashboard Training, génération de plan) est réalisée. Le Training a été entièrement refondu (migration `20260708130130_training_rebuild.sql`) : dashboard, page séance détaillée, wizard de génération et réglages sont en place. Coros passe par un client MCP direct avec OAuth PKCE (`coros-oauth`, page `/training/settings`).
 
-Révisions et Veille sont désactivées : `enabled: false` dans leur `module.js`, code conservé.
+Révisions et Veille : code actif dans le registre, attribuées à aucun compte.
 
 Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Filet de sécurité en place : CI bloquante, lint vert, tests verts, deno check vert, schéma reproductible.
 
@@ -167,7 +169,7 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 | `coros-push` | `{ action: 'push', session_id, date }` ou `{ action: 'update', session_id }` | Crée la séance planifiée sur Coros à la date choisie (aujourd'hui à J+90), ou met à jour la copie existante. 409 `coros_not_connected` sans token Coros |
 | `fetch-rss` | | Récupère les flux RSS dans `watch_items` |
 | `summarize-article` | `{ articleId, url, title, content }` | Fiche Mistral `{ summary, keyPoints, suggestedTags }` |
-| `admin-users` | `{ action, ... }` : `list`, `create { email, modules }`, `set_modules { user_id, modules }`, `disable` / `enable { user_id }`, `delete { user_id }` | Gestion des comptes, réservée au rôle admin (lu côté serveur). Refuse disable, delete et set_modules sur un compte admin. 409 si l'email existe déjà |
+| `admin-users` | `{ action, ... }` : `list`, `create { email, modules }`, `set_modules { user_id, modules }`, `disable` / `enable { user_id }`, `delete { user_id }` | Gestion des comptes, réservée au rôle admin (lu côté serveur). Refuse disable, enable et delete sur un compte admin (403) ; set_modules y est permis, y compris sur son propre compte. 409 si l'email existe déjà |
 
 Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push, regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`) ne passent pas par ce contrôle.
 

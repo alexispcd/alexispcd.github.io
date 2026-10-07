@@ -30,10 +30,8 @@ const UserListItem = ({ account, isSelf, now, moduleName, onClick }) => (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
       {account.disabled && <Chip label="Désactivé" size="small" color="warning" sx={chipSx} />}
       {account.coros_connected && <Chip label="Coros connecté" size="small" color="success" variant="outlined" sx={chipSx} />}
-      {account.role === 'admin'
-        ? <Chip label="Tous les modules" size="small" variant="outlined" sx={chipSx} />
-        : account.modules.map(id => <Chip key={id} label={moduleName(id)} size="small" sx={chipSx} />)}
-      {account.role !== 'admin' && account.modules.length === 0 && (
+      {account.modules.map(id => <Chip key={id} label={moduleName(id)} size="small" sx={chipSx} />)}
+      {account.modules.length === 0 && (
         <Typography variant="caption" color="text.disabled">Aucun module</Typography>
       )}
     </Box>

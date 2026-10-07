@@ -4,7 +4,7 @@ import { ThemeProvider, CssBaseline, Box } from '@mui/material'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
-import { enabledRoutes } from './apps/registry'
+import { moduleRoutes } from './apps/registry'
 import AuthGate from './components/AuthGate'
 import AccessGate from './components/AccessGate'
 import FullScreenLoader from './components/FullScreenLoader'
@@ -88,7 +88,7 @@ const router = createBrowserRouter([
     hydrateFallbackElement: <FullScreenLoader />,
     children: [
       { path: '/', element: <Home />, handle: { showBack: false } },
-      ...enabledRoutes(),
+      ...moduleRoutes(),
     ],
   },
 ])
@@ -134,10 +134,21 @@ const App = () => {
     return () => { cancelled = true }
   }, [user?.id])
 
+  // Recharge l'accès du compte courant sans changement de compte (l'admin a modifié
+  // ses propres modules) : même publication que ci-dessus, la home et les gardes de
+  // route se mettent à jour sans recharger la page. Lève en cas d'échec.
+  const refreshAccess = async () => {
+    if (!user?.id) return
+    const next = await fetchAccess(user.id)
+    publishAccess(next)
+    setLoadedAccess(next)
+    router.revalidate()
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user, access, headerActions, setHeaderActions, overlay, setOverlay }}>
+      <AppCtx.Provider value={{ dark, setDark, user, access, refreshAccess, headerActions, setHeaderActions, overlay, setOverlay }}>
         <AuthGate>
           <AccessGate>
             <RouterProvider router={router} />

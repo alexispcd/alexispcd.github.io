@@ -50,55 +50,53 @@ const UserDrawer = ({ account, busy, onClose, onSetModules, onToggleDisabled, on
               {busy && <CircularProgress size={18} />}
             </Box>
 
+            <Box>
+              <Typography variant="overline" sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem' }}>
+                Modules
+              </Typography>
+              {assignableModules().map(m => {
+                const Icon = m.icon
+                return (
+                  <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
+                    <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                    <Typography variant="body2" sx={{ flex: 1 }}>{m.name}</Typography>
+                    <Switch
+                      checked={account.modules.includes(m.id)}
+                      disabled={busy}
+                      onChange={(e) => toggleModule(m.id, e.target.checked)}
+                    />
+                  </Box>
+                )
+              })}
+            </Box>
+
+            <Divider />
+
             {isAdminAccount ? (
               <Typography variant="body2" color="text.secondary">
-                Compte administrateur : accès à tous les modules, aucune action possible.
+                Compte administrateur : ni désactivation ni suppression.
               </Typography>
             ) : (
-              <>
-                <Box>
-                  <Typography variant="overline" sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem' }}>
-                    Modules
-                  </Typography>
-                  {assignableModules().map(m => {
-                    const Icon = m.icon
-                    return (
-                      <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.5 }}>
-                        <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flex: 1 }}>{m.name}</Typography>
-                        <Switch
-                          checked={account.modules.includes(m.id)}
-                          disabled={busy}
-                          onChange={(e) => toggleModule(m.id, e.target.checked)}
-                        />
-                      </Box>
-                    )
-                  })}
-                </Box>
-
-                <Divider />
-
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                  <Button
-                    variant="outlined"
-                    color="inherit"
-                    disabled={busy}
-                    onClick={onToggleDisabled}
-                    sx={{ flex: 1, textTransform: 'none' }}
-                  >
-                    {account.disabled ? 'Réactiver' : 'Désactiver'}
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    disabled={busy}
-                    onClick={() => setConfirmDelete(true)}
-                    sx={{ flex: 1, textTransform: 'none' }}
-                  >
-                    Supprimer
-                  </Button>
-                </Box>
-              </>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  disabled={busy}
+                  onClick={onToggleDisabled}
+                  sx={{ flex: 1, textTransform: 'none' }}
+                >
+                  {account.disabled ? 'Réactiver' : 'Désactiver'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={busy}
+                  onClick={() => setConfirmDelete(true)}
+                  sx={{ flex: 1, textTransform: 'none' }}
+                >
+                  Supprimer
+                </Button>
+              </Box>
             )}
           </Box>
         )}

@@ -18,7 +18,7 @@ const fetchUsers = async () => ({ users: await listUsers(), now: Date.now() })
 const moduleName = (id) => modules.find(m => m.id === id)?.name ?? id
 
 const AdminPage = () => {
-  const { user } = useAppCtx()
+  const { user, refreshAccess } = useAppCtx()
   const [state, setState] = useState({ status: 'loading', users: [], now: 0 })
   const [selectedId, setSelectedId] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -70,6 +70,15 @@ const AdminPage = () => {
   const handleSetModules = (mods) => run(async () => {
     const res = await setUserModules(selected.id, mods)
     updateUser(selected.id, { modules: res.modules })
+    // Ses propres droits : l'accès courant (home, routes) suit immédiatement.
+    if (selected.id === user?.id) {
+      try {
+        await refreshAccess()
+      } catch (err) {
+        console.error('refreshAccess error:', err)
+        throw new Error('Droits mis à jour, recharge la page pour les appliquer', { cause: err })
+      }
+    }
   }, 'Droits mis à jour')
 
   const handleToggleDisabled = () => {

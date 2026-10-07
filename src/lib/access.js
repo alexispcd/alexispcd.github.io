@@ -2,9 +2,9 @@ import supabase from './supabase'
 
 // Rôle et modules du compte connecté. Miroir de supabase/functions/_shared/access.ts.
 
-/** Vrai si le compte a accès au module. Un admin a implicitement tous les modules. */
+/** Vrai si le compte a le module dans user_modules. Aucune exception pour le rôle admin. */
 export const hasModule = (access, moduleId) =>
-  access.role === 'admin' || access.modules.includes(moduleId)
+  access.modules.includes(moduleId)
 
 /** Charge { userId, role, modules } depuis profiles et user_modules (RLS : sa propre ligne). */
 export const fetchAccess = async (userId) => {

@@ -7,9 +7,9 @@ export interface Access {
   modules: string[]
 }
 
-/** Vrai si le compte a accès au module. Un admin a implicitement tous les modules. */
+/** Vrai si le compte a le module dans user_modules. Aucune exception pour le rôle admin. */
 export const hasModule = (access: Access, moduleId: string): boolean =>
-  access.role === "admin" || access.modules.includes(moduleId)
+  access.modules.includes(moduleId)
 
 /** Charge rôle et modules d'un compte. `admin` doit être un client service role. */
 export async function loadAccess(admin: SupabaseClient, userId: string): Promise<Access> {

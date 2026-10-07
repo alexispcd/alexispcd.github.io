@@ -70,7 +70,9 @@ async function handleRequest(req: Request): Promise<Response> {
   switch (body?.action) {
     case "list": return await handleList(admin)
     case "create": return await handleCreate(admin, body)
-    case "set_modules": return await withTarget(admin, body, (id) => setModules(admin, id, body.modules))
+    // set_modules est permis sur un compte admin, y compris le sien : ses droits
+    // par module viennent de user_modules comme pour tout compte.
+    case "set_modules": return await withTarget(admin, body, (id) => setModules(admin, id, body.modules), { allowAdmin: true })
     case "disable": return await withTarget(admin, body, (id) => setBan(admin, id, BAN_FOREVER))
     case "enable": return await withTarget(admin, body, (id) => setBan(admin, id, "none"))
     case "delete": return await withTarget(admin, body, (id) => deleteUser(admin, id))
@@ -78,16 +80,22 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 }
 
-/** Valide user_id et refuse toute action sur un compte admin, y compris le sien. */
+/**
+ * Valide user_id puis exécute l'action. Sauf `allowAdmin`, refuse toute action sur
+ * un compte admin, y compris le sien (désactivation, réactivation, suppression).
+ */
 async function withTarget(
   admin: SupabaseClient,
   body: Record<string, unknown>,
   run: (userId: string) => Promise<Response>,
+  { allowAdmin = false }: { allowAdmin?: boolean } = {},
 ): Promise<Response> {
   const targetId = body.user_id
   if (typeof targetId !== "string" || !UUID_RE.test(targetId)) return json(400, { error: "user_id invalide" })
-  const target = await loadAccess(admin, targetId)
-  if (target.role === "admin") return json(403, { error: "Action impossible sur un compte administrateur" })
+  if (!allowAdmin) {
+    const target = await loadAccess(admin, targetId)
+    if (target.role === "admin") return json(403, { error: "Action impossible sur un compte administrateur" })
+  }
   return await run(targetId)
 }
 

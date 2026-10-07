@@ -5,7 +5,6 @@ const admin = {
   name: 'Administration',
   description: 'Comptes et droits',
   category: null,
-  enabled: true,
   adminOnly: true,
   icon: AdminPanelSettings,
   path: '/admin',

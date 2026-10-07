@@ -5,7 +5,6 @@ const cotes = {
   name: 'Côtes',
   description: 'Dénivelé pour séances running',
   category: 'Sport',
-  enabled: true,
   adminOnly: false,
   icon: TrendingUp,
   path: '/cotes',
