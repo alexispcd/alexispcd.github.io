@@ -95,10 +95,16 @@ const SessionPage = () => {
     return s
   }, [sessionId])
 
-  useEffect(() => {
-    let cancelled = false
+  // Changement de séance : état de chargement remis au rendu, l'effet ne fait que charger.
+  const [prevSessionId, setPrevSessionId] = useState(sessionId)
+  if (sessionId !== prevSessionId) {
+    setPrevSessionId(sessionId)
     setLoading(true)
     setLoadError(null)
+  }
+
+  useEffect(() => {
+    let cancelled = false
     getSession(sessionId)
       .then((s) => { if (!cancelled) { setSession(s); setLoading(false) } })
       .catch((e) => { if (!cancelled) { setLoadError(e.message); setLoading(false) } })

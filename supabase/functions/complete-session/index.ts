@@ -2,6 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
@@ -180,9 +181,7 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[complete-session] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("complete-session", err)
   }
 }))
 
@@ -225,7 +224,8 @@ async function handleRequest(req: Request): Promise<Response> {
     if (!sessionId) throw new Error("session_id requis")
     selected = parseSelectedActivities(body)
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[complete-session] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   // Champs de ressenti persistés tels quels (uniquement si un ressenti est fourni).
@@ -273,7 +273,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .select("order_index, step_type, target_pace_sec, pace_tolerance_sec, distance_m, duration_sec")
     .eq("session_id", sessionId)
     .order("order_index", { ascending: true })
-  if (stepsErr) return json(500, { error: "Lecture des steps impossible", detail: stepsErr.message })
+  if (stepsErr) {
+    console.error("[complete-session] lecture steps:", stepsErr.message)
+    return json(500, { error: "Lecture des steps impossible" })
+  }
   const steps = (stepsRows ?? []) as Step[]
 
   // 6. Token Coros
@@ -281,8 +284,9 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    return json(503, { error: "Coros authentication required", detail })
+    // Le texte exact de error est testé par CompleteDialog.jsx.
+    console.error("[complete-session] token Coros:", errorMessage(err))
+    return json(503, { error: "Coros authentication required", detail: "Reconnecte ton compte Coros dans les réglages." })
   }
 
   // 7. Un appel MCP (queryActivityLapData) PAR activité, en SÉQUENTIEL pour rester
@@ -347,7 +351,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .eq("user_id", user.id)
     .select("*")
     .single()
-  if (updateErr) return json(500, { error: "Mise à jour impossible", detail: updateErr.message })
+  if (updateErr) {
+    console.error("[complete-session] mise à jour:", updateErr.message)
+    return json(500, { error: "Mise à jour impossible" })
+  }
 
   return json(200, { session: updated })
 }
@@ -379,7 +386,10 @@ async function manualComplete(
     .eq("id", sessionId)
     .select("*")
     .single()
-  if (error) return json(500, { error: "Mise à jour impossible", detail: error.message })
+  if (error) {
+    console.error("[complete-session] mise à jour feedback:", error.message)
+    return json(500, { error: "Mise à jour impossible" })
+  }
   return json(200, { session: updated })
 }
 
@@ -426,9 +436,9 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number,
   try {
     raw = await callCorosTool(corosToken, "queryActivityLapData", { labelId, sportType })
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    console.error("[complete-session] MCP laps error:", detail)
-    return { failure: `Appel Coros en échec (${detail})` }
+    // Le texte Coros peut contenir des injections : logs uniquement, jamais dans failure.
+    console.error("[complete-session] MCP laps error:", errorMessage(err))
+    return { failure: "Appel Coros en échec" }
   }
 
   // Indispensable au premier run pour vérifier le schéma réel Coros.

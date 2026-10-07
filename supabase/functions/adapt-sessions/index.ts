@@ -2,6 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
@@ -117,7 +118,8 @@ async function handleRequest(req: Request): Promise<Response> {
     sessionId = body.session_id
     if (!sessionId) throw new Error("session_id requis")
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[adapt-sessions] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   // 3. Séance sautée (+ steps) et plan
@@ -171,7 +173,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .gt("scheduled_date", skipped.scheduled_date)
     .lte("scheduled_date", windowEnd)
     .order("scheduled_date", { ascending: true })
-  if (winErr) return json(500, { error: "Lecture de la fenêtre impossible", detail: winErr.message })
+  if (winErr) {
+    console.error("[adapt-sessions] lecture fenêtre:", winErr.message)
+    return json(500, { error: "Lecture de la fenêtre impossible" })
+  }
 
   // Les renfos ne sont jamais adaptés : exclus de la fenêtre et du prompt.
   const windowSessions = (windowRows ?? [])
@@ -193,7 +198,8 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     adapted = await callModel(system, [{ role: "user", content: userPrompt }])
   } catch (err) {
-    return json(502, { error: "Erreur IA d'adaptation", detail: err instanceof Error ? err.message : String(err) })
+    console.error("[adapt-sessions] IA:", errorMessage(err))
+    return json(502, { error: "Erreur IA d'adaptation" })
   }
 
   // 6. Validation stricte (+ 1 retry ciblé sur les séances hors fenêtre exclues)
@@ -215,7 +221,8 @@ async function handleRequest(req: Request): Promise<Response> {
       adapted = adapted.filter((a) => byId.has(a.id))
       errors = validateAdapted(adapted, byId)
     } catch (err) {
-      return json(502, { error: "Erreur IA d'adaptation (retry)", detail: err instanceof Error ? err.message : String(err) })
+      console.error("[adapt-sessions] IA (retry):", errorMessage(err))
+      return json(502, { error: "Erreur IA d'adaptation (retry)" })
     }
   }
   if (errors.length) {
@@ -307,8 +314,6 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[adapt-sessions] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("adapt-sessions", err)
   }
 }))

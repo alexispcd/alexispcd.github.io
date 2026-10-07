@@ -1,5 +1,5 @@
 import "@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "@supabase/supabase-js"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
 import { parse } from "https://deno.land/x/xml@2.1.3/mod.ts"
@@ -91,7 +91,7 @@ function truncateXml(xml: string, maxItems: number): string {
 
 async function processFeed(
   feed: FeedInput,
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   userId: string,
 ): Promise<FeedResult> {
   const t0 = Date.now()
@@ -107,20 +107,21 @@ async function processFeed(
     })
     clearTimeout(timer)
   } catch (err) {
-    console.log(`[${feed.name}] fetch failed in ${Date.now() - t0}ms: ${err}`)
-    return { feed: feed.name, inserted: 0, error: `fetch failed: ${err}` }
+    console.error(`[fetch-rss] ${feed.name} fetch failed in ${Date.now() - t0}ms: ${err}`)
+    return { feed: feed.name, inserted: 0, error: "Flux inaccessible" }
   }
 
   if (!res.ok) {
-    console.log(`[${feed.name}] HTTP ${res.status} in ${Date.now() - t0}ms`)
-    return { feed: feed.name, inserted: 0, error: `HTTP ${res.status}` }
+    console.error(`[fetch-rss] ${feed.name} HTTP ${res.status} in ${Date.now() - t0}ms`)
+    return { feed: feed.name, inserted: 0, error: "Flux inaccessible" }
   }
 
   let xmlText: string
   try {
     xmlText = await res.text()
   } catch (err) {
-    return { feed: feed.name, inserted: 0, error: `read failed: ${err}` }
+    console.error(`[fetch-rss] ${feed.name} read failed: ${err}`)
+    return { feed: feed.name, inserted: 0, error: "Flux illisible" }
   }
 
   const rawBytes = xmlText.length
@@ -131,15 +132,15 @@ async function processFeed(
   try {
     parsed = parse(xmlText) as ParsedNode
   } catch (err) {
-    console.log(`[${feed.name}] parse failed in ${Date.now() - t0}ms: ${err}`)
-    return { feed: feed.name, inserted: 0, error: `parse failed: ${err}` }
+    console.error(`[fetch-rss] ${feed.name} parse failed in ${Date.now() - t0}ms: ${err}`)
+    return { feed: feed.name, inserted: 0, error: "Flux illisible" }
   }
 
   const items = extractItems(parsed)
   console.log(`[${feed.name}] done in ${Date.now() - t0}ms, ${items.length} items, ${rawBytes} bytes`)
 
   if (items.length === 0) {
-    return { feed: feed.name, inserted: 0, error: "no items found (empty feed or unrecognized format)" }
+    return { feed: feed.name, inserted: 0, error: "Aucun article trouvé dans le flux" }
   }
 
   let inserted = 0
@@ -174,7 +175,8 @@ async function processFeed(
       .select("id")
 
     if (error) {
-      return { feed: feed.name, inserted, error: `db error: ${error.message}` }
+      console.error(`[fetch-rss] ${feed.name} db error: ${error.message}`)
+      return { feed: feed.name, inserted, error: "Enregistrement des articles impossible" }
     }
     if (data && data.length > 0) inserted++
   }
@@ -196,7 +198,7 @@ Deno.serve(withCors(async (req) => {
   const batchOffset: number = body.batchOffset ?? 0
   const batchSize: number = body.batchSize ?? 3
 
-  let supabase: ReturnType<typeof createClient>
+  let supabase: SupabaseClient
   let userId: string
   let feeds: FeedInput[]
   let depth: number

@@ -5,7 +5,7 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 ## Stack
 - React 19, Vite 8, MUI 9, React Router v7, Framer Motion, Leaflet (react-leaflet)
 - PWA via vite-plugin-pwa
-- Déployé sur GitHub Pages (statique) par GitHub Actions à chaque push sur `main` (`.github/workflows/deploy.yml`)
+- Déployé sur GitHub Pages (statique) par GitHub Actions, workflow unique `.github/workflows/ci.yml` (voir CI)
 - Supabase : auth (magic link) + BDD + Edge Functions (Deno)
 - API Anthropic via Edge Functions uniquement, jamais côté client (`supabase/functions/_shared/anthropic.ts`) : génération, adaptation et analyse des plans Training
 - API Mistral via Edge Functions : `summarize-article` (mistral-small-latest, gratuit)
@@ -13,8 +13,16 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 ## Commandes
 - `npm run dev` : serveur de dev Vite
 - `npm run build` : build de prod
-- `npm run lint` : ESLint (voir Pièges techniques, jamais vert globalement)
-- `deno check` sur `supabase/functions/**` pour les Edge Functions
+- `npm run lint` : ESLint, vert (0 erreur, 0 warning) et doit le rester
+- `npm test` : tests front (`node --test` sur `src/**/*.test.js`)
+- `npm run check:functions` : `scripts/check-functions.mjs`, `deno check --frozen` sur chaque Edge Function avec son `deno.json`, puis `deno test --frozen` sur `supabase/functions`. Sort en erreur si l'un échoue. Le `deno.lock` racine suit aussi les dépendances de `package.json` : après un changement de dépendance npm, le rafraîchir avec `deno test --frozen=false --allow-all supabase/functions/`
+
+### CI
+- Un seul workflow, `.github/workflows/ci.yml`, sur chaque push (toutes branches) et chaque pull request.
+- Job `front` : Node 22, `npm ci`, `npm run lint`, `npm test`, `npm run build` (secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+- Job `functions` : Node 22 et `npm ci` (le script est en Node, et `deno test` résout certains imports via `package.json`), Deno v2.x, `npm run check:functions`.
+- Job `deploy` : uniquement sur push vers `main`, après `front` et `functions` verts. Publie sur GitHub Pages le `dist` construit et vérifié par `front` (artifact), sans second build. `concurrency` empêche deux déploiements simultanés.
+- Le déploiement des Edge Functions reste manuel, hors CI.
 
 ## Structure src/
 - `apps/registry.js` : registre unique des modules (liste ordonnée, ordre des catégories, helpers `enabledModules`, `canAccess`, `assignableModules`, `enabledRoutes`, `homeCategories`) ; routes et home en dérivent
@@ -64,7 +72,7 @@ La feuille de route initiale (home catégorisée, auth Supabase, Edge Functions,
 
 Révisions et Veille sont désactivées : `enabled: false` dans leur `module.js`, code conservé.
 
-Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Prochain chantier : reprise du plan qualité (filet de sécurité : CI, lint vert, deno check vert).
+Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Filet de sécurité en place : CI bloquante, lint vert, tests verts, deno check vert, schéma reproductible.
 
 Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
 
@@ -125,8 +133,14 @@ Les migrations dans `supabase/migrations/` font foi. Toutes les tables ont la RL
 ### Autres tables
 - **coros_oauth_state** : état OAuth PKCE de la connexion Coros
 - **revision_progress** : `(user_id, card_id)` clé primaire, `theme_id`, `box` (1 à 5), `due_on`, `last_reviewed_at`
-- **watch_items** : `url`, `title`, `source`, `published_at`, `tags` text[], `is_read`, `is_favorite`, `summary`, `key_points` jsonb, `note`, `read_at`
+- **watch_items** : `url` (unique sur toute la table), `title`, `source`, `published_at`, `tags` text[], `is_read`, `is_favorite`, `summary`, `key_points` text[], `note`, `read_at`
 - **rss_feeds** : `url`, `name`, `theme`
+- `coros_tokens`, `user_preferences`, `watch_items` et `rss_feeds` ont été créées hors migrations ; la migration de rattrapage `20261007125515_baseline_untracked_tables.sql` les recrée à l'identique de la prod (colonnes, contraintes, RLS, policies, droits, anomalies de droits comprises).
+
+### Hors migrations (à connaître)
+- Cron `fetch-rss-daily` (pg_cron, tous les jours à 7h UTC, `0 7 * * *`) : appelle `fetch-rss` en service role. Sa commande contient un JWT en dur : jamais dans le repo.
+- Cron `training-plans-autocomplete` (4h UTC) : lui est défini dans `20260708130130_training_rebuild.sql`.
+- Fonction `public.rls_auto_enable()` et event trigger `ensure_rls` (owner `postgres`) : activent la RLS sur les nouvelles tables, posés hors repo (probablement depuis le dashboard). Les autres event triggers appartiennent à `supabase_admin` (plateforme).
 
 ---
 
@@ -151,7 +165,9 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 
 Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push, regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`) ne passent pas par ce contrôle.
 
-**Règle** : toute Edge Function rattachée à un module appelle `requireModule(supabaseAdmin, user.id, '<module>', CORS)` juste après `getUser`.
+**Règle** : toute Edge Function rattachée à un module appelle `requireModule(supabaseAdmin, user.id, '<module>')` juste après `getUser`. Les en-têtes CORS sont posés par `withCors` (`_shared/cors.ts`).
+
+**Règle des erreurs** : un `detail` (ou tout champ) renvoyé au client ne contient qu'un message écrit à la main en français, destiné à l'utilisateur. Tout message interne (`err.message`, `String(err)`, erreur Postgres ou Supabase, texte Coros, Mistral ou Anthropic, erreur de parsing) part dans `console.error` avec le préfixe `[nom-fonction]`, jamais dans la réponse : le texte Coros peut contenir des injections. 500 générique : `internalError(tag, err)` (`_shared/http.ts`), qui logge et renvoie `{ error: "Internal server error" }`. Chaque autre erreur garde un `error` lisible en français. À conserver : `error: "Coros authentication required"` en 503 (testé par `CompleteDialog.jsx`), `error.code` et `plan_id` quand ils existent, `details` des 422 de validation IA.
 
 `verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth, coros-push, admin-users) : l'auth y est vérifiée dans le code.
 
@@ -332,7 +348,7 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 10. Optimisation du SI
 
 ### Fonctionnalités
-- Sync RSS via cron Supabase (pg_cron, toutes les 6h) + bouton refresh manuel
+- Sync RSS via cron Supabase (`fetch-rss-daily`, pg_cron, tous les jours à 7h UTC) + bouton refresh manuel
 - Filtrage par thème (chips horizontaux)
 - Statut lu / non lu, favoris
 - Résumé à la demande via Mistral (bouton sur chaque article), sauvegardé en BDD
@@ -356,7 +372,8 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 
 ### Lint React Compiler
 - `eslint-plugin-react-hooks` v7 en règles strictes : `react-hooks/purity` interdit `Date.now()`, `Math.random()` et la lecture de `ref.current` pendant le rendu ; `react-hooks/set-state-in-effect` interdit tout `setState` atteint synchroniquement depuis le corps d'un effet.
-- Socle de 11 erreurs préexistantes (`cotes/BottomBar`, `training/*`, `veille/VeillePage`, `useDarkMode`) : `npm run lint` n'est jamais vert, viser zéro erreur sur les fichiers touchés.
+- `npm run lint` est vert et la CI le bloque : aucune nouvelle erreur ni warning. Pas d'assouplissement de `eslint.config.js` ; un `eslint-disable-next-line` ne se justifie que si la correction changerait le comportement, avec la règle précise et la raison en commentaire.
+- Ajustement d'état sur changement de prop : au rendu (`const [prev, setPrev] = useState(x); if (x !== prev) { setPrev(x); ... }`), pas dans un effet. Le lint traite l'appel d'une fonction async qui fait des setState comme synchrone : dans un effet, écrire le chargement en chaîne de promesses, setState dans les `.then` / `.finally`.
 - Patterns qui passent (exemples dans `src/apps/revisions/`) : fetch initial via fonction `async` hors composant qui retourne les données, `setState` dans le `.then()` de l'effet ; valeur dérivée figée mémoïsée sur un snapshot d'état ; aléatoire via PRNG seedé pendant le rendu, ou `Date.now()` dans un handler.
 
 ### Edge Functions

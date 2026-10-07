@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Box, Typography, Chip, Button, CircularProgress, Alert, Snackbar,
@@ -70,7 +70,17 @@ const PlanDashboard = () => {
     setSelectedWeek(weekNumber)
   }
 
-  const readyWeeks = plan?.generation_status === 'ready' ? (plan.weeks ?? []) : []
+  const readyWeeks = useMemo(
+    () => (plan?.generation_status === 'ready' ? (plan.weeks ?? []) : []),
+    [plan],
+  )
+
+  // Garde-fou : semaine restaurée absente du plan chargé (autre plan, régén). La
+  // sélection est remise à null au rendu ; l'effet plus bas nettoie sessionStorage.
+  if (selectedWeek != null && readyWeeks.length && !readyWeeks.some((w) => w.week_number === selectedWeek)) {
+    setSelectedWeek(null)
+  }
+
   const effectiveWeek = selectedWeek ?? (readyWeeks.length ? currentWeekNumber(readyWeeks) : null)
 
   const reloadPlan = useCallback(async () => {
@@ -80,10 +90,16 @@ const PlanDashboard = () => {
   }, [planId])
 
   // ── Chargement initial ──────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false
+  // Changement de plan : état de chargement remis au rendu, l'effet ne fait que charger.
+  const [prevPlanId, setPrevPlanId] = useState(planId)
+  if (planId !== prevPlanId) {
+    setPrevPlanId(planId)
     setLoading(true)
     setLoadError(null)
+  }
+
+  useEffect(() => {
+    let cancelled = false
     scrolledRef.current = false
     getPlan(planId)
       .then((p) => { if (!cancelled) { setPlan(p); setLoading(false) } })
@@ -91,14 +107,12 @@ const PlanDashboard = () => {
     return () => { cancelled = true }
   }, [planId])
 
-  // ── Garde-fou : semaine restaurée absente du plan chargé (autre plan, régén) ──
+  // ── Garde-fou (suite) : retire de sessionStorage une semaine absente du plan ──
   useEffect(() => {
-    if (selectedWeek == null || !readyWeeks.length) return
-    if (!readyWeeks.some((w) => w.week_number === selectedWeek)) {
-      sessionStorage.removeItem(weekStorageKey)
-      setSelectedWeek(null)
-    }
-  }, [selectedWeek, readyWeeks, weekStorageKey])
+    const stored = sessionStorage.getItem(weekStorageKey)
+    if (stored == null || !readyWeeks.length) return
+    if (!readyWeeks.some((w) => String(w.week_number) === stored)) sessionStorage.removeItem(weekStorageKey)
+  }, [readyWeeks, weekStorageKey])
 
   // ── Suivi de génération tant que le plan génère ──────────────────────────────
   useEffect(() => {
@@ -112,8 +126,14 @@ const PlanDashboard = () => {
 
   // ── Filet anti-blocage : si ça génère depuis plus de 6 min, bascule en erreur ──
   const isGenerating = regenBusy || plan?.generation_status === 'generating'
+  // Fin de génération : le délai dépassé est oublié dès le rendu.
+  const [prevGenerating, setPrevGenerating] = useState(isGenerating)
+  if (isGenerating !== prevGenerating) {
+    setPrevGenerating(isGenerating)
+    if (!isGenerating) setGenTimedOut(false)
+  }
   useEffect(() => {
-    if (!isGenerating) { setGenTimedOut(false); return }
+    if (!isGenerating) return
     const t = setTimeout(() => setGenTimedOut(true), 6 * 60 * 1000)
     return () => clearTimeout(t)
   }, [isGenerating])
@@ -128,13 +148,24 @@ const PlanDashboard = () => {
 
   // Au changement de semaine on ne vide PAS la liste (setSessions(null)) : on garde
   // l'ancienne rendue en fondu pour préserver la hauteur et donc la position de scroll.
+  // L'indicateur de chargement passe à true au rendu quand la semaine ou le plan
+  // change ; l'effet lance le chargement et le repasse à false.
+  const [prevSessionsSource, setPrevSessionsSource] = useState({ effectiveWeek, plan })
+  if (prevSessionsSource.effectiveWeek !== effectiveWeek || prevSessionsSource.plan !== plan) {
+    setPrevSessionsSource({ effectiveWeek, plan })
+    if (effectiveWeek != null && plan?.weeks?.length) setSessionsLoading(true)
+  }
+
   useEffect(() => {
     if (effectiveWeek == null || !plan?.weeks?.length) return
-    setSessionsLoading(true)
-    reloadSessions()
+    // Même chargement que reloadSessions, écrit en chaîne de promesses : tous les
+    // setState partent des callbacks, jamais du corps de l'effet.
+    const week = plan.weeks.find((w) => w.week_number === effectiveWeek)
+    Promise.resolve(week ? getWeekSessions(week.id) : undefined)
+      .then((data) => { if (week) setSessions(data) })
       .catch((e) => console.error('[PlanDashboard]', e.message))
       .finally(() => setSessionsLoading(false))
-  }, [effectiveWeek, plan, reloadSessions])
+  }, [effectiveWeek, plan])
 
   // ── Scroll auto vers la semaine courante (une fois) ───────────────────────────
   useEffect(() => {

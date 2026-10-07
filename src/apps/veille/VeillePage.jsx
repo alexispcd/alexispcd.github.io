@@ -120,13 +120,14 @@ const VeillePage = () => {
     setSyncing(false)
   }, [applyFirstPage])
 
+  const userId = user?.id
   const toggleDisplayMode = useCallback(async () => {
     const next = displayMode === 'list' ? 'mosaic' : 'list'
     setDisplayMode(next)
-    if (user?.id) {
+    if (userId) {
       try {
         await supabase.from('user_preferences').upsert({
-          user_id: user.id,
+          user_id: userId,
           key: PREF_KEY,
           value: next,
         })
@@ -134,7 +135,7 @@ const VeillePage = () => {
         console.error('user_preferences upsert error:', err)
       }
     }
-  }, [displayMode, user?.id])
+  }, [displayMode, userId])
 
   const toggleUnread = useCallback(() => {
     const next = !unreadRef.current
@@ -169,7 +170,17 @@ const VeillePage = () => {
   useEffect(() => {
     const saved = parseInt(sessionStorage.getItem(SCROLL_KEY) || '0', 10) || 0
     pendingRestore.current = saved > 0 ? saved : null
-    applyFirstPage(filter, unreadOnly)
+    // Même chargement que applyFirstPage, sans le setLoading(true) initial (loading
+    // vaut déjà true au montage) et avec les setState dans les callbacks de promesse.
+    loadArticles({ theme: filter, unreadOnly, offset: 0 })
+      .then(({ articles: rows, hasMore: more }) => {
+        articlesRef.current = rows
+        setArticles(rows)
+        hasMoreRef.current = more
+        setHasMore(more)
+      })
+      .catch((err) => console.error('loadArticles error:', err))
+      .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Enregistre les actions du pill centre

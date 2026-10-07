@@ -2,6 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { validateStrengthContent } from "../_shared/training/validate.ts"
@@ -124,7 +125,8 @@ async function handleRequest(req: Request): Promise<Response> {
     planId = body.plan_id
     if (!planId) throw new Error("plan_id requis")
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[regenerate-renfo] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   // 3. Plan
@@ -146,7 +148,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .eq("status", "planned")
     .gte("scheduled_date", today)
     .order("scheduled_date", { ascending: true })
-  if (tErr) return json(500, { error: "Lecture des renfos impossible", detail: tErr.message })
+  if (tErr) {
+    console.error("[regenerate-renfo] lecture renfos:", tErr.message)
+    return json(500, { error: "Lecture des renfos impossible" })
+  }
 
   const targets: RenfoTarget[] = (targetRows ?? []).map((r) => {
     const w = (r as Record<string, unknown>).week as { week_number?: number; block?: string } | null
@@ -183,7 +188,8 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     out = await callModel(system, [{ role: "user", content: userPrompt }])
   } catch (err) {
-    return json(502, { error: "Erreur IA renfo", detail: err instanceof Error ? err.message : String(err) })
+    console.error("[regenerate-renfo] IA:", errorMessage(err))
+    return json(502, { error: "Erreur IA renfo" })
   }
 
   out = out.filter((o) => byId.has(o.id))
@@ -210,7 +216,8 @@ async function handleRequest(req: Request): Promise<Response> {
       errors = validateOut(out, byId)
       hints = durationHints(out, byId)
     } catch (err) {
-      return json(502, { error: "Erreur IA renfo (retry)", detail: err instanceof Error ? err.message : String(err) })
+      console.error("[regenerate-renfo] IA (retry):", errorMessage(err))
+      return json(502, { error: "Erreur IA renfo (retry)" })
     }
   }
   // Seules les erreurs de STRUCTURE bloquent. Une durée encore hors bande après
@@ -252,8 +259,6 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[regenerate-renfo] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("regenerate-renfo", err)
   }
 }))

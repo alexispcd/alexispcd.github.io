@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { loadAccess } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 import { isModuleId, type ModuleId } from "../_shared/modules.ts"
 
 // Bannissement "permanent" (100 ans) pour désactiver un compte, "none" pour le réactiver.
@@ -45,9 +46,7 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    console.error("[admin-users] uncaught:", detail)
-    return json(500, { error: "Internal server error" })
+    return internalError("admin-users", err)
   }
 }))
 
@@ -64,7 +63,8 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     body = await req.json()
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[admin-users] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   switch (body?.action) {

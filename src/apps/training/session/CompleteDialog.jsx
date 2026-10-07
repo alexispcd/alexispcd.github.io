@@ -41,17 +41,27 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
   const [manualDate, setManualDate] = useState(scheduledDate ?? '') // date de séance, chemin sans Coros
   const [authExpired, setAuthExpired] = useState(false) // token Coros expiré : on propose de se reconnecter
 
+  // Remise à zéro à chaque ouverture (ou changement de séance pendant l'ouverture),
+  // faite au rendu plutôt que dans l'effet, qui ne garde que l'appel réseau.
+  const resetKey = open ? `${sessionId}|${scheduledDate ?? ''}` : null
+  const [prevResetKey, setPrevResetKey] = useState(resetKey)
+  if (resetKey !== prevResetKey) {
+    setPrevResetKey(resetKey)
+    if (resetKey !== null) {
+      setPhase('matching')
+      setCandidates([])
+      setSelectedIds([])
+      setError(null)
+      setAuthExpired(false)
+      setPendingActivities(null)
+      setFeedback(emptyFeedback())
+      setManualDate(scheduledDate ?? '')
+    }
+  }
+
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    setPhase('matching')
-    setCandidates([])
-    setSelectedIds([])
-    setError(null)
-    setAuthExpired(false)
-    setPendingActivities(null)
-    setFeedback(emptyFeedback())
-    setManualDate(scheduledDate ?? '')
     corosMatch(sessionId)
       .then(({ candidates: list }) => {
         if (cancelled) return

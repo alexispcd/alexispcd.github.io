@@ -80,8 +80,8 @@ Réponds avec un objet JSON contenant exactement ces clés :
 
   if (!mistralRes.ok) {
     const errText = await mistralRes.text()
-    console.error("Mistral error:", mistralRes.status, errText)
-    return Response.json({ error: "Mistral API error", status: mistralRes.status, detail: errText }, { status: 502 })
+    console.error("[summarize-article] Mistral error:", mistralRes.status, errText)
+    return Response.json({ error: "Résumé indisponible, réessaie plus tard." }, { status: 502 })
   }
 
   const mistralData = await mistralRes.json()

@@ -4,7 +4,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildSequence } from './sequence.js'
-import { estimateStrengthDuration } from '../renfo.js'
+import {
+  estimateStrengthDuration, PER_REP_SEC, REST_BETWEEN_EXERCISES_SEC, REST_BETWEEN_ROUNDS_SEC,
+} from '../renfo.js'
+
+// Repos lus depuis l'estimateur (source unique) : le test suit leurs valeurs.
+const EXO = REST_BETWEEN_EXERCISES_SEC
+const ROUND = REST_BETWEEN_ROUNDS_SEC
 
 const kinds = (steps) => steps.map((s) => s.kind)
 
@@ -24,8 +30,8 @@ test('préparation : step auto de 10 s en tête, hors durée totale', () => {
   assert.equal(prep.exercise, null)
   assert.equal(prep.index, 0)
   // Le sas n'entre pas dans l'estimation (alignée sur l'estimateur renfo.js).
-  // 2 tours de 45 s + 1 repos inter-tours de 30 s.
-  assert.equal(totalSeconds, 120)
+  // 2 tours de 45 s + 1 repos inter-tours.
+  assert.equal(totalSeconds, 2 * 45 + ROUND)
 })
 
 test('entrées vides / invalides : séquence vide, total 0', () => {
@@ -35,7 +41,7 @@ test('entrées vides / invalides : séquence vide, total 0', () => {
 })
 
 // ── Circuit ───────────────────────────────────────────────────────────────────
-test('circuit : le bloc entier est répété, repos 20 s entre exercices et 30 s entre tours', () => {
+test('circuit : le bloc entier est répété, repos inter-exercices puis inter-tours', () => {
   const { steps } = buildSequence([
     {
       theme: 'Force',
@@ -46,13 +52,13 @@ test('circuit : le bloc entier est répété, repos 20 s entre exercices et 30 s
       ],
     },
   ])
-  // Tour 1 : A, repos 20, B — puis repos 30 — Tour 2 : A, repos 20, B.
+  // Tour 1 : A, repos inter-exercices, B, puis repos inter-tours, puis Tour 2 : A, repos, B.
   assert.deepEqual(kinds(steps), ['prep', 'work', 'rest', 'work', 'rest', 'work', 'rest', 'work'])
-  const [a1, r20, b1, r30, a2] = afterPrep(steps)
+  const [a1, rExo, b1, rRound, a2] = afterPrep(steps)
   assert.equal(a1.exercise.name, 'Planche')
-  assert.equal(r20.duration_sec, 20)
+  assert.equal(rExo.duration_sec, EXO)
   assert.equal(b1.exercise.name, 'Fentes')
-  assert.equal(r30.duration_sec, 30)
+  assert.equal(rRound.duration_sec, ROUND)
   assert.equal(a2.exercise.name, 'Planche')
   // Pas de repos après le dernier exercice du dernier tour.
   assert.equal(steps.at(-1).kind, 'work')
@@ -73,18 +79,18 @@ test('circuit : deux blocs, tours différents, unilatéral en reps dédoublé', 
   const { steps, totalSeconds } = buildSequence(blocks)
 
   // Ordre exact : l'unilatéral produit deux steps accolés, sans repos entre les
-  // côtés ; un repos de 30 s sépare les tours ET les deux blocs.
+  // côtés ; le repos inter-tours sépare les tours ET les deux blocs.
   assert.deepEqual(kinds(steps), [
     'prep',
-    'work', 'rest', 'work', 'work', // bloc 1 tour 1 : Planche, r20, Step-up G, Step-up D
-    'rest', // repos inter-tours 30
+    'work', 'rest', 'work', 'work', // bloc 1 tour 1 : Planche, repos, Step-up G, Step-up D
+    'rest', // repos inter-tours
     'work', 'rest', 'work', 'work', // bloc 1 tour 2
-    'rest', // repos inter-blocs 30
-    'work', 'rest', 'work', 'rest', 'work', // bloc 2, 3 tours séparés par 30
+    'rest', // repos inter-blocs
+    'work', 'rest', 'work', 'rest', 'work', // bloc 2, 3 tours séparés par le repos inter-tours
   ])
 
   const rests = steps.filter((s) => s.kind === 'rest').map((s) => s.duration_sec)
-  assert.deepEqual(rests, [20, 30, 20, 30, 30, 30])
+  assert.deepEqual(rests, [EXO, ROUND, EXO, ROUND, ROUND, ROUND])
 
   // Côtés et numéros de tour.
   const stepUps = steps.filter((s) => s.exercise?.name === 'Step-up')
@@ -104,7 +110,11 @@ test('circuit : deux blocs, tours différents, unilatéral en reps dédoublé', 
   assert.equal(hollow[0].theme, 'Gainage')
 
   // La durée du séquenceur colle exactement à l'estimateur.
-  assert.equal(totalSeconds, 450)
+  // Bloc 1 : 2 tours de (Planche 40 s, repos, Step-up 10 reps par côté), repos inter-tours.
+  // Bloc 2 : 3 tours de Hollow 30 s séparés par le repos inter-tours. Puis le repos inter-blocs.
+  const bloc1 = 2 * (40 + EXO + 2 * 10 * PER_REP_SEC) + ROUND
+  const bloc2 = 3 * 30 + 2 * ROUND
+  assert.equal(totalSeconds, bloc1 + bloc2 + ROUND)
   assert.equal(Math.round(totalSeconds / 60), estimateStrengthDuration(blocks))
 })
 
@@ -190,6 +200,6 @@ test('mixte : un bloc circuit et un bloc hérité cohabitent', () => {
   ])
   assert.deepEqual(kinds(steps), ['prep', 'work', 'rest', 'work', 'rest', 'work', 'rest', 'work'])
   const rests = steps.filter((s) => s.kind === 'rest').map((s) => s.duration_sec)
-  // 30 entre les tours du circuit, 30 entre les blocs, 45 entre les séries héritées.
-  assert.deepEqual(rests, [30, 30, 45])
+  // Inter-tours dans le circuit, inter-blocs, puis 45 entre les séries héritées.
+  assert.deepEqual(rests, [ROUND, ROUND, 45])
 })

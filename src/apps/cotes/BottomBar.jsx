@@ -25,11 +25,16 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
 
-  // Fermeture immédiate sur changement de phase
+  // Fermeture immédiate sur changement de phase : l'état se replie dès le rendu,
+  // l'effet ne fait que nettoyer le DOM et le verrou d'animation.
+  const [prevPhase, setPrevPhase] = useState(phase)
+  if (phase !== prevPhase) {
+    setPrevPhase(phase)
+    if (phase === 'searching' || phase === 'idle') setFilterExpanded(false)
+  }
   useEffect(() => {
     if (phase === 'searching' || phase === 'idle') {
       isClosing.current = false
-      setFilterExpanded(false)
       if (filterRef.current) {
         filterRef.current.style.cssText = ''
       }

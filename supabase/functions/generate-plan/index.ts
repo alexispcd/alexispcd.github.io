@@ -2,6 +2,11 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { internalError } from "../_shared/http.ts"
+
+// Global fourni par le runtime Supabase. edge-runtime.d.ts est importé plus haut mais
+// ses déclarations globales ne sont pas vues par deno check : déclaration locale, typage seul.
+declare const EdgeRuntime: { waitUntil<T>(promise: Promise<T>): Promise<T> }
 import { extractJson } from "../_shared/extract-json.ts"
 import {
   buildSystemPrompt, buildRetryPrompt, buildChunkUserPrompt,
@@ -45,7 +50,7 @@ async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Pr
 
 /** Rejette après `ms` avec un message explicite (garde-fou anti-blocage). */
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
-  let timer: number | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
   const guard = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error(message)), ms)
   })
@@ -326,7 +331,7 @@ async function handleRequest(req: Request): Promise<Response> {
   if (insertError || !newPlan) {
     if (insertError?.code === "23505") return json(409, { error: "Un plan actif existe déjà" })
     console.error("[generate-plan] insert plan error:", JSON.stringify(insertError))
-    return json(500, { error: "Impossible de créer le plan", detail: insertError?.message })
+    return json(500, { error: "Impossible de créer le plan" })
   }
 
   EdgeRuntime.waitUntil(runChunkAndChain(supabaseAdmin, newPlan.id, user.id, input))
@@ -337,8 +342,6 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[generate-plan] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("generate-plan", err)
   }
 }))

@@ -2,6 +2,11 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { internalError } from "../_shared/http.ts"
+
+// Global fourni par le runtime Supabase. edge-runtime.d.ts est importé plus haut mais
+// ses déclarations globales ne sont pas vues par deno check : déclaration locale, typage seul.
+declare const EdgeRuntime: { waitUntil<T>(promise: Promise<T>): Promise<T> }
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
 import { buildPlanSystemPrompt, buildRetryPrompt } from "../_shared/training/methodology.ts"
@@ -29,7 +34,7 @@ async function timed<T>(planId: string, phase: string, fn: () => Promise<T>): Pr
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
-  let timer: number | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
   const guard = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms) })
   return Promise.race([p, guard]).finally(() => clearTimeout(timer))
 }
@@ -220,7 +225,8 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     body = await req.json()
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[regenerate-plan] corps invalide:", String(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   // ── Auto-invocation interne : chunk suivant ─────────────────────────────────
@@ -273,7 +279,10 @@ async function handleRequest(req: Request): Promise<Response> {
     .select("week_number, start_date, block, focus")
     .eq("plan_id", planId)
     .order("week_number", { ascending: true })
-  if (weeksErr) return json(500, { error: "Lecture des semaines impossible", detail: weeksErr.message })
+  if (weeksErr) {
+    console.error("[regenerate-plan] lecture semaines:", weeksErr.message)
+    return json(500, { error: "Lecture des semaines impossible" })
+  }
   const weeks = (weeksData ?? []) as WeekRow[]
   if (weeks.length === 0) return json(400, { error: "Le plan n'a aucune semaine à régénérer" })
 
@@ -291,14 +300,20 @@ async function handleRequest(req: Request): Promise<Response> {
     .from("training_plans")
     .update({ generation_status: "generating", generation_error: null })
     .eq("id", planId)
-  if (statusErr) return json(500, { error: "Mise à jour du statut impossible", detail: statusErr.message })
+  if (statusErr) {
+    console.error("[regenerate-plan] statut:", statusErr.message)
+    return json(500, { error: "Mise à jour du statut impossible" })
+  }
 
   const { error: delErr } = await supabaseAdmin
     .from("training_weeks")
     .delete()
     .eq("plan_id", planId)
     .gte("week_number", currentWeek)
-  if (delErr) return json(500, { error: "Suppression des semaines impossible", detail: delErr.message })
+  if (delErr) {
+    console.error("[regenerate-plan] suppression semaines:", delErr.message)
+    return json(500, { error: "Suppression des semaines impossible" })
+  }
 
   EdgeRuntime.waitUntil(runRegenChunk(supabaseAdmin, planId, user.id, currentWeek, lastWeek))
   return json(200, { plan_id: planId })
@@ -308,8 +323,6 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[regenerate-plan] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("regenerate-plan", err)
   }
 }))

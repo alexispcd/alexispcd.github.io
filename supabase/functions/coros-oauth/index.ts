@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 
 const COROS_AUTHORIZE = "https://mcpeu.coros.com/oauth2/authorize"
 const COROS_TOKEN = "https://mcpeu.coros.com/oauth2/token"
@@ -77,9 +78,7 @@ Deno.serve(withCors(async (req) => {
     try {
       return await handleAction(req)
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err)
-      console.error("[coros-oauth] uncaught:", detail)
-      return json(500, { error: "Internal server error", detail })
+      return internalError("coros-oauth", err)
     }
   }
 
@@ -98,7 +97,8 @@ async function handleAction(req: Request): Promise<Response> {
     const body = await req.json()
     action = body?.action
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[coros-oauth] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   if (action === "status") return await handleStatus(userId)

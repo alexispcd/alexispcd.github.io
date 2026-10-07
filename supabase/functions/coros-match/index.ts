@@ -2,6 +2,7 @@ import "@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
+import { errorMessage, internalError } from "../_shared/http.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { parseSportRecords } from "../_shared/coros-parse.ts"
@@ -20,9 +21,7 @@ Deno.serve(withCors(async (req) => {
   try {
     return await handleRequest(req)
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error("[coros-match] uncaught:", message)
-    return json(500, { error: "Internal server error", detail: message })
+    return internalError("coros-match", err)
   }
 }))
 
@@ -53,7 +52,8 @@ async function handleRequest(req: Request): Promise<Response> {
     sessionId = body.session_id
     if (!sessionId) throw new Error("session_id requis")
   } catch (err) {
-    return json(400, { error: "Corps invalide", detail: String(err) })
+    console.error("[coros-match] corps invalide:", errorMessage(err))
+    return json(400, { error: "Corps invalide" })
   }
 
   const { data: session, error: sessionErr } = await supabaseAdmin
@@ -69,8 +69,8 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    return json(503, { error: "Coros authentication required", detail })
+    console.error("[coros-match] token Coros:", errorMessage(err))
+    return json(503, { error: "Coros authentication required", detail: "Reconnecte ton compte Coros dans les réglages." })
   }
 
   // 4. Fenêtre de candidats = la semaine de la séance (lundi→dimanche de sa
@@ -107,9 +107,9 @@ async function handleRequest(req: Request): Promise<Response> {
     // ferait passer une panne pour une absence d'activité.
     records = parseSportRecords(text)
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err)
-    console.error("[coros-match] Coros error:", detail)
-    return json(502, { error: "Erreur lors de la récupération des activités Coros", detail })
+    // Le texte Coros peut contenir des injections : logs uniquement.
+    console.error("[coros-match] Coros error:", errorMessage(err))
+    return json(502, { error: "Erreur lors de la récupération des activités Coros" })
   }
 
   // 6. Tri par proximité de date (en code). Le parseur garantit déjà les types,
