@@ -19,10 +19,24 @@ export const directionFor = (to, from = window.location.pathname) => {
   return pathDepth(target) < pathDepth(from) ? 'back' : 'forward'
 }
 
+// Retour par geste iOS ou bouton du navigateur : React Router lancerait quand même une
+// View Transition (l'aller était animé), qui garderait l'ancien écran figé jusqu'au rendu
+// de la nouvelle page. React Router teste la présence de document.startViewTransition
+// au moment de rendre : la masquer le fait rendre directement, sans capture.
+const disableViewTransitions = () => {
+  if (typeof document.startViewTransition === 'function') document.startViewTransition = undefined
+}
+
+// Supprime la propriété posée sur document : la méthode du prototype redevient visible.
+const restoreViewTransitions = () => {
+  if (Object.hasOwn(document, 'startViewTransition')) delete document.startViewTransition
+}
+
 // Toute navigation lancée par l'app réactive l'animation (data-vt-skip retiré).
 export const setTransitionDirection = (direction) => {
   root().dataset.vtDir = direction
   delete root().dataset.vtSkip
+  restoreViewTransitions()
 }
 
 // Sens d'un déplacement dans l'historique lancé par l'app (navigate(-1)), lu puis
@@ -35,8 +49,12 @@ export const markAppHistoryNavigation = (direction) => {
 }
 
 const onPopState = () => {
-  if (pendingAppPop) setTransitionDirection(pendingAppPop)
-  else root().dataset.vtSkip = ''
+  if (pendingAppPop) {
+    setTransitionDirection(pendingAppPop)
+  } else {
+    root().dataset.vtSkip = ''
+    disableViewTransitions()
+  }
   pendingAppPop = null
 }
 
