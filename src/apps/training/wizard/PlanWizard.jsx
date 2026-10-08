@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useOnline } from '../../../hooks/useOnline'
 import { Box, Typography, Button, IconButton, CircularProgress, Alert, Link } from '@mui/material'
 import ArrowBack from '@mui/icons-material/ArrowBackRounded'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -84,7 +85,8 @@ const buildPayload = (d) => ({
 })
 
 const PlanWizard = () => {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
+  const online = useOnline()
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState(emptyDraft)
   const [generating, setGenerating] = useState(false)
@@ -182,7 +184,7 @@ const PlanWizard = () => {
             fullWidth
             variant="contained"
             onClick={isLast ? handleGenerate : goNext}
-            disabled={!canNext || generating}
+            disabled={!canNext || generating || (isLast && !online)}
             sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
           >
             {generating

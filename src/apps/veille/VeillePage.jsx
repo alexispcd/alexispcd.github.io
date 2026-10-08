@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { Box, Chip, CircularProgress, Typography } from '@mui/material'
 import Sync from '@mui/icons-material/Sync'
 import GridView from '@mui/icons-material/GridView'
@@ -32,7 +32,7 @@ const FILTER_KEY = 'veille:filter'
 const UNREAD_KEY = 'veille:unreadOnly'
 
 const VeillePage = () => {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const { setHeaderActions, user } = useAppCtx()
 
   const [articles, setArticles] = useState([])

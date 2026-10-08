@@ -1,10 +1,10 @@
 import { Card, CardContent, Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 
 const AppCard = ({ module }) => {
   const theme = useTheme()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const Icon = module.icon
 
   return (

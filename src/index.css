@@ -35,3 +35,74 @@ body {
   padding: 0;         
   margin: 0;          
 }
+/* Transitions de page (View Transitions API). Sens dans data-vt-dir (forward | back),
+   style dans data-vt-style, posés sur <html> par src/lib/viewTransition.js. */
+
+/* Header fixe, fondu haut et pastille hors ligne : capturés à part, sans animation. */
+::view-transition-group(app-header),
+::view-transition-group(app-header-fade),
+::view-transition-group(offline-indicator),
+::view-transition-new(app-header),
+::view-transition-new(app-header-fade),
+::view-transition-new(offline-indicator) {
+  animation: none;
+}
+::view-transition-old(app-header),
+::view-transition-old(app-header-fade),
+::view-transition-old(offline-indicator) {
+  display: none;
+}
+
+@keyframes vt-slide-from-right { from { transform: translateX(100%); } }
+@keyframes vt-slide-to-left { to { transform: translateX(-30%); } }
+@keyframes vt-slide-from-left { from { transform: translateX(-30%); } }
+@keyframes vt-slide-to-right { to { transform: translateX(100%); } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-zoom-in-from-small { from { opacity: 0; transform: scale(0.96); } }
+@keyframes vt-zoom-out-to-large { to { opacity: 0; transform: scale(1.04); } }
+@keyframes vt-zoom-in-from-large { from { opacity: 0; transform: scale(1.04); } }
+@keyframes vt-zoom-out-to-small { to { opacity: 0; transform: scale(0.96); } }
+
+/* Glissement façon iOS : la nouvelle page arrive par la droite, l'ancienne recule un peu. */
+:root[data-vt-style="slide"]::view-transition-old(root),
+:root[data-vt-style="slide"]::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt-style="slide"][data-vt-dir="forward"]::view-transition-old(root) { animation-name: vt-slide-to-left; }
+:root[data-vt-style="slide"][data-vt-dir="forward"]::view-transition-new(root) { animation-name: vt-slide-from-right; }
+:root[data-vt-style="slide"][data-vt-dir="back"]::view-transition-old(root) { animation-name: vt-slide-to-right; z-index: 1; }
+:root[data-vt-style="slide"][data-vt-dir="back"]::view-transition-new(root) { animation-name: vt-slide-from-left; }
+
+/* Fondu enchaîné. */
+:root[data-vt-style="fade"]::view-transition-old(root) { animation: vt-fade-out 250ms ease both; }
+:root[data-vt-style="fade"]::view-transition-new(root) { animation: vt-fade-in 250ms ease both; }
+
+/* Fondu et zoom : avance vers l'avant, retour vers l'arrière. */
+:root[data-vt-style="fade-zoom"]::view-transition-old(root),
+:root[data-vt-style="fade-zoom"]::view-transition-new(root) {
+  animation-duration: 280ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt-style="fade-zoom"][data-vt-dir="forward"]::view-transition-old(root) { animation-name: vt-zoom-out-to-large; }
+:root[data-vt-style="fade-zoom"][data-vt-dir="forward"]::view-transition-new(root) { animation-name: vt-zoom-in-from-small; }
+:root[data-vt-style="fade-zoom"][data-vt-dir="back"]::view-transition-old(root) { animation-name: vt-zoom-out-to-small; }
+:root[data-vt-style="fade-zoom"][data-vt-dir="back"]::view-transition-new(root) { animation-name: vt-zoom-in-from-large; }
+
+/* Aucune animation : style « none », ou réduction des animations demandée par le système. */
+:root[data-vt-style="none"]::view-transition-group(*),
+:root[data-vt-style="none"]::view-transition-old(*),
+:root[data-vt-style="none"]::view-transition-new(*) {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

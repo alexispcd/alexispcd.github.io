@@ -1,6 +1,7 @@
-import { createBrowserRouter, RouterProvider, Outlet, useMatches, useNavigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet, useMatches } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
 import { ThemeProvider, CssBaseline, Box } from '@mui/material'
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { useDarkMode } from './hooks/useDarkMode'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
@@ -10,16 +11,20 @@ import AccessGate from './components/AccessGate'
 import FullScreenLoader from './components/FullScreenLoader'
 import RouteError from './components/RouteError'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
+import UpdatePrompt from './components/UpdatePrompt'
+import OfflineIndicator from './components/OfflineIndicator'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 import { fetchAccess, publishAccess, clearAccess } from './lib/access'
+import { clearDataCache } from './lib/pwa'
+import { useAppNavigate } from './hooks/useAppNavigate'
 
 const AppLayout = () => {
   const { dark, setDark, user, access, headerActions, overlay } = useAppCtx()
   const matches = useMatches()
   const lastMatch = matches.at(-1)
   const handle = lastMatch?.handle ?? {}
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
 
   // backTo peut être une string ou une fonction (params) => string (route dynamique).
   const backTo = typeof handle.backTo === 'function'
@@ -56,6 +61,7 @@ const AppLayout = () => {
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
             height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT / 2}px)`,
             pointerEvents: 'none',
+            viewTransitionName: 'app-header-fade',
             background: dark
               ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 12%, rgba(15,15,18,0) 100%)'
               : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 12%, rgba(255,255,255,0) 100%)',
@@ -71,7 +77,8 @@ const AppLayout = () => {
           isAdmin={access?.role === 'admin'}
           // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
           // pt : le header porte l'inset haut et ne passe plus sous l'heure (py:1.5 = 12px conservés).
-          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          // viewTransitionName : capturé à part, il reste immobile pendant les transitions de page.
+          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)', viewTransitionName: 'app-header' }}
           />
         </>
       )}
@@ -106,8 +113,22 @@ const App = () => {
   const access = loadedAccess?.userId === user?.id ? loadedAccess : null
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    // Hors ligne, getUser() échoue sur l'appel réseau et renverrait user null alors que la
+    // session locale est valide : cet échec réseau est ignoré, la session locale arrive
+    // par onAuthStateChange (INITIAL_SESSION). Un refus du serveur garde son effet.
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (isAuthRetryableFetchError(error)) return
+      setUser(data.user ?? null)
+    })
+    // Dernier compte vu : le cache hors ligne (indexé par URL, pas par compte) est vidé
+    // à la déconnexion et au passage d'un compte à un autre.
+    let lastUserId = null
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUserId = session?.user?.id ?? null
+      if (event === 'SIGNED_OUT' || (lastUserId && nextUserId && nextUserId !== lastUserId)) {
+        clearDataCache()
+      }
+      if (nextUserId) lastUserId = nextUserId
       setUser(session?.user ?? null)
     })
     return () => subscription.unsubscribe()
@@ -154,6 +175,8 @@ const App = () => {
             <RouterProvider router={router} />
           </AccessGate>
         </AuthGate>
+        <OfflineIndicator />
+        <UpdatePrompt />
       </AppCtx.Provider>
     </ThemeProvider>
   )

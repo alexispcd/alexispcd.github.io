@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useOnline } from '../../../hooks/useOnline'
 import {
   Box, Typography, Chip, Button, CircularProgress, Alert, Snackbar,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
@@ -30,8 +32,10 @@ import CorosPushDialog from '../session/CorosPushDialog'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const { setHeaderActions } = useAppCtx()
+  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
+  const online = useOnline()
 
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -180,14 +184,14 @@ const PlanDashboard = () => {
     if (!plan || plan.generation_status !== 'ready') { setHeaderActions([]); return }
     const actions = []
     if (!readOnly) {
-      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true) })
-      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
+      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true), disabled: !online })
+      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true), disabled: !online })
     }
-    actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history') })
-    actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings') })
+    actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
+    actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings', { direction: 'forward' }) })
     setHeaderActions(actions)
     return () => setHeaderActions([])
-  }, [plan, readOnly, navigate, setHeaderActions])
+  }, [plan, readOnly, online, navigate, setHeaderActions])
 
   // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
   // Même borne que regenerate-plan : semaines à partir de la courante incluse.
@@ -358,10 +362,10 @@ const PlanDashboard = () => {
               : (plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.')}
           </Alert>
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying}>
+            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying || !online}>
               Supprimer
             </Button>
-            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying}>
+            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying || !online}>
               {retrying ? <CircularProgress size={18} color="inherit" /> : 'Réessayer'}
             </Button>
           </Box>
@@ -529,7 +533,7 @@ const PlanDashboard = () => {
                 <ZoneGroup
                   key={group.zone}
                   group={group}
-                  readOnly={readOnly}
+                  readOnly={readOnly || !online}
                   onSkip={handleSkip}
                   onOpen={handleOpen}
                   onPush={handlePush}
@@ -539,7 +543,7 @@ const PlanDashboard = () => {
           )}
         </Box>
 
-        {!readOnly && (sessions?.length ?? 0) > 0 && (
+        {!readOnly && online && (sessions?.length ?? 0) > 0 && (
           <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1, px: 2 }}>
             Tape une séance pour l'ouvrir · glisse à droite pour la sauter, à gauche pour l'envoyer
           </Typography>
@@ -549,7 +553,8 @@ const PlanDashboard = () => {
       {/* Dialog adaptation */}
       <Dialog
         open={Boolean(skipDialog)}
-        onClose={() => !adapting && handleCancelSkip()}
+        // Hors ligne, fermer garde la séance sautée (déjà enregistrée) : l'annulation écrit en base.
+        onClose={() => { if (adapting) return; if (online) handleCancelSkip(); else setSkipDialog(null) }}
         slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
@@ -561,8 +566,8 @@ const PlanDashboard = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
+          <Button onClick={handleCancelSkip} disabled={adapting || !online} color="inherit">Annuler</Button>
+          <Button onClick={handleAdapt} disabled={adapting || !online} variant="contained">
             {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
           </Button>
         </DialogActions>
@@ -577,6 +582,7 @@ const PlanDashboard = () => {
         text={'Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées.'
           + (regenOnWatch > 0 ? ` ${onWatchWarning(regenOnWatch)}` : '')}
         confirmLabel="Régénérer"
+        confirmDisabled={!online}
       />
 
       {/* Popup d'envoi vers la montre (swipe) */}
@@ -595,6 +601,7 @@ const PlanDashboard = () => {
         title="Archiver ce plan ?"
         text="Le plan passera en lecture seule et ne sera plus modifiable. Tu pourras toujours le consulter dans tes anciens plans."
         confirmLabel="Archiver"
+        confirmDisabled={!online}
       />
 
       <Snackbar
@@ -674,7 +681,7 @@ const SectionLabel = ({ children }) => (
   </Typography>
 )
 
-const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel }) => (
+const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel, confirmDisabled = false }) => (
   <Dialog
     open={open}
     onClose={onClose}
@@ -686,7 +693,7 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel }) 
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2 }}>
       <Button onClick={onClose} color="inherit">Annuler</Button>
-      <Button onClick={onConfirm} variant="contained">{confirmLabel}</Button>
+      <Button onClick={onConfirm} disabled={confirmDisabled} variant="contained">{confirmLabel}</Button>
     </DialogActions>
   </Dialog>
 )

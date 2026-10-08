@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useOnline } from '../../../hooks/useOnline'
 import {
   Box, Typography, Button, CircularProgress, Alert, Snackbar, Collapse,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
@@ -67,12 +69,15 @@ const VERDICT_ICON = {
 
 const SessionPage = () => {
   const { planId, sessionId } = useParams()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
 
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [busy, setBusy] = useState(false) // action en cours (valider renfo, reset, délier…)
+  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
+  const online = useOnline()
+  const locked = busy || !online
   const [snack, setSnack] = useState(null)
 
   const [completeOpen, setCompleteOpen] = useState(false)
@@ -321,7 +326,7 @@ const SessionPage = () => {
             text="Séance adaptée suite à une séance sautée."
             action="Restaurer la version d'origine"
             onAction={doRestore}
-            disabled={busy}
+            disabled={locked}
           />
         )}
 
@@ -332,7 +337,7 @@ const SessionPage = () => {
             text="Séance sautée."
             action="Reprendre la séance"
             onAction={doRestore}
-            disabled={busy}
+            disabled={locked}
           />
         )}
         {isSkipped && isCorosCopyUpcoming(session) && (
@@ -345,7 +350,7 @@ const SessionPage = () => {
         {isRenfo ? (
           <RenfoBody
             content={session.strength_content}
-            editable={canComplete}
+            editable={canComplete && online}
             onChangeDuration={handleRenfoDuration}
             onStart={startPlayer}
           />
@@ -373,7 +378,7 @@ const SessionPage = () => {
                   startIcon={<Watch />}
                   endIcon={isPushed ? <ExpandMore /> : undefined}
                   onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
-                  disabled={busy}
+                  disabled={locked}
                   sx={{
                     height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
                     boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
@@ -392,7 +397,7 @@ const SessionPage = () => {
                     <Box
                       component="button"
                       onClick={doUpdateCoros}
-                      disabled={busy}
+                      disabled={locked}
                       sx={{
                         p: 0, border: 0, bgcolor: 'transparent', font: 'inherit', fontWeight: 700,
                         color: 'primary.main', cursor: 'pointer', textDecoration: 'underline',
@@ -410,8 +415,8 @@ const SessionPage = () => {
                   transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                   slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
                 >
-                  <MenuItem onClick={doUpdateCoros}>Mettre à jour</MenuItem>
-                  <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }}>
+                  <MenuItem onClick={doUpdateCoros} disabled={!online}>Mettre à jour</MenuItem>
+                  <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }} disabled={!online}>
                     Envoyer à une autre date
                   </MenuItem>
                 </Menu>
@@ -459,7 +464,7 @@ const SessionPage = () => {
                 <Button
                   variant="outlined"
                   onClick={doSkip}
-                  disabled={busy}
+                  disabled={locked}
                   sx={{
                     flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
                     textTransform: 'none', fontWeight: 600, boxShadow: 'none',
@@ -472,7 +477,7 @@ const SessionPage = () => {
                   fullWidth
                   variant="contained"
                   onClick={isRenfo ? openRenfoComplete : () => setCompleteOpen(true)}
-                  disabled={busy}
+                  disabled={locked}
                   sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
                 >
                   {busy
@@ -487,7 +492,7 @@ const SessionPage = () => {
                   fullWidth
                   variant="outlined"
                   onClick={() => setConfirmReset(true)}
-                  disabled={busy}
+                  disabled={locked}
                   sx={{
                     height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
                     boxShadow: 'none', borderColor: 'divider', color: 'text.secondary',
@@ -499,7 +504,7 @@ const SessionPage = () => {
                   <Button
                     variant="outlined"
                     onClick={doDelink}
-                    disabled={busy}
+                    disabled={locked}
                     sx={{
                       flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
                       textTransform: 'none', fontWeight: 600, boxShadow: 'none',
@@ -545,9 +550,9 @@ const SessionPage = () => {
           <RpeForm value={renfoFeedback} onChange={setRenfoFeedback} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button onClick={() => doCompleteRenfo(null)} color="inherit">Passer</Button>
+          <Button onClick={() => doCompleteRenfo(null)} disabled={!online} color="inherit">Passer</Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={() => doCompleteRenfo(toFeedbackPayload(renfoFeedback))} variant="contained">
+          <Button onClick={() => doCompleteRenfo(toFeedbackPayload(renfoFeedback))} disabled={!online} variant="contained">
             Valider
           </Button>
         </DialogActions>
@@ -555,7 +560,8 @@ const SessionPage = () => {
 
       <Dialog
         open={skipOpen}
-        onClose={() => !adapting && handleCancelSkip()}
+        // Hors ligne, fermer garde la séance sautée (déjà enregistrée) : l'annulation écrit en base.
+        onClose={() => { if (adapting) return; if (online) handleCancelSkip(); else { setSkipOpen(false); backToDashboard() } }}
         slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
@@ -567,8 +573,8 @@ const SessionPage = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
+          <Button onClick={handleCancelSkip} disabled={adapting || !online} color="inherit">Annuler</Button>
+          <Button onClick={handleAdapt} disabled={adapting || !online} variant="contained">
             {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
           </Button>
         </DialogActions>
@@ -587,7 +593,7 @@ const SessionPage = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmReset(false)} color="inherit">Annuler</Button>
-          <Button onClick={doReset} variant="contained">Réinitialiser</Button>
+          <Button onClick={doReset} disabled={!online} variant="contained">Réinitialiser</Button>
         </DialogActions>
       </Dialog>
 

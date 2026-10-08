@@ -6,6 +6,8 @@ import {
 } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { pushToCoros, getCorosStatus } from '../../../lib/training'
+import { setTransitionDirection } from '../../../lib/viewTransition'
+import { useOnline } from '../../../hooks/useOnline'
 import { cleanText, todayISO, addDaysISO, COROS_PUSH_WINDOW_DAYS } from '../constants'
 
 // Date proposée : la date prévue, ramenée à aujourd'hui si elle est passée, et
@@ -36,6 +38,7 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
   const [error, setError] = useState(null)
   const [connected, setConnected] = useState(null) // null = vérification en cours
   const [wasOpen, setWasOpen] = useState(false)
+  const online = useOnline()
 
   // Reset à l'ouverture, ajusté pendant le rendu (pas d'effet).
   if (open && !wasOpen) {
@@ -96,7 +99,7 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
         {connected === false && (
           <Alert severity="info" sx={{ mb: 2 }}>
             Coros n'est pas connecté.{' '}
-            <Link component={RouterLink} to="/training/settings" onClick={onClose}>
+            <Link component={RouterLink} to="/training/settings" viewTransition onClick={() => { setTransitionDirection('forward'); onClose() }}>
               Connecter Coros dans les réglages
             </Link>
           </Alert>
@@ -120,7 +123,7 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
         <Button onClick={onClose} disabled={pushing} color="inherit">Annuler</Button>
         <Button
           onClick={confirm}
-          disabled={pushing || !dateValid || connected !== true}
+          disabled={pushing || !dateValid || connected !== true || !online}
           variant="contained"
         >
           {pushing || connected === null ? <CircularProgress size={18} color="inherit" /> : 'Envoyer'}

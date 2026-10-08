@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { Box, Button, Card, CircularProgress, Divider, Typography } from '@mui/material'
 import TaskAlt from '@mui/icons-material/TaskAlt'
 import StyleOutlined from '@mui/icons-material/StyleOutlined'
@@ -64,7 +64,7 @@ const EmptyState = ({ icon, title, children, accent }) => (
 )
 
 const RevisionsHome = () => {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const { rows, loading, error, reload } = useProgress()
   const [filters, setFilters] = useState(EMPTY_FILTERS)
 

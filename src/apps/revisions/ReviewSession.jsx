@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { Box, Button, Card, CircularProgress, Divider, LinearProgress, Typography } from '@mui/material'
 import Autorenew from '@mui/icons-material/Autorenew'
 import WarningAmber from '@mui/icons-material/WarningAmber'
@@ -18,7 +19,7 @@ const INNER_SX = {
 }
 
 const ReviewSession = () => {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const location = useLocation()
   const filters = location.state?.filters ?? null
 

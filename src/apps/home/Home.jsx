@@ -1,5 +1,6 @@
 import { Box, Typography, Divider } from '@mui/material'
 import AppCard from '../../components/AppCard'
+import InstallBanner from '../../components/InstallBanner'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { homeCategories } from '../registry'
 import { useAppCtx } from '../../lib/context'
@@ -41,6 +42,8 @@ const Home = () => {
             </Typography>
           </Box>
         </Box>
+
+        <InstallBanner />
 
         {categories.length === 0 && (
           <Typography variant="body2" color="text.secondary">

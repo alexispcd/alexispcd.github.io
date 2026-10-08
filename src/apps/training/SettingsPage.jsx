@@ -7,6 +7,7 @@ import {
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx, glassSx, GLASS_BACKDROP } from '../../styles/glass'
 import { getCorosStatus, startCorosOauth, disconnectCoros } from '../../lib/training'
+import { useOnline } from '../../hooks/useOnline'
 
 // Coins concentriques : radius carte = inset (16 = p 2) + radius bouton (12) = 28.
 const CARD_INSET = 2
@@ -47,6 +48,8 @@ const SettingsPage = () => {
   // juste apres pour que le message ne persiste pas au rechargement.
   const [notice, setNotice] = useState(() => noticeFromParam(searchParams.get('coros')))
   const [starting, setStarting] = useState(false)
+  // Hors ligne : connexion et déconnexion Coros indisponibles (Edge Function).
+  const online = useOnline()
 
   // Deconnexion : confirmation, appel en cours, erreur affichee dans la modale.
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
@@ -154,7 +157,7 @@ const SettingsPage = () => {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
-            disabled={loading || starting}
+            disabled={loading || starting || !online}
             onClick={handleConnect}
           >
             {starting
@@ -167,7 +170,7 @@ const SettingsPage = () => {
               variant="text"
               fullWidth
               sx={{ mt: 1, color: DISCONNECTED_COLOR }}
-              disabled={starting}
+              disabled={starting || !online}
               onClick={openDisconnect}
             >
               Déconnecter
@@ -196,7 +199,7 @@ const SettingsPage = () => {
           </Button>
           <Button
             onClick={handleDisconnect}
-            disabled={disconnecting}
+            disabled={disconnecting || !online}
             variant="contained"
             sx={{ bgcolor: DISCONNECTED_COLOR, color: '#fff', '&:hover': { bgcolor: DISCONNECTED_COLOR } }}
           >

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
+import { useOnline } from '../../hooks/useOnline'
 import {
   Box, Typography, Button, IconButton, CircularProgress, Alert,
   Menu, MenuItem, ListItemIcon, ListItemText,
@@ -26,7 +28,9 @@ const formatEndDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
 const TrainingHome = () => {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
+  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
+  const online = useOnline()
   const { setHeaderActions } = useAppCtx()
   const [searchParams] = useSearchParams()
   const historyView = searchParams.get('view') === 'history'
@@ -151,6 +155,7 @@ const TrainingHome = () => {
             <Button
               variant="contained"
               fullWidth
+              disabled={!online}
               onClick={() => navigate('/training/wizard')}
             >
               Créer un plan
@@ -216,7 +221,7 @@ const TrainingHome = () => {
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         PaperProps={{ sx: { ...glassSx, minWidth: 180 } }}
       >
-        <MenuItem onClick={askDelete}>
+        <MenuItem onClick={askDelete} disabled={!online}>
           <ListItemIcon><DeleteOutlined fontSize="small" /></ListItemIcon>
           <ListItemText>Supprimer</ListItemText>
         </MenuItem>
@@ -239,7 +244,7 @@ const TrainingHome = () => {
           <Button onClick={() => setConfirmDelete(null)} disabled={deleting} color="inherit">
             Annuler
           </Button>
-          <Button onClick={doDelete} disabled={deleting} color="error" variant="contained">
+          <Button onClick={doDelete} disabled={deleting || !online} color="error" variant="contained">
             {deleting ? <CircularProgress size={18} color="inherit" /> : 'Supprimer'}
           </Button>
         </DialogActions>

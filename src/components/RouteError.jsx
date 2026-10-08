@@ -1,4 +1,5 @@
-import { useRouteError, isRouteErrorResponse, useNavigate } from 'react-router-dom'
+import { useRouteError, isRouteErrorResponse } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import { Box, Typography, Button } from '@mui/material'
 
 // Messages des navigateurs quand un chunk lazy est introuvable, typiquement après
@@ -7,7 +8,7 @@ const CHUNK_ERROR = /Failed to fetch dynamically imported module|error loading d
 
 const RouteError = () => {
   const error = useRouteError()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   // URL inconnue ou module désactivé : recharger ne changerait rien, on renvoie à l'accueil.
   const isNotFound = isRouteErrorResponse(error) && error.status === 404
   const isChunkError = CHUNK_ERROR.test(error?.message ?? '')
