@@ -19,48 +19,35 @@ export const directionFor = (to, from = window.location.pathname) => {
   return pathDepth(target) < pathDepth(from) ? 'back' : 'forward'
 }
 
+// Toute navigation lancée par l'app réactive l'animation (data-vt-skip retiré).
 export const setTransitionDirection = (direction) => {
   root().dataset.vtDir = direction
+  delete root().dataset.vtSkip
 }
 
-// Bouton retour du navigateur ou geste système : toujours un retour.
-export const initTransitions = () => {
-  window.addEventListener('popstate', () => setTransitionDirection('back'))
-  applyTransitionStyle(readTransitionStyle())
+// Sens d'un déplacement dans l'historique lancé par l'app (navigate(-1)), lu puis
+// remis à zéro par le prochain popstate. Absent : le popstate vient du geste retour
+// iOS ou du bouton du navigateur, qui animent déjà eux-mêmes.
+let pendingAppPop = null
+
+export const markAppHistoryNavigation = (direction) => {
+  pendingAppPop = direction
 }
 
-// --- Réglage de test, à retirer une fois le style choisi ---
-// Choix du style (data-vt-style sur <html>, CSS dans index.css), mémorisé par appareil.
-
-export const VT_STYLES = [
-  { id: 'slide', label: 'Glissement' },
-  { id: 'fade', label: 'Fondu' },
-  { id: 'fade-zoom', label: 'Fondu et zoom' },
-  { id: 'none', label: 'Aucune' },
-]
-
-const VT_STYLE_KEY = 'cairn-vt-style'
-const DEFAULT_VT_STYLE = 'slide'
-
-export const readTransitionStyle = () => {
-  try {
-    const stored = localStorage.getItem(VT_STYLE_KEY)
-    return VT_STYLES.some(s => s.id === stored) ? stored : DEFAULT_VT_STYLE
-  } catch {
-    return DEFAULT_VT_STYLE
-  }
+const onPopState = () => {
+  if (pendingAppPop) setTransitionDirection(pendingAppPop)
+  else root().dataset.vtSkip = ''
+  pendingAppPop = null
 }
 
-export const applyTransitionStyle = (style) => {
-  root().dataset.vtStyle = style
-}
+// Enregistré à l'évaluation du module, donc avant le listener popstate du router
+// (createBrowserRouter dans App.jsx, qui dépend de ce module) : data-vt-skip est posé
+// avant que React Router ne traite le popstate.
+window.addEventListener('popstate', onPopState)
 
-export const saveTransitionStyle = (style) => {
-  applyTransitionStyle(style)
-  try {
-    localStorage.setItem(VT_STYLE_KEY, style)
-  } catch {
-    // Stockage indisponible : le style vaut pour cette session seulement.
-  }
+// Ancien réglage de test (style au choix), plus lu : on efface la valeur mémorisée.
+try {
+  localStorage.removeItem('cairn-vt-style')
+} catch {
+  // Stockage indisponible : rien à nettoyer.
 }
-// --- Fin du réglage de test ---

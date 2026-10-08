@@ -10,11 +10,9 @@ import DarkMode from '@mui/icons-material/DarkMode'
 import LightMode from '@mui/icons-material/LightMode'
 import Logout from '@mui/icons-material/Logout'
 import AdminPanelSettings from '@mui/icons-material/AdminPanelSettings'
-import Animation from '@mui/icons-material/Animation'
 import supabase from '../lib/supabase'
 import { clearDataCache } from '../lib/pwa'
 import { useAppNavigate } from '../hooks/useAppNavigate'
-import TransitionStyleDialog from './TransitionStyleDialog'
 import { glassSx } from '../styles/glass'
 
 // Hauteur occupée par le header flottant (py:1.5 *2 + bouton 36px)
@@ -35,8 +33,6 @@ const AppHeader = ({
   const [actionsAnchor, setActionsAnchor] = useState(null)
 
   const navigate = useAppNavigate()
-  // Réglage de test, à retirer une fois le style choisi.
-  const [transitionsOpen, setTransitionsOpen] = useState(false)
 
   // Ferme les menus au changement de route (AppHeader n'est jamais démonté).
   // Ajustement pendant le rendu plutôt qu'un effet : pas de rendu intermédiaire
@@ -170,13 +166,6 @@ const AppHeader = ({
               <ListItemText>Administration</ListItemText>
             </MenuItem>
           )}
-          {/* Réglage de test, à retirer une fois le style choisi. */}
-          {isAdmin && (
-            <MenuItem onClick={() => { setAccountAnchor(null); setTransitionsOpen(true) }}>
-              <ListItemIcon><Animation fontSize="small" /></ListItemIcon>
-              <ListItemText>Transitions</ListItemText>
-            </MenuItem>
-          )}
           <MenuItem onClick={() => { setDark(!dark); setAccountAnchor(null) }}>
             <ListItemIcon>
               {dark ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
@@ -188,10 +177,6 @@ const AppHeader = ({
             <ListItemText>Se déconnecter</ListItemText>
           </MenuItem>
         </Menu>
-        {/* Réglage de test, à retirer une fois le style choisi. */}
-        {isAdmin && (
-          <TransitionStyleDialog open={transitionsOpen} onClose={() => setTransitionsOpen(false)} />
-        )}
       </Box>
 
     </Box>
