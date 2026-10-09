@@ -1,0 +1,1 @@
+import{P as e,Tt as t}from"./index-Vnozty9J.js";var n=t(),r=({children:t,sx:r})=>(0,n.jsx)(e,{variant:`overline`,sx:{display:`block`,color:`text.disabled`,letterSpacing:`0.12em`,fontSize:`0.62rem`,fontWeight:600,mt:2.5,mb:1,px:.5,...r},children:t});export{r as t};
