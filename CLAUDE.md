@@ -78,7 +78,7 @@ Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par modul
 
 Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
 
-Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir Specs Training). Chantier suivant en cadrage : Renfo en module autonome.
+Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir Specs Training). Module Renfo autonome : backend en place (tables, catalogue, photos, `renfo-cycle`, `renfo-session`, voir Specs Renfo), front à venir.
 
 ---
 
@@ -170,14 +170,16 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 | `fetch-rss` | | Récupère les flux RSS dans `watch_items` |
 | `summarize-article` | `{ articleId, url, title, content }` | Fiche Mistral `{ summary, keyPoints, suggestedTags }` |
 | `admin-users` | `{ action, ... }` : `list`, `create { email, modules }`, `set_modules { user_id, modules }`, `disable` / `enable { user_id }`, `delete { user_id }` | Gestion des comptes, réservée au rôle admin (lu côté serveur). Refuse disable, enable et delete sur un compte admin (403) ; set_modules y est permis, y compris sur son propre compte. 409 si l'email existe déjà |
+| `renfo-cycle` | `{}` ; `continue_cycle_id` pour reprendre (interne) | Génère un cycle Renfo de 4 semaines en asynchrone (202 `{ cycle_id }`), une semaine par appel modèle. 409 `profile_missing`, `cycle_generating` ou `cycle_in_progress` ; reprend un cycle en `error` |
+| `renfo-session` | `{ kind }` (parmi `FREE_KINDS`) | Génère une séance libre synchrone, hors cycle, sur la semaine en cours. 409 `profile_missing`, 422 avec `details` si la séance reste invalide après retry |
 
-Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push, regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`) ne passent pas par ce contrôle.
+Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push, regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Module `renfo` : renfo-cycle, renfo-session. Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`, `continue_cycle_id`) ne passent pas par ce contrôle.
 
 **Règle** : toute Edge Function rattachée à un module appelle `requireModule(supabaseAdmin, user.id, '<module>')` juste après `getUser`. Les en-têtes CORS sont posés par `withCors` (`_shared/cors.ts`).
 
 **Règle des erreurs** : un `detail` (ou tout champ) renvoyé au client ne contient qu'un message écrit à la main en français, destiné à l'utilisateur. Tout message interne (`err.message`, `String(err)`, erreur Postgres ou Supabase, texte Coros, Mistral ou Anthropic, erreur de parsing) part dans `console.error` avec le préfixe `[nom-fonction]`, jamais dans la réponse : le texte Coros peut contenir des injections. 500 générique : `internalError(tag, err)` (`_shared/http.ts`), qui logge et renvoie `{ error: "Internal server error" }`. Chaque autre erreur garde un `error` lisible en français. À conserver : `error: "Coros authentication required"` en 503 (testé par `CompleteDialog.jsx`), `error.code` et `plan_id` quand ils existent, `details` des 422 de validation IA.
 
-`verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth, coros-push, admin-users) : l'auth y est vérifiée dans le code.
+`verify_jwt` est désactivé sur certaines fonctions (generate-plan, adapt-sessions, regenerate-plan, complete-session, coros-match, coros-oauth, coros-push, admin-users, renfo-cycle) : l'auth y est vérifiée dans le code.
 
 ### Auth
 - Connexion par code OTP email (`AuthGate`), `shouldCreateUser: false` : un email sans compte reçoit « Ce compte n'existe pas. Demande une invitation. ».
@@ -233,7 +235,7 @@ Couleurs, définies dans `ZONE_STYLE` (`src/apps/training/constants.js:4`) et in
 - Training ne génère plus de renfo (ni génération, ni adaptation, ni régénération depuis l'UI). Le code renfo partagé est conservé pour le futur module autonome : `RENFO_RULES` (`methodology.ts`), `strength.ts`, `exercises.ts`, `estimator.ts`, le player, et la valeur `renfo` en base (zone et type).
 - Matériel disponible : tapis de sol, élastiques de 10, 15, 20, 30 et 40 kg, barre de traction. Chaise possible mais à minimiser.
 - État du code : le type `Equipment` ne connaît que `"none" | "chair"` (`supabase/functions/_shared/training/exercises.ts:22`). Élastiques et barre ne sont pas encore intégrés.
-- Décision actée : Renfo deviendra un module autonome avec son propre planning, indépendant du plan course. Chantier non commencé, ne rien anticiper dans le code.
+- Décision actée : Renfo deviendra un module autonome avec son propre planning, indépendant du plan course. Voir « Specs Renfo ».
 - Ordre de validation renfo : structure validée sur la sortie brute du modèle (bloquant, `validateStrengthContent`), durée de base contrôlée en souple avant le trim (`baseDurationHint`), puis simple warning sur la durée finale (`finalDurationWarning`). Ne jamais valider la durée avant le trim.
 
 ### Philosophie du plan
@@ -283,6 +285,36 @@ Séance par séance, par utilisateur (token Coros propre à chaque compte), via 
 Structure de données prête (`race_elevation_m`, distance libre, type Trail dans le wizard). La logique de génération trail (côtes, D+ dans les sorties longues, renfo descente, objectif à l'effort) est une évolution future.
 
 ---
+
+## Specs Renfo
+
+Module autonome de renforcement musculaire, planning propre, indépendant du plan course de Training. Backend en place (migration `20261009103052_renfo_module.sql`), front à venir (`src/apps/renfo/`).
+
+### Tables
+- **strength_profiles** : une ligne par compte (`user_id` PK), `frequency` 1 à 3 (défaut 2), `equipment` text[] limité à `chair` et `bar`. Droits authenticated complets.
+- **strength_bands** : inventaire d'élastiques, `kg` (> 0), `color` (`#rrggbb`), unique `(user_id, kg)`. Droits authenticated complets.
+- **strength_cycles** : cycle de 4 semaines, `number`, `start_date` (un lundi), `frequency` figée, `status` (`active` | `completed`, un seul `active` par compte), `generation_status` (`generating` | `ready` | `error`), `generated_weeks`, `main_exercises` jsonb (`{ "<kind>": ["slug", ...] }`, figés en semaine 1). authenticated : lecture seule.
+- **strength_sessions** : `cycle_id` et `week_index` (1 à 4) tous deux null pour une séance libre, `week_start` (lundi, pas de jour imposé), `position`, `kind`, `title`, `content` jsonb, `status` (`planned` | `done`), `completed_at`, `bands_used` jsonb (`{ "<slug>": <kg> }`), `rpe`, `pain_areas`, `feedback_note`. authenticated : lecture, update limité à `status, completed_at, bands_used, rpe, pain_areas, feedback_note`, delete des seules séances libres (policy restrictive), pas d'insert. RPE et `bands_used` stockés, pas encore utilisés par la génération.
+
+### Code partagé (`supabase/functions/_shared/strength/`)
+`catalog.ts`, `rules.ts`, `estimate.ts` et `validate.ts` sont du TypeScript pur, sans import Deno ni npm : le front les importe aussi. `prompt.ts` et `generate.ts` sont réservés aux Edge Functions.
+- **Catalogue** (`catalog.ts`) : 57 exercices, textes affichés tels quels. Catégories `warmup`, `legs`, `posterior_chain`, `calves_feet`, `pull`, `push`, `arms`, `core`, `balance`, `cooldown` ; matériel `band`, `bar`, `chair` ; `anchor` = hauteur de barre (`high`, `mid`, `low`) ; `mode` `reps` ou `duration` ; `ref` dosage de référence (par côté si `unilateral`) ; `assist` = élastique d'assistance (bande plus forte = plus facile). `availableExercises` : `band` disponible dès qu'il y a une bande.
+- **Types de séance** (`rules.ts`) : fréquence 1 → `full` ; 2 → `lower_core`, `upper_core` ; 3 → `legs`, `upper`, `core_runner`. Séance libre : `full`, `legs`, `upper`, `core_runner`. Catégories autorisées par bloc dans `BLOCK_CATEGORIES`, extras d'échauffement dans `WARMUP_EXTRAS`.
+- **Phases** : semaine 1 `base`, 2 `progression`, 3 `pic`, 4 `decharge`. Exercices principaux identiques sur les 4 semaines d'un cycle, le reste varie.
+
+### Contenu d'une séance (`strength_sessions.content`)
+`{ title, estimated_min, blocks }`, exactement 5 blocs dans l'ordre : `warmup` (3 à 4 exercices, une fois), `main` (2 à 3 exercices en séries, `sets`, `rest_sec`), deux `superset` (`rounds`, `rest_sec` après B, `a`, `b`), `cooldown` (3 à 4 exercices). `reps` ou `duration_sec` selon le mode, jamais les deux, valeur par côté si unilatéral. `band_kg` présent si et seulement si l'exercice utilise `band`, égal à une bande du compte. `estimated_min` posé par `estimateSessionMinutes`, jamais par le modèle. Validation complète dans `validateSessionContent` (erreurs en français).
+
+### Règles de barre
+Barre de traction mobile : dans un superset, A et B à la même hauteur s'ils utilisent tous deux la barre ; deux hauteurs différentes au plus par séance.
+
+### Edge Functions
+- `renfo-cycle` : même mécanisme que `generate-plan` (`EdgeRuntime.waitUntil`, auto-invocation `{ continue_cycle_id }` en service role, avancement lu dans `generated_weeks`, reprenable). Une semaine par appel modèle, validation, un retry avec les erreurs ; semaine partielle nettoyée à la reprise. Nouveau cycle : l'actif passe en `completed`, `start_date` = lundi de la semaine en cours. Échec : `generation_status = 'error'`, cause dans les logs uniquement.
+- `renfo-session` : séance libre synchrone, contexte = séances de la semaine en cours, pas d'exercices principaux imposés.
+- Modèle : même constante que `generate-plan` (`MODEL` de `_shared/strength/generate.ts`).
+
+### Photos
+48 exercices ont une photo, issue du dépôt public `yuhonas/free-exercise-db` (Unlicense, provenance des photos non documentée, voir `public/renfo/CREDITS.md`). `scripts/renfo-images.mjs` (à relancer avec `node`, git et réseau requis) écrit `public/renfo/<slug>-0.webp` (départ) et `-1.webp` (arrivée) avec sharp, 480 px au plus, qualité 70 : 96 fichiers. Non précachées par le service worker (`globPatterns` par défaut).
 
 ## Specs Côtes
 
