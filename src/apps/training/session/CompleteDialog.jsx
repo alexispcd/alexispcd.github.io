@@ -12,8 +12,8 @@ import { corosMatch, completeSession } from '../../../lib/training'
 import { formatKm, formatGoalTime, formatPace } from '../constants'
 import { setTransitionDirection } from '../../../lib/viewTransition'
 import { useOnline } from '../../../hooks/useOnline'
-import RpeForm from './RpeForm'
-import { emptyFeedback, toFeedbackPayload } from './feedback'
+import RpeForm from '../../../components/RpeForm'
+import { emptyFeedback, toFeedbackPayload } from '../../../lib/feedback'
 
 // Cohérent avec le garde-fou serveur (3 activités max par complétion).
 const MAX_ACTIVITIES = 3

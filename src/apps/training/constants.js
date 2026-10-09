@@ -5,7 +5,6 @@ export const ZONE_STYLE = {
   A:     { main: '#1D9E75', bg: 'rgba(29,158,117,0.12)' },
   B:     { main: '#f97316', bg: 'rgba(249,115,22,0.12)' },
   C:     { main: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
-  renfo: { main: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
 }
 
 // Teintes des blocs — distinctes des zones, lisibles en dark mode.
@@ -30,7 +29,6 @@ export const ZONE_LABEL = {
   A: 'Zone A',
   B: 'Zone B',
   C: 'Zone C',
-  renfo: 'Renfo',
 }
 
 export const BLOCK_LABEL = {
@@ -51,7 +49,6 @@ export const TYPE_LABEL = {
   fractionne: 'Fractionné',
   tempo: 'Tempo',
   sortie_longue: 'Sortie longue',
-  renfo: 'Renfo',
 }
 
 export const PLAN_STATUS_LABEL = {
@@ -61,13 +58,12 @@ export const PLAN_STATUS_LABEL = {
 }
 
 // ── Zones : ordre d'affichage + plage de jours (méthodo) ─────────────────────
-export const ZONE_ORDER = ['A', 'B', 'C', 'renfo']
+export const ZONE_ORDER = ['A', 'B', 'C']
 
 export const ZONE_SUBLABEL = {
   A: 'Facile',
   B: 'Qualité',
   C: 'Sortie longue',
-  renfo: null,
 }
 
 /**
@@ -80,7 +76,6 @@ export const intensityOf = (type) => ({
   fractionne: 'B',
   tempo: 'B',
   sortie_longue: 'C',
-  renfo: 'renfo',
 }[type] ?? 'A')
 
 // Plages de jours par zone (tirets simples, jamais de cadratin).
@@ -88,7 +83,6 @@ export const ZONE_DAYS = {
   A: 'Lun-Mar',
   B: 'Mer-Ven',
   C: 'Sam-Dim',
-  renfo: 'Libre dans la semaine',
 }
 
 const DOW_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
@@ -102,7 +96,7 @@ export const shortDayLabel = (dateStr) => {
 }
 
 /**
- * Groupe les séances d'une semaine par zone, dans l'ordre A, B, C, renfo.
+ * Groupe les séances d'une semaine par zone, dans l'ordre A, B, C.
  * Ne renvoie que les zones ayant au moins une séance (groupes vides masqués).
  * Chaque groupe : { zone, sessions, done, total }.
  */

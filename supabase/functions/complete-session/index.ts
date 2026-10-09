@@ -73,6 +73,10 @@ const PAIN_LABELS: Record<string, string> = {
   quadri_d: "cuisse droite",
   tfl_g: "hanche/TFL gauche",
   tfl_d: "hanche/TFL droite",
+  epaule_g: "épaule gauche",
+  epaule_d: "épaule droite",
+  coude_g: "coude gauche",
+  coude_d: "coude droit",
   dos: "dos",
   autre: "autre",
 }
@@ -211,7 +215,7 @@ async function handleRequest(req: Request): Promise<Response> {
   //        le tri chronologique côté serveur)
   //      - coros_activity_ids : ["id", ...]              (compat : sans horodatage)
   //      - coros_activity_id : "id"                       (compat : une activité)
-  //    Aucune des trois = complétion sans Coros (renfo ou course non liée).
+  //    Aucune des trois = complétion sans Coros (course non liée).
   let sessionId: string
   let selected: SelectedActivity[] | null
   let feedback: Feedback | null
@@ -243,7 +247,7 @@ async function handleRequest(req: Request): Promise<Response> {
   if (sessionErr || !session) return json(404, { error: "Séance introuvable" })
   if (session.status === "done") return json(409, { error: "Séance déjà complétée" })
 
-  // 4. Cas sans Coros (renfo ou course non liée) : pas de laps à comparer.
+  // 4. Cas sans Coros (course non liée) : pas de laps à comparer.
   //    On persiste le ressenti et, s'il est présent, un conseil fondé dessus.
   if (!selected) {
     const completedAt = completedAtFrom(null, completedDate ?? session.scheduled_date)
@@ -261,11 +265,6 @@ async function handleRequest(req: Request): Promise<Response> {
       })
     }
     selected = [...selected].sort((a, b) => (a.start_timestamp as number) - (b.start_timestamp as number))
-  }
-
-  // 5. Renfo : pas de matching Coros possible.
-  if (session.type === "renfo") {
-    return json(400, { error: "Une séance de renfo se valide sans Coros (envoie sans coros_activity_id)" })
   }
 
   const { data: stepsRows, error: stepsErr } = await supabaseAdmin

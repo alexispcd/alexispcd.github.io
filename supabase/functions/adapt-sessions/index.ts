@@ -5,9 +5,8 @@ import { withCors } from "../_shared/cors.ts"
 import { errorMessage, internalError } from "../_shared/http.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { extractJson } from "../_shared/extract-json.ts"
-import { isStrengthSession, validateSessionContent } from "../_shared/training/validate.ts"
+import { validateSessionContent } from "../_shared/training/validate.ts"
 import { buildStepRows } from "../_shared/training/persist.ts"
-import { finalizeStrengthContent } from "../_shared/training/strength.ts"
 import { expandSteps } from "../_shared/training/expand.ts"
 import { addDaysISO } from "../_shared/training/weeks.ts"
 import { corosTokenProvider, syncCorosCopy } from "../_shared/training/coros-sync.ts"
@@ -22,7 +21,7 @@ import {
 const MODEL = "claude-sonnet-4-6"
 const WINDOW_DAYS = 10
 const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pace_sec, pace_tolerance_sec, distance_m, duration_sec"
-const SESSION_COLS = `id, scheduled_date, zone, type, title, rationale, notes, strength_content, session_steps(${STEP_COLS})`
+const SESSION_COLS = `id, scheduled_date, zone, type, title, rationale, notes, session_steps(${STEP_COLS})`
 
 const json = (status: number, body: unknown) => Response.json(body, { status })
 
@@ -30,9 +29,8 @@ interface AdaptedOut {
   id: string
   title?: string
   rationale?: string
-  type?: string           // nouveau type si la nature de la séance change (bascule renfo interdite)
+  type?: string           // nouveau type de course si la nature de la séance change
   steps?: CompactStep[]   // format compact (sortie modèle), déplié avant persistance
-  strength_content?: unknown
 }
 
 /** Normalise une ligne séance (+ steps imbriqués) en SessionContent (steps triés). */
@@ -48,7 +46,6 @@ function toSessionContent(row: Record<string, unknown>): SessionContent {
     title: row.title as string,
     rationale: (row.rationale as string) ?? null,
     notes: (row.notes as string) ?? null,
-    strength_content: row.strength_content ?? null,
     steps,
   }
 }
@@ -68,23 +65,14 @@ function validateAdapted(adapted: AdaptedOut[], byId: Map<string, SessionContent
       errors.push(`séance ${a.id} : hors fenêtre`)
       continue
     }
+    // Type hors des 4 types de course : rejeté par validateSessionContent.
     const nextType = a.type ?? cur.type
-    // Bascule renfo <-> course interdite : les contenus sont incompatibles.
-    if (
-      a.type &&
-      isStrengthSession({ type: cur.type as PlanSession["type"], zone: cur.zone as PlanSession["zone"] }) !==
-        isStrengthSession({ type: nextType as PlanSession["type"], zone: cur.zone as PlanSession["zone"] })
-    ) {
-      errors.push(`séance ${a.id} : bascule renfo interdite`)
-      continue
-    }
     const pseudo: PlanSession = {
       scheduled_date: cur.scheduled_date,
       zone: cur.zone as PlanSession["zone"],
       type: nextType as PlanSession["type"],
       title: a.title ?? cur.title,
       steps: a.steps,
-      strength_content: a.strength_content,
     }
     validateSessionContent(pseudo, `séance ${a.id}`, errors)
   }
@@ -134,8 +122,8 @@ async function handleRequest(req: Request): Promise<Response> {
   const skipped = toSessionContent(skippedRow)
   const planId = skippedRow.plan_id as string
 
-  // Séance facile / renfo sautée → aucune compensation (règle déterministe).
-  if (skipped.type === "facile" || skipped.type === "renfo") {
+  // Séance facile sautée → aucune compensation (règle déterministe).
+  if (skipped.type === "facile") {
     return json(200, { sessions: [] })
   }
 
@@ -157,10 +145,8 @@ async function handleRequest(req: Request): Promise<Response> {
     .gte("scheduled_date", historyStart)
     .lte("scheduled_date", skipped.scheduled_date)
     .order("scheduled_date", { ascending: true })
-  // Les renfos sont hors du plan course : exclus de l'historique envoyé au modèle.
   const feedbackHistory = (feedbackRows ?? []).filter(
-    (r) => !isStrengthSession(r as Pick<PlanSession, "type" | "zone">) &&
-      (r.rpe != null || (Array.isArray(r.pain_areas) && r.pain_areas.length) || r.feedback_note),
+    (r) => r.rpe != null || (Array.isArray(r.pain_areas) && r.pain_areas.length) || r.feedback_note,
   ) as FeedbackHistoryRow[]
 
   // 4. Fenêtre : séances suivantes 'planned' dans [date sautée, +10 jours]
@@ -178,10 +164,8 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(500, { error: "Lecture de la fenêtre impossible" })
   }
 
-  // Les renfos ne sont jamais adaptés : exclus de la fenêtre et du prompt.
   const windowSessions = (windowRows ?? [])
     .map((r) => toSessionContent(r as Record<string, unknown>))
-    .filter((s) => !isStrengthSession(s as Pick<PlanSession, "type" | "zone">))
   if (windowSessions.length === 0) return json(200, { sessions: [] })
 
   const byId = new Map(windowSessions.map((s) => [s.id, s]))
@@ -237,9 +221,6 @@ async function handleRequest(req: Request): Promise<Response> {
   for (const a of adapted) {
     const cur = byId.get(a.id)!
     const nextType = a.type ?? cur.type
-    // La bascule renfo étant interdite (rejetée en validation), isRenfo est
-    // identique pour cur.type et nextType : on le calcule sur cur.
-    const isRenfo = isStrengthSession({ type: cur.type as PlanSession["type"], zone: cur.zone as PlanSession["zone"] })
 
     const previousVersion = {
       title: cur.title,
@@ -247,7 +228,6 @@ async function handleRequest(req: Request): Promise<Response> {
       notes: cur.notes,
       type: cur.type,
       steps: cur.steps,
-      strength_content: cur.strength_content,
     }
 
     const { error: updErr } = await supabaseAdmin
@@ -256,9 +236,6 @@ async function handleRequest(req: Request): Promise<Response> {
         title: a.title ?? cur.title,
         rationale: a.rationale ?? cur.rationale,
         type: nextType,
-        strength_content: isRenfo
-          ? (a.strength_content ? finalizeStrengthContent(a.strength_content as never) : cur.strength_content)
-          : cur.strength_content,
         previous_version: previousVersion,
         status: "adapted",
         adapted_at: now,
@@ -271,8 +248,8 @@ async function handleRequest(req: Request): Promise<Response> {
       continue
     }
 
-    // Remplacement des steps (séances de course uniquement) — dépliage du compact.
-    if (!isRenfo && Array.isArray(a.steps)) {
+    // Remplacement des steps : dépliage du format compact.
+    if (Array.isArray(a.steps)) {
       await supabaseAdmin.from("session_steps").delete().eq("session_id", a.id)
       const rows = buildStepRows(a.id, user.id, expandSteps(a.steps))
       if (rows.length) {
@@ -284,7 +261,7 @@ async function handleRequest(req: Request): Promise<Response> {
     // Copie Coros : mise à jour automatique. syncCorosCopy n'échoue jamais, un
     // problème est seulement noté dans coros_sync_error ; on blinde quand même
     // pour qu'aucune erreur imprévue n'interrompe l'adaptation.
-    if (!isRenfo && onWatch.has(a.id)) {
+    if (onWatch.has(a.id)) {
       try {
         await syncCorosCopy(supabaseAdmin, user.id, a.id, getCorosToken)
       } catch (err) {

@@ -387,10 +387,10 @@ const PlanDashboard = () => {
   const maxKm = weeks.reduce((m, w) => Math.max(m, weekKm(w)), 0)
   const days = daysUntil(plan.race_date)
 
-  // Km réalisés de la semaine sélectionnée : séances faites hors renfo, laps réels
+  // Km réalisés de la semaine sélectionnée : séances faites, laps réels
   // si synchronisés, sinon fallback sur l'agrégat prévu.
   const doneMeters = (sessions ?? []).reduce((sum, s) => {
-    if (s.type === 'renfo' || s.status !== 'done') return sum
+    if (s.status !== 'done') return sum
     const laps = s.actual_laps
     if (Array.isArray(laps) && laps.length) {
       return sum + laps.reduce((a, l) => a + (l.distance_m ?? 0), 0)
@@ -634,8 +634,8 @@ const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
   // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
   // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
   // ZONE_LABEL / ZONE_DAYS restent calés sur la zone (créneau de jours).
-  const runSession = sessions.find((s) => s.type !== 'renfo')
-  const key = zone === 'renfo' || !runSession ? zone : intensityOf(runSession.type)
+  const runSession = sessions[0]
+  const key = runSession ? intensityOf(runSession.type) : zone
   const z = ZONE_STYLE[key] ?? ZONE_STYLE.A
   const sub = ZONE_SUBLABEL[key]
 
@@ -661,7 +661,7 @@ const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
             key={s.id}
             session={s}
             canSkip={!readOnly && s.status !== 'done'}
-            canPush={!readOnly && s.type !== 'renfo' && (s.status === 'planned' || s.status === 'adapted')}
+            canPush={!readOnly && (s.status === 'planned' || s.status === 'adapted')}
             onSkip={onSkip}
             onOpen={onOpen}
             onPush={onPush}

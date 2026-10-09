@@ -1,4 +1,4 @@
-// Bips du player renfo.
+// Bips du player Renfo.
 //
 // Le Web Audio est coupé par le switch silencieux de l'iPhone : une séance
 // renfo se fait souvent téléphone en mode silencieux, les bips de fin de chrono

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { useOnline } from '../../../hooks/useOnline'
 import {
-  Box, Typography, Button, CircularProgress, Alert, Snackbar, Collapse,
+  Box, Typography, Button, CircularProgress, Alert, Snackbar,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
   Menu, MenuItem,
 } from '@mui/material'
@@ -14,18 +14,16 @@ import PauseCircle from '@mui/icons-material/PauseCircleOutlined'
 import Bedtime from '@mui/icons-material/BedtimeOutlined'
 import AutoAwesome from '@mui/icons-material/AutoAwesome'
 import ExpandMore from '@mui/icons-material/ExpandMore'
-import EventSeat from '@mui/icons-material/EventSeatOutlined'
 import Redo from '@mui/icons-material/Redo'
 import CheckCircle from '@mui/icons-material/CheckCircle'
 import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
-import PlayArrow from '@mui/icons-material/PlayArrow'
 import Watch from '@mui/icons-material/WatchOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
 import {
   getSession, skipSession, unskipSession, adaptSessions,
-  completeSession, resetSession, updateStrengthContent, updateOnCoros,
+  completeSession, resetSession, updateOnCoros,
 } from '../../../lib/training'
 import {
   ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
@@ -35,14 +33,9 @@ import {
 import {
   groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
 } from '../sessionMath'
-import { RENFO_DURATIONS, applyDuration } from './renfo'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 import CorosPushDialog from './CorosPushDialog'
-import RpeForm from './RpeForm'
-import RenfoPlayer from './player/RenfoPlayer'
-import { createBeeps } from './player/beeps'
-import { emptyFeedback, toFeedbackPayload } from './feedback'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
 const STATUS_CHIP = {
@@ -74,22 +67,18 @@ const SessionPage = () => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
-  const [busy, setBusy] = useState(false) // action en cours (valider renfo, reset, délier…)
+  const [busy, setBusy] = useState(false) // action en cours (reset, délier…)
   // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
   const online = useOnline()
   const locked = busy || !online
   const [snack, setSnack] = useState(null)
 
   const [completeOpen, setCompleteOpen] = useState(false)
-  const [renfoFeedbackOpen, setRenfoFeedbackOpen] = useState(false)
-  const [renfoFeedback, setRenfoFeedback] = useState(emptyFeedback())
   const [skipOpen, setSkipOpen] = useState(false)
   const [adapting, setAdapting] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [pushOpen, setPushOpen] = useState(false)
   const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
-
-  const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
 
   const flash = (message, severity = 'error') => setSnack({ message, severity })
   const backToDashboard = () => navigate(`/training/plan/${planId}`)
@@ -143,46 +132,6 @@ const SessionPage = () => {
     setSkipOpen(false)
     try { await unskipSession(sessionId) } catch (e) { flash(e.message) }
     backToDashboard()
-  }
-
-  const openRenfoComplete = () => {
-    setRenfoFeedback(emptyFeedback())
-    setRenfoFeedbackOpen(true)
-  }
-
-  // Player renfo : les bips sont créés et débloqués DANS le geste utilisateur
-  // (contrainte iOS) puis confiés au player, qui les libère à sa fermeture.
-  const startPlayer = () => {
-    let beeps
-    try {
-      beeps = createBeeps()
-      beeps.unlock()
-    } catch { beeps = null }
-    setPlayer({ beeps })
-  }
-
-  const closePlayer = () => setPlayer(null)
-
-  const validateFromPlayer = () => {
-    closePlayer()
-    openRenfoComplete()
-  }
-
-  const doCompleteRenfo = async (feedback) => {
-    setRenfoFeedbackOpen(false)
-    setBusy(true)
-    try {
-      await completeSession(sessionId, null, feedback)
-      await reload()
-    } catch (e) { flash(e.message) } finally { setBusy(false) }
-  }
-
-  const handleRenfoDuration = async (duration) => {
-    const updated = applyDuration(session.strength_content ?? {}, duration)
-    setSession((s) => ({ ...s, strength_content: updated }))
-    try {
-      await updateStrengthContent(sessionId, updated)
-    } catch (e) { flash(e.message) }
   }
 
   const doReset = async () => {
@@ -253,12 +202,11 @@ const SessionPage = () => {
   }
 
   const { zone, type, status, steps } = session
-  const isRenfo = type === 'renfo'
   const isDone = status === 'done'
   const isSkipped = status === 'skipped'
   const isAdapted = status === 'adapted'
   const canComplete = status === 'planned' || status === 'adapted'
-  const canPush = !isRenfo && canComplete
+  const canPush = canComplete
   const isPushed = Boolean(session.coros_workout_id)
 
   // Couleur dérivée de l'intensité du type ; le chip garde ZONE_LABEL[zone] :
@@ -287,7 +235,7 @@ const SessionPage = () => {
         <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
             <StatusChip label={ZONE_LABEL[zone]} main={zoneStyle.main} bg={zoneStyle.bg} />
-            {!isRenfo && <StatusChip label={TYPE_LABEL[type]} />}
+            <StatusChip label={TYPE_LABEL[type]} />
             <StatusChip label={STATUS_LABEL[status]} main={statusStyle.main} bg={statusStyle.bg} />
           </Box>
 
@@ -300,23 +248,11 @@ const SessionPage = () => {
             </Typography>
           )}
 
-          {!isRenfo && (
-            <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
-              {totalMeters(steps) > 0 && <Metric value={`${formatKm(totalMeters(steps))} km`} label="distance" />}
-              {totalSeconds(steps) > 0 && <Metric value={`~${formatMin(Math.round(totalSeconds(steps) / 60))}`} label="durée" />}
-              {keyPaceSec(steps) != null && <Metric value={`${formatPace(keyPaceSec(steps))} /km`} label="allure clé" />}
-            </Box>
-          )}
-          {isRenfo && session.strength_content && (
-            <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
-              {session.strength_content.target_duration_min && (
-                <Metric value={formatMin(session.strength_content.target_duration_min)} label="durée" />
-              )}
-              {Array.isArray(session.strength_content.blocks) && (
-                <Metric value={`${session.strength_content.blocks.length} blocs`} label="au programme" />
-              )}
-            </Box>
-          )}
+          <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
+            {totalMeters(steps) > 0 && <Metric value={`${formatKm(totalMeters(steps))} km`} label="distance" />}
+            {totalSeconds(steps) > 0 && <Metric value={`~${formatMin(Math.round(totalSeconds(steps) / 60))}`} label="durée" />}
+            {keyPaceSec(steps) != null && <Metric value={`${formatPace(keyPaceSec(steps))} /km`} label="allure clé" />}
+          </Box>
         </Box>
 
         {/* ── Bandeau séance adaptée ──────────────────────────────── */}
@@ -347,105 +283,95 @@ const SessionPage = () => {
         )}
 
         {/* ── Corps ───────────────────────────────────────────────── */}
-        {isRenfo ? (
-          <RenfoBody
-            content={session.strength_content}
-            editable={canComplete && online}
-            onChangeDuration={handleRenfoDuration}
-            onStart={startPlayer}
-          />
-        ) : (
-          <>
-            {/* Graphique */}
-            <SectionLabel>Allure</SectionLabel>
-            <Box sx={{ ...cardSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
-              <ChartLegend synced={Boolean(laps?.length)} hasHr={hasHr} />
-              <PaceChart steps={steps} actualLaps={laps} kmLaps={session.km_laps} comparisons={analysis?.comparisons ?? []} />
-            </Box>
+          {/* Graphique */}
+          <SectionLabel>Allure</SectionLabel>
+          <Box sx={{ ...cardSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
+            <ChartLegend synced={Boolean(laps?.length)} hasHr={hasHr} />
+            <PaceChart steps={steps} actualLaps={laps} kmLaps={session.km_laps} comparisons={analysis?.comparisons ?? []} />
+          </Box>
 
-            {/* Structure */}
-            <SectionLabel>Structure</SectionLabel>
-            <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
-              <StepsList steps={steps} type={type} />
-            </Box>
+          {/* Structure */}
+          <SectionLabel>Structure</SectionLabel>
+          <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
+            <StepsList steps={steps} type={type} />
+          </Box>
 
-            {/* Envoi vers la montre (MCP Coros) */}
-            {canPush && (
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<Watch />}
-                  endIcon={isPushed ? <ExpandMore /> : undefined}
-                  onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
-                  disabled={locked}
-                  sx={{
-                    height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
-                    boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
-                  }}
-                >
-                  {isPushed ? 'Sur la montre' : 'Envoyer vers la montre'}
-                </Button>
-                {isPushed && session.coros_workout_date && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
-                    {`Prévue le ${formatLongDay(session.coros_workout_date)} sur Coros`}
-                  </Typography>
-                )}
-                {isPushed && session.coros_sync_error && (
-                  <Typography variant="caption" color="warning.main" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
-                    {session.coros_sync_error}{' '}
-                    <Box
-                      component="button"
-                      onClick={doUpdateCoros}
-                      disabled={locked}
-                      sx={{
-                        p: 0, border: 0, bgcolor: 'transparent', font: 'inherit', fontWeight: 700,
-                        color: 'primary.main', cursor: 'pointer', textDecoration: 'underline',
-                      }}
-                    >
-                      Réessayer
-                    </Box>
-                  </Typography>
-                )}
-                <Menu
-                  anchorEl={watchAnchor}
-                  open={Boolean(watchAnchor)}
-                  onClose={() => setWatchAnchor(null)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                  slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
-                >
-                  <MenuItem onClick={doUpdateCoros} disabled={!online}>Mettre à jour</MenuItem>
-                  <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }} disabled={!online}>
-                    Envoyer à une autre date
-                  </MenuItem>
-                </Menu>
+          {/* Envoi vers la montre (MCP Coros) */}
+          {canPush && (
+            <Box sx={{ mt: 2 }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<Watch />}
+                endIcon={isPushed ? <ExpandMore /> : undefined}
+                onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
+                disabled={locked}
+                sx={{
+                  height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
+                  boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
+                }}
+              >
+                {isPushed ? 'Sur la montre' : 'Envoyer vers la montre'}
+              </Button>
+              {isPushed && session.coros_workout_date && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
+                  {`Prévue le ${formatLongDay(session.coros_workout_date)} sur Coros`}
+                </Typography>
+              )}
+              {isPushed && session.coros_sync_error && (
+                <Typography variant="caption" color="warning.main" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
+                  {session.coros_sync_error}{' '}
+                  <Box
+                    component="button"
+                    onClick={doUpdateCoros}
+                    disabled={locked}
+                    sx={{
+                      p: 0, border: 0, bgcolor: 'transparent', font: 'inherit', fontWeight: 700,
+                      color: 'primary.main', cursor: 'pointer', textDecoration: 'underline',
+                    }}
+                  >
+                    Réessayer
+                  </Box>
+                </Typography>
+              )}
+              <Menu
+                anchorEl={watchAnchor}
+                open={Boolean(watchAnchor)}
+                onClose={() => setWatchAnchor(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
+              >
+                <MenuItem onClick={doUpdateCoros} disabled={!online}>Mettre à jour</MenuItem>
+                <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }} disabled={!online}>
+                  Envoyer à une autre date
+                </MenuItem>
+              </Menu>
+            </Box>
+          )}
+
+          {/* Justification */}
+          {session.rationale && (
+            <>
+              <SectionLabel>Pourquoi ces allures</SectionLabel>
+              <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  {cleanText(session.rationale)}
+                </Typography>
               </Box>
-            )}
+            </>
+          )}
 
-            {/* Justification */}
-            {session.rationale && (
-              <>
-                <SectionLabel>Pourquoi ces allures</SectionLabel>
-                <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                    {cleanText(session.rationale)}
-                  </Typography>
-                </Box>
-              </>
-            )}
+          {/* Analyse */}
+          {analysis && (
+            <>
+              <SectionLabel>Analyse</SectionLabel>
+              <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
+                <AnalysisBlock analysis={analysis} />
+              </Box>
+            </>
+          )}
 
-            {/* Analyse */}
-            {analysis && (
-              <>
-                <SectionLabel>Analyse</SectionLabel>
-                <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
-                  <AnalysisBlock analysis={analysis} />
-                </Box>
-              </>
-            )}
-          </>
-        )}
 
       </Box>
 
@@ -476,13 +402,13 @@ const SessionPage = () => {
                 <Button
                   fullWidth
                   variant="contained"
-                  onClick={isRenfo ? openRenfoComplete : () => setCompleteOpen(true)}
+                  onClick={() => setCompleteOpen(true)}
                   disabled={locked}
                   sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
                 >
                   {busy
                     ? <CircularProgress size={18} color="inherit" />
-                    : isRenfo ? 'Valider' : 'Valider & lier Coros'}
+                    : 'Valider & lier Coros'}
                 </Button>
               </>
             )}
@@ -537,28 +463,6 @@ const SessionPage = () => {
       />
 
       <Dialog
-        open={renfoFeedbackOpen}
-        onClose={() => !busy && setRenfoFeedbackOpen(false)}
-        fullWidth
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Ton ressenti</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Optionnel, mais ça affine l'adaptation des prochaines séances.
-          </DialogContentText>
-          <RpeForm value={renfoFeedback} onChange={setRenfoFeedback} />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button onClick={() => doCompleteRenfo(null)} disabled={!online} color="inherit">Passer</Button>
-          <Box sx={{ flex: 1 }} />
-          <Button onClick={() => doCompleteRenfo(toFeedbackPayload(renfoFeedback))} disabled={!online} variant="contained">
-            Valider
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog
         open={skipOpen}
         // Hors ligne, fermer garde la séance sautée (déjà enregistrée) : l'annulation écrit en base.
         onClose={() => { if (adapting) return; if (online) handleCancelSkip(); else { setSkipOpen(false); backToDashboard() } }}
@@ -608,14 +512,6 @@ const SessionPage = () => {
         </Alert>
       </Snackbar>
 
-      {player && (
-        <RenfoPlayer
-          blocks={session.strength_content?.blocks}
-          beeps={player.beeps}
-          onClose={closePlayer}
-          onValidate={validateFromPlayer}
-        />
-      )}
     </Box>
   )
 }
@@ -770,161 +666,6 @@ const StepRow = ({ first, stepType, name, detail, pace, tol, }) => {
         </Box>
       )}
     </Box>
-  )
-}
-
-// ── Corps renfo ──────────────────────────────────────────────────────────────
-
-const exoDuration = (sec) => {
-  if (!sec) return null
-  if (sec < 60) return `${sec} s`
-  if (sec % 60 === 0) return `${sec / 60} min`
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} min`
-}
-
-// En circuit, séries et repos ne sont plus portés par l'exercice : seule la
-// charge (reps ou durée) est affichée. Les blocs hérités gardent l'ancien format.
-const exoDetail = (ex, circuit) => {
-  const load = ex.reps != null ? `${ex.reps}` : (exoDuration(ex.duration_sec) ?? '')
-  if (circuit) return load
-  const sets = ex.sets ? `${ex.sets} × ` : ''
-  const rest = ex.rest_sec != null ? ` · repos ${ex.rest_sec} s` : ''
-  return `${sets}${load}${rest}`.trim()
-}
-
-// Puce "chaise" quand l'exercice nécessite une chaise (equipment === 'chair').
-const ChairChip = () => (
-  <Box sx={{
-    display: 'inline-flex', alignItems: 'center', gap: 0.25, px: 0.6, py: 0.15,
-    borderRadius: '6px', bgcolor: 'action.hover', color: 'text.secondary',
-    fontSize: '0.58rem', fontWeight: 600, letterSpacing: '0.02em', flexShrink: 0,
-  }}>
-    <EventSeat sx={{ fontSize: 12 }} />
-    chaise
-  </Box>
-)
-
-// Ligne exercice : dépliable au tap pour révéler la description (si présente).
-// Rétrocompatible : sans description/equipment, s'affiche comme une ligne simple.
-const RenfoExerciseRow = ({ ex, first, circuit }) => {
-  const [open, setOpen] = useState(false)
-  const hasDesc = Boolean(ex.description)
-  const isChair = ex.equipment === 'chair'
-  return (
-    <Box sx={{ borderTop: first ? 'none' : '1px solid', borderColor: 'divider' }}>
-      <Box
-        onClick={hasDesc ? () => setOpen((o) => !o) : undefined}
-        sx={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
-          px: 2, py: 1.25, cursor: hasDesc ? 'pointer' : 'default', userSelect: 'none',
-        }}
-      >
-        <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <Typography variant="body2">{ex.name}</Typography>
-          {isChair && <ChairChip />}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-            {exoDetail(ex, circuit)}
-          </Typography>
-          {hasDesc && (
-            <ExpandMore sx={{
-              fontSize: 18, color: 'text.disabled',
-              transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s',
-            }} />
-          )}
-        </Box>
-      </Box>
-      {hasDesc && (
-        <Collapse in={open} unmountOnExit>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, pb: 1.25, lineHeight: 1.5 }}>
-            {cleanText(ex.description)}
-          </Typography>
-        </Collapse>
-      )}
-    </Box>
-  )
-}
-
-const RenfoBody = ({ content, editable, onChangeDuration, onStart }) => {
-  const blocks = Array.isArray(content?.blocks) ? content.blocks : []
-  if (!blocks.length) {
-    return (
-      <Box sx={{ ...cardSx, borderRadius: '20px', p: 3, mt: 2, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">Contenu de la séance indisponible.</Typography>
-      </Box>
-    )
-  }
-  const duration = content.target_duration_min
-  return (
-    <>
-      {editable && (
-        <>
-          <SectionLabel>Durée</SectionLabel>
-          <Box sx={{ display: 'flex', gap: 1, px: 0.5 }}>
-            {RENFO_DURATIONS.map((d) => {
-              const on = d === duration
-              return (
-                <Box
-                  key={d}
-                  onClick={() => !on && onChangeDuration(d)}
-                  sx={{
-                    flex: 1, textAlign: 'center', py: 1.25, borderRadius: '12px', cursor: 'pointer',
-                    fontSize: '0.8rem', fontWeight: 600, userSelect: 'none',
-                    border: '1px solid',
-                    borderColor: on ? ZONE_STYLE.renfo.main : 'divider',
-                    bgcolor: on ? ZONE_STYLE.renfo.bg : 'transparent',
-                    color: on ? ZONE_STYLE.renfo.main : 'text.secondary',
-                    transition: 'all .15s',
-                  }}
-                >
-                  {d} min
-                </Box>
-              )
-            })}
-          </Box>
-        </>
-      )}
-      {editable && (
-        <Button
-          fullWidth
-          variant="contained"
-          startIcon={<PlayArrow />}
-          onClick={onStart}
-          sx={{
-            mt: 2, height: 52, borderRadius: '26px', textTransform: 'none', fontWeight: 700,
-            fontSize: '1rem', boxShadow: 'none',
-            bgcolor: ZONE_STYLE.renfo.main, '&:hover': { bgcolor: ZONE_STYLE.renfo.main },
-          }}
-        >
-          Démarrer la séance
-        </Button>
-      )}
-      <SectionLabel>Programme</SectionLabel>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        {blocks.map((b, i) => {
-          const exos = Array.isArray(b.exercises) ? b.exercises : []
-          const circuit = b.rounds != null
-          const count = `${exos.length} exercice${exos.length > 1 ? 's' : ''}`
-          return (
-            <Box key={i} sx={{ ...cardSx, borderRadius: '20px', overflow: 'hidden' }}>
-              <Box sx={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider',
-              }}>
-                <Typography variant="body2" fontWeight={700}>{cleanText(b.theme ?? b.name)}</Typography>
-                <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>
-                  {circuit ? `${b.rounds} tours · ${count}` : count}
-                </Typography>
-              </Box>
-              {exos.map((ex, j) => (
-                <RenfoExerciseRow key={ex.slug ?? j} ex={ex} first={j === 0} circuit={circuit} />
-              ))}
-            </Box>
-          )
-        })}
-      </Box>
-    </>
   )
 }
 

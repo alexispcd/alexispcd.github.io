@@ -48,50 +48,11 @@ export type CompactStep = CompactSimpleStep | CompactRepeat
 // PlanSession = sortie modèle : steps au format COMPACT.
 export interface PlanSession {
   scheduled_date: string
-  zone: "A" | "B" | "C" | "renfo"
-  type: "facile" | "fractionne" | "tempo" | "sortie_longue" | "renfo"
+  zone: "A" | "B" | "C"
+  type: "facile" | "fractionne" | "tempo" | "sortie_longue"
   title: string
   rationale?: string
   steps?: CompactStep[]
-  strength_content?: unknown
-}
-
-// ── Renfo (musculation) ──────────────────────────────────────────────────────
-// Format CIRCUIT : un bloc est une liste d'exercices enchaînés, l'ensemble étant
-// répété `rounds` fois. Les repos ne sont plus portés par l'exercice, ils sont
-// déterministes et définis dans strength.ts.
-//
-// Sortie modèle : chaque exercice porte un `slug` du catalogue (exercises.ts) +
-// reps OU duration_sec. Le code enrichit ensuite name / description / category /
-// equipment / unilateral depuis le catalogue.
-export interface StrengthExercise {
-  slug: string
-  reps?: number | null
-  duration_sec?: number | null
-  // Blocs HISTORIQUES uniquement (plans générés avant le format circuit) :
-  // séries et repos portés par l'exercice. Le modèle ne les émet plus.
-  sets?: number
-  rest_sec?: number
-  // Champs résolus à l'enrichissement (persistance) :
-  name?: string
-  description?: string
-  category?: string
-  equipment?: string
-  unilateral?: boolean
-}
-
-export interface StrengthBlock {
-  theme: string
-  /** Nombre de tours du circuit. Absent = bloc historique (sets / rest_sec). */
-  rounds?: number
-  exercises: StrengthExercise[]
-}
-
-export interface StrengthContent {
-  target_duration_min: number
-  blocks: StrengthBlock[]
-  // Base complète (~45 min) figée à la persistance, source de la recomposition.
-  base_blocks?: StrengthBlock[]
 }
 
 export interface PlanWeek {

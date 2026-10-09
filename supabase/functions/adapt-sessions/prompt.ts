@@ -10,7 +10,6 @@ export interface SessionContent {
   title: string
   rationale: string | null
   notes: string | null
-  strength_content: unknown
   steps: unknown[]
 }
 
@@ -36,6 +35,10 @@ const PAIN_LABELS: Record<string, string> = {
   quadri_d: "cuisse droite",
   tfl_g: "hanche/TFL gauche",
   tfl_d: "hanche/TFL droite",
+  epaule_g: "épaule gauche",
+  epaule_d: "épaule droite",
+  coude_g: "coude gauche",
+  coude_d: "coude droit",
   dos: "dos",
   autre: "autre",
 }
@@ -58,7 +61,7 @@ ${TRAINING_RULES}
 RÈGLES D'ADAPTATION (fenêtre glissante) :
 - Séance sautée de QUALITÉ (fractionne / tempo) → préserve AU MOINS une séance de qualité dans la fenêtre, quitte à transformer une séance facile en qualité.
 - Séance sautée = sortie_longue → reporte une partie du volume sur la sortie longue suivante (max +15 % distance/durée).
-- Séance sautée = facile ou renfo → ne compense rien (retourne { "adapted": [] }).
+- Séance sautée = facile → ne compense rien (retourne { "adapted": [] }).
 - JAMAIS deux séances dures consécutives pour rattraper.
 - N'augmente pas la charge de plus d'une séance à la fois.
 - RESSENTI : si l'historique montre un RPE >= 8 répété, ou une même douleur sur 2 séances ou plus, RÉDUIS le volume/l'intensité des séances à venir et mentionne-le explicitement dans la justification (rationale).
@@ -68,15 +71,13 @@ SORTIE :
   { "adapted": [ { "id": "<uuid de la séance>", "title": "...", "rationale": "...", "type": "<optionnel, seulement s'il change>", "steps": [ ...mêmes règles de steps que ci-dessus... ] } ] }
 - Pour une séance de COURSE adaptée, renvoie TOUJOURS le tableau "steps" complet (il remplace intégralement l'existant).
 - N'inclure QUE les séances réellement modifiées. Ne modifie JAMAIS la date ni la zone d'une séance : la zone est un créneau de jours, pas un niveau d'intensité, et elle ne contient qu'une séance.
-- Si tu changes la NATURE d'une séance, renvoie son nouveau "type" parmi facile, fractionne, tempo, sortie_longue. Une séance de course ne devient JAMAIS un renfo, et un renfo ne devient JAMAIS une séance de course.`
+- Si tu changes la NATURE d'une séance, renvoie son nouveau "type" parmi facile, fractionne, tempo, sortie_longue.`
 }
 
 function describeSession(s: SessionContent): string {
-  const base = `id="${s.id}" — ${s.scheduled_date} — Zone ${s.zone} / ${s.type} — "${s.title}"`
+  const base = `id="${s.id}" · ${s.scheduled_date} · Zone ${s.zone} / ${s.type} · "${s.title}"`
   // Steps présentés au format COMPACT (comme la sortie attendue).
-  const content = s.type === "renfo" || s.zone === "renfo"
-    ? `strength_content: ${JSON.stringify(s.strength_content)}`
-    : `steps: ${JSON.stringify(foldSteps(s.steps as PlanStep[]))}`
+  const content = `steps: ${JSON.stringify(foldSteps(s.steps as PlanStep[]))}`
   return `  · ${base}\n    ${content}`
 }
 

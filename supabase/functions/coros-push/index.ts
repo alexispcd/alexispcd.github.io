@@ -55,7 +55,6 @@ async function handlePush(admin: SupabaseClient, userId: string, sessionId: stri
     .eq("user_id", userId)
     .maybeSingle()
   if (error || !session) return json(404, { error: "Séance introuvable" })
-  if (session.type === "renfo") return json(400, { error: "Seules les séances de course peuvent être envoyées" })
   if (session.status !== "planned" && session.status !== "adapted") {
     return json(409, { error: "Séance non envoyable", detail: "Seules les séances à venir ou adaptées peuvent être envoyées." })
   }

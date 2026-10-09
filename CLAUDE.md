@@ -31,6 +31,7 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `apps/home/` : page d'accueil, cartes par catégorie construites depuis le registre
 - `apps/cotes/` : outil Côtes (ex Côtes.Run)
 - `apps/training/` : outil Training (plan d'entraînement course à pied)
+- `apps/renfo/` : outil Renfo (renforcement à la maison, cycles de 4 semaines, player ; voir Specs Renfo)
 - `apps/veille/` : outil Veille dev (RSS + fiches Mistral)
 - `apps/revisions/` : outil Révisions (cartes en répétition espacée)
 - `components/AppCard.jsx` : carte module de la home (navigation React Router, icône MUI)
@@ -39,9 +40,10 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `components/AuthGate.jsx` : écran de connexion OTP tant qu'il n'y a pas de session
 - `components/AccessGate.jsx` : loader tant que les droits du compte ne sont pas chargés
 - `components/FullScreenLoader.jsx` : loader plein écran partagé
+- `components/RpeForm.jsx` : formulaire de ressenti (RPE, douleurs, note) partagé par Training et Renfo, accent en prop ; zones de douleur et helpers dans `lib/feedback.js`
 - `hooks/useDarkMode.jsx` : mode sombre (localStorage + classe `body.dark`), passé en props `{ dark, setDark }` à chaque app
 - `styles/theme.js` : thème MUI clair et sombre
-- `lib/supabase.js` : client Supabase ; `lib/training.js` : accès données Training ; `lib/rss.js` : Veille
+- `lib/supabase.js` : client Supabase ; `lib/functions.js` : `callFunction` (appel d'Edge Function avec le jeton de session) ; `lib/training.js` : accès données Training ; `lib/renfo.js` : accès données Renfo ; `lib/rss.js` : Veille
 - `lib/access.js` : rôle et modules du compte connecté, `hasModule` (miroir de `_shared/access.ts`), accès publié pour les loaders de route ; `lib/admin.js` : appels à `admin-users`
 
 Routes : `/` (Home) est déclarée en dur dans `src/App.jsx`, toutes les autres sont générées depuis le registre avec le `lazy` de route de React Router (un chunk par page, `hydrateFallbackElement` au premier chargement). Titre et cible du bouton retour dans le `handle` de chaque route, dans le `module.js`. Chaque route de module a un `loader` qui attend l'accès publié par `App` et lève un 404 si le compte n'a pas le module (`canAccess` du registre) : la page n'est jamais rendue. Le router est créé une seule fois ; `App` appelle `router.revalidate()` quand l'accès change : changement de compte, ou admin qui modifie ses propres modules (`refreshAccess` du contexte, appelé par la page Administration). Tous les modules ont leurs routes et leurs chunks précachés ; un module non attribué n'a pas de carte et ses routes renvoient un 404.
@@ -76,9 +78,9 @@ Révisions et Veille : code actif dans le registre, attribuées à aucun compte.
 
 Multi-utilisateur (quelques comptes) : rôles `user` / `admin`, droits par module (`user_modules`), module Administration. Inscriptions fermées. Filet de sécurité en place : CI bloquante, lint vert, tests verts, deno check vert, schéma reproductible.
 
-Training ne génère plus de renfo : 3 séances de course par semaine (zones A, B, C). Toutes les séances renfo existantes sont supprimées par la migration `20261002131938_remove_renfo_sessions.sql` (2026-10-02).
+Training ne porte que la course : 3 séances par semaine (zones A, B, C). Tout l'ancien renfo de Training est supprimé (code, fonction `regenerate-renfo`, colonne `strength_content` et valeurs `renfo` des contraintes, migration `20261009113125_training_drop_renfo.sql`).
 
-Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir Specs Training). Module Renfo autonome : backend en place (tables, catalogue, photos, `renfo-cycle`, `renfo-session`, voir Specs Renfo), front à venir.
+Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir Specs Training). Module Renfo autonome en place, front et backend (voir Specs Renfo).
 
 ---
 
@@ -135,7 +137,7 @@ Droits sur les tables (migration `20261007141949_fix_table_grants.sql`) :
 
 - **training_plans** : `status` (`active` | `completed` | `archived`), `generation_status` (`generating` | `ready` | `error`), `generation_error`, `race_name`, `race_date`, `race_distance_m`, `race_elevation_m`, `goal_time_sec`, `fitness_snapshot` jsonb (`{ vo2max, threshold_pace, vma, predictions, source }`), `previous_races` jsonb, `notes`, `summary` (résumé IA), `start_date` (ajouté par migration `20260709090000`). Un seul plan `active` par utilisateur (index unique partiel). Les plans dont la course est passée basculent en `completed`.
 - **training_weeks** : `plan_id`, `week_number`, `block` (`construction` | `intensification` | `affutage`), `focus`, `target_km`, `start_date`.
-- **training_sessions** : `plan_id`, `week_id`, `scheduled_date`, `zone` (`A` | `B` | `C` | `renfo`), `type` (`facile` | `fractionne` | `tempo` | `sortie_longue` | `renfo`), `title`, `rationale` (justification des allures), `notes`, `status` (`planned` | `done` | `skipped` | `adapted`), `completed_at`, `coros_activity_id` + `coros_activity_ids` text[], `actual_laps`, `km_laps`, `analysis` jsonb (`{ verdict, advice, comparisons }`), `previous_version` jsonb (snapshot avant adaptation), `adapted_at`, `adapted_by_session_id`, `strength_content` jsonb (renfo : `{ target_duration_min, blocks: [{ name, exercises: [{ name, sets, reps?, duration_sec?, rest_sec }] }] }`), feedback (`rpe` 1 à 10, `pain_areas`, `feedback_note`), copie sur la montre (migration `20261006063050_coros_push.sql`) : `coros_workout_id` (idInPlan Coros, entier 64 bits gardé en texte), `coros_workout_date` (date de la copie, peut différer de `scheduled_date`), `coros_pushed_at`, `coros_sync_error` (dernier échec de mise à jour, message court en français).
+- **training_sessions** : `plan_id`, `week_id`, `scheduled_date`, `zone` (`A` | `B` | `C`), `type` (`facile` | `fractionne` | `tempo` | `sortie_longue`), `title`, `rationale` (justification des allures), `notes`, `status` (`planned` | `done` | `skipped` | `adapted`), `completed_at`, `coros_activity_id` + `coros_activity_ids` text[], `actual_laps`, `km_laps`, `analysis` jsonb (`{ verdict, advice, comparisons }`), `previous_version` jsonb (snapshot avant adaptation), `adapted_at`, `adapted_by_session_id`, feedback (`rpe` 1 à 10, `pain_areas`, `feedback_note`), copie sur la montre (migration `20261006063050_coros_push.sql`) : `coros_workout_id` (idInPlan Coros, entier 64 bits gardé en texte), `coros_workout_date` (date de la copie, peut différer de `scheduled_date`), `coros_pushed_at`, `coros_sync_error` (dernier échec de mise à jour, message court en français).
 - **session_steps** : `session_id`, `order_index`, `step_type` (`warmup` | `run` | `interval` | `recovery` | `cooldown`), `repeat_group` / `repeat_index` (répétitions aplaties, regroupées à l'affichage), `target_pace_sec` (s/km), `pace_tolerance_sec` (défaut 5), `distance_m` ou `duration_sec`.
 
 ### Autres tables
@@ -160,7 +162,6 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 |---|---|---|
 | `generate-plan` | contexte wizard (course, snapshot forme, objectif, éditions passées, notes) ; `continue_plan_id` pour reprendre | Génère le plan en asynchrone, refuse (409) si un plan actif existe |
 | `regenerate-plan` | `plan_id` ; `continue_regen` pour reprendre | Régénère la fin du plan |
-| `regenerate-renfo` | `plan_id` | Régénère les séances de renfo. Conservée mais plus appelée depuis l'UI |
 | `adapt-sessions` | `session_id` (séance sautée) | Adapte les séances suivantes |
 | `coros-match` | `session_id` | Propose les activités Coros candidates |
 | `complete-session` | `session_id`, activités Coros, `feedback`, `completed_date` | Marque la séance faite, importe les laps, analyse |
@@ -173,7 +174,7 @@ Toutes en POST, dans `supabase/functions/` ; code partagé dans `_shared/` (clie
 | `renfo-cycle` | `{}` ; `continue_cycle_id` pour reprendre (interne) | Génère un cycle Renfo de 4 semaines en asynchrone (202 `{ cycle_id }`), une semaine par appel modèle. 409 `profile_missing`, `cycle_generating` ou `cycle_in_progress` ; reprend un cycle en `error` |
 | `renfo-session` | `{ kind }` (parmi `FREE_KINDS`) | Génère une séance libre synchrone, hors cycle, sur la semaine en cours. 409 `profile_missing`, 422 avec `details` si la séance reste invalide après retry |
 
-Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push, regenerate-renfo. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Module `renfo` : renfo-cycle, renfo-session. Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`, `continue_cycle_id`) ne passent pas par ce contrôle.
+Contrôle d'accès par module : `requireModule` (`_shared/access.ts`) renvoie un 403 si le compte n'a pas le module. Module `training` : generate-plan, regenerate-plan, adapt-sessions, complete-session, coros-match, coros-fitness, coros-oauth (actions POST, pas le callback), coros-push. Module `veille` : summarize-article, fetch-rss (chemin utilisateur ; le chemin cron service role n'est pas contrôlé). Module `renfo` : renfo-cycle, renfo-session. Les auto-invocations internes en service role (`continue_plan_id`, `continue_regen`, `continue_cycle_id`) ne passent pas par ce contrôle.
 
 **Règle** : toute Edge Function rattachée à un module appelle `requireModule(supabaseAdmin, user.id, '<module>')` juste après `getUser`. Les en-têtes CORS sont posés par `withCors` (`_shared/cors.ts`).
 
@@ -222,21 +223,13 @@ Une zone est un **créneau de jours**, pas un niveau d'intensité :
 - **Zone B** : mercredi-vendredi
 - **Zone C** : samedi-dimanche
 
-Chaque semaine complète compte exactement 3 séances. Répartition par défaut à la génération : A = course facile, B = séance qualité (fractionné ou tempo), C = sortie longue. Une séance renfo dans un plan généré est rejetée par `validatePlan` (erreur bloquante, retry).
+Chaque semaine complète compte exactement 3 séances. Répartition par défaut à la génération : A = course facile, B = séance qualité (fractionné ou tempo), C = sortie longue. Toute séance hors des zones A, B, C ou d'un type autre que les 4 types de course est rejetée par `validatePlan` (erreur bloquante, retry).
 
-L'intensité est portée par `type`, pas par `zone`. Le rendu (couleur, sous-libellé) dérive de `intensityOf(type)` (`src/apps/training/constants.js:78`), jamais de la lettre de zone : après une adaptation, une séance de qualité peut occuper la zone A et doit s'afficher comme une qualité.
+L'intensité est portée par `type`, pas par `zone`. Le rendu (couleur, sous-libellé) dérive de `intensityOf(type)` (`src/apps/training/constants.js:74`), jamais de la lettre de zone : après une adaptation, une séance de qualité peut occuper la zone A et doit s'afficher comme une qualité.
 
-`adapt-sessions` peut modifier `type`, jamais `zone` ni `scheduled_date`. La bascule course vers renfo ou renfo vers course est interdite (rejetée en validation).
+`adapt-sessions` peut modifier `type` (parmi les 4 types de course), jamais `zone` ni `scheduled_date`.
 
-Couleurs, définies dans `ZONE_STYLE` (`src/apps/training/constants.js:4`) et indexées par `intensityOf(type)` : A `#1D9E75`, B `#f97316`, C `#8b5cf6`, renfo `#3b82f6`.
-
-### Renforcement musculaire
-
-- Training ne génère plus de renfo (ni génération, ni adaptation, ni régénération depuis l'UI). Le code renfo partagé est conservé pour le futur module autonome : `RENFO_RULES` (`methodology.ts`), `strength.ts`, `exercises.ts`, `estimator.ts`, le player, et la valeur `renfo` en base (zone et type).
-- Matériel disponible : tapis de sol, élastiques de 10, 15, 20, 30 et 40 kg, barre de traction. Chaise possible mais à minimiser.
-- État du code : le type `Equipment` ne connaît que `"none" | "chair"` (`supabase/functions/_shared/training/exercises.ts:22`). Élastiques et barre ne sont pas encore intégrés.
-- Décision actée : Renfo deviendra un module autonome avec son propre planning, indépendant du plan course. Voir « Specs Renfo ».
-- Ordre de validation renfo : structure validée sur la sortie brute du modèle (bloquant, `validateStrengthContent`), durée de base contrôlée en souple avant le trim (`baseDurationHint`), puis simple warning sur la durée finale (`finalDurationWarning`). Ne jamais valider la durée avant le trim.
+Couleurs, définies dans `ZONE_STYLE` (`src/apps/training/constants.js:4`) et indexées par `intensityOf(type)` : A `#1D9E75`, B `#f97316`, C `#8b5cf6`.
 
 ### Philosophie du plan
 
@@ -265,7 +258,7 @@ Déclenchée uniquement par "Je saute", pas de bilan de fin de semaine.
 Règles IA :
 - Qualité sautée (fractionné/tempo) → préserver une qualité dans la fenêtre, quitte à transformer une séance facile
 - Sortie longue sautée → reporter une partie du volume sur la suivante (max +15 %)
-- Facile ou renfo sautée → ne rien compenser
+- Facile sautée → ne rien compenser
 - Ne JAMAIS empiler deux séances dures consécutives pour rattraper
 
 ### Envoi vers la montre (MCP Coros)
@@ -288,7 +281,7 @@ Structure de données prête (`race_elevation_m`, distance libre, type Trail dan
 
 ## Specs Renfo
 
-Module autonome de renforcement musculaire, planning propre, indépendant du plan course de Training. Backend en place (migration `20261009103052_renfo_module.sql`), front à venir (`src/apps/renfo/`).
+Module autonome de renforcement musculaire, planning propre, indépendant du plan course de Training (migration `20261009103052_renfo_module.sql`, front dans `src/apps/renfo/`).
 
 ### Tables
 - **strength_profiles** : une ligne par compte (`user_id` PK), `frequency` 1 à 3 (défaut 2), `equipment` text[] limité à `chair` et `bar`. Droits authenticated complets.
@@ -313,8 +306,24 @@ Barre de traction mobile : dans un superset, A et B à la même hauteur s'ils ut
 - `renfo-session` : séance libre synchrone, contexte = séances de la semaine en cours, pas d'exercices principaux imposés.
 - Modèle : même constante que `generate-plan` (`MODEL` de `_shared/strength/generate.ts`).
 
+### Front (`src/apps/renfo/`)
+- Routes : `/renfo` (accueil), `/renfo/settings` (réglages), `/renfo/session/:sessionId` (séance). Action d'en-tête « Réglages ».
+- **Réglages** (`SettingsPage.jsx`) : fréquence 1 à 3 (s'applique au prochain cycle), barre de traction et chaise, inventaire d'élastiques (`settings/BandDialog.jsx` : kg unique pour le compte, couleur de la palette ou hex libre). Upsert de `strength_profiles`, écritures directes sur `strength_bands`.
+- **Accueil** (`RenfoHome.jsx`) : états pas de profil, aucun cycle, génération (interrogation de `generation_status` et `generated_weeks` toutes les 4 s, semaines affichées au fur et à mesure), erreur (« Reprendre la génération »), cycle prêt (en-tête « Cycle N · Semaine k sur 4 · phase », `PHASE_LABELS` de `rules.ts`, navigation S1 à S4, cartes de séance puis séances libres « Libre »), cycle terminé (`start_date` + 28 jours, « Lancer le cycle suivant »). Bouton « Séance libre » (`home/FreeSessionDialog.jsx`, appel synchrone jusqu'à 30 s). Codes 409 et 422 traduits dans `errors.js`.
+- **Séance** (`session/SessionPage.jsx`) : en-tête, encadré Matériel (hauteurs de barre dans l'ordre d'usage, chaise, bandes), blocs avec vignette, dosage, bande et hauteur de barre, fiche exercice (`session/ExerciseSheet.jsx` : photos départ et arrivée, installation, mouvement, conseil). Bande affichée : `bands_used[slug]` sinon `band_kg`. Actions : Démarrer (player), Valider sans le player, Remettre à faire (garde `bands_used`), Supprimer (séance libre). Validation par `session/ValidateDialog.jsx` (`RpeForm`).
+- Helpers purs : `content.js` (lecture du contenu, libellés, photos), `dates.js`, `bandColor.js` (palette, `textOnColor` par luminance). Le front n'importe de `_shared/strength/` que `catalog.ts`, `rules.ts` et `estimate.ts`.
+- **Couleurs des bandes** : palette `#9FDCA9` vert menthe, `#B3BDCC` gris-bleu, `#F2D16B` jaune, `#EFA24F` orange, `#7A2F42` bordeaux, `#D64545` rouge, `#2F68CC` bleu, `#2B9A64` vert, `#7348B8` violet, `#E57FB0` rose, `#222222` noir, `#8A8F98` gris. Texte sombre sur couleur claire, blanc sur foncée. Kg absent de l'inventaire : pastille neutre `#8A8F98`. Composant `BandChip.jsx` partout.
+
+### Player (`src/apps/renfo/player/`)
+- `sequence.js` (pur, testé par `sequence.test.js`) : sas de 10 s, échauffement et retour au calme avec `TRANSITION_SEC` entre exercices, bloc principal en séries (`rest_sec` entre séries et avant l'exercice suivant), superset A, transition, B, `rest_sec` après B sauf au dernier tour, `BETWEEN_BLOCKS_SEC` entre blocs, unilatéral en deux steps gauche puis droite sans repos, aucun repos final. Constantes lues dans `estimate.ts` ; total cohérent avec `estimateSessionMinutes`.
+- `RenfoPlayer.jsx` : overlay plein écran en portail (`setOverlay`), anneau de progression, bips créés dans le geste « Démarrer » (contrainte iOS, `beeps.js`), wake lock, pause, précédent et suivant, `useBlocker` sur le geste retour, son on/off (`renfo:player_sound`). Sur un step de travail : pastille de bande modifiable (vaut pour l'exercice jusqu'à la fin), vignette départ ou arrivée au toucher, contexte « Superset 1 · Tour 2/4 · A », consigne au premier tour d'un superset. Sur un repos : -15 s et +15 s, aperçu de l'exercice suivant, rappel « Déplace la barre en bas » si la hauteur change. Les bandes jouées alimentent `bands_used` à la validation.
+- Fonctionne hors ligne ; seule la validation finale demande le réseau.
+
+### Hors ligne
+Tables `strength_*` en cache NetworkFirst (`cairn-data`, voir PWA et hors ligne). Lecture et player disponibles hors ligne ; génération, réglages et validation désactivés avec un message (`useOnline`).
+
 ### Photos
-48 exercices ont une photo, issue du dépôt public `yuhonas/free-exercise-db` (Unlicense, provenance des photos non documentée, voir `public/renfo/CREDITS.md`). `scripts/renfo-images.mjs` (à relancer avec `node`, git et réseau requis) écrit `public/renfo/<slug>-0.webp` (départ) et `-1.webp` (arrivée) avec sharp, 480 px au plus, qualité 70 : 96 fichiers. Non précachées par le service worker (`globPatterns` par défaut).
+48 exercices ont une photo, issue du dépôt public `yuhonas/free-exercise-db` (Unlicense, provenance des photos non documentée, voir `public/renfo/CREDITS.md`). `scripts/renfo-images.mjs` (à relancer avec `node`, git et réseau requis) écrit `public/renfo/<slug>-0.webp` (départ) et `-1.webp` (arrivée) avec sharp, 480 px au plus, qualité 70 : 96 fichiers. Non précachées par le service worker ; mises en cache à la première consultation (CacheFirst, `cairn-renfo-images`, 200 entrées, 90 jours).
 
 ## Specs Côtes
 
@@ -398,6 +407,15 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 - 3 points clés
 - Tags thèmes suggérés automatiquement
 - Champ note perso (éditable, sauvegardé en BDD)
+
+---
+
+## PWA et hors ligne
+
+- `vite-plugin-pwa` en `registerType: 'prompt'` : bandeau « Nouvelle version disponible » (`components/UpdatePrompt.jsx`), vérification au retour au premier plan.
+- Cache des lectures Supabase (`workbox.runtimeCaching` dans `vite.config.js`) : NetworkFirst, cache `cairn-data`, GET uniquement sur `/rest/v1/<table>` pour les tables de `OFFLINE_TABLES` : `training_plans`, `training_weeks`, `training_sessions`, `strength_profiles`, `strength_bands`, `strength_cycles`, `strength_sessions`, `profiles`, `user_modules`. Aucune Edge Function, aucun appel d'auth. Cache vidé à la déconnexion et au changement de compte (`lib/pwa.js`).
+- Photos Renfo : CacheFirst, `cairn-renfo-images`.
+- Hors ligne, Training et Renfo sont en lecture seule : actions d'écriture et appels d'Edge Function désactivés via `useOnline` ; indicateur global « Hors ligne ».
 
 ---
 

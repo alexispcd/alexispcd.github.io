@@ -1,6 +1,6 @@
 // Découpage calendaire des semaines d'entraînement (aligné lundi→dimanche) et
 // plages de jours par zone (méthodo). Module pur de dates, partagé par
-// generate-plan / regenerate-plan / regenerate-renfo / coros-match / validate.
+// generate-plan / regenerate-plan / coros-match / validate.
 //
 // Une séance appartient à une SEMAINE + une ZONE (plage de jours), plus à un
 // jour précis. La scheduled_date reste renseignée (tri, fenêtre coros-match)
@@ -89,16 +89,14 @@ export function computeWeekBounds(startISO: string, raceISO: string): WeekBounds
   return bounds
 }
 
-export type Zone = "A" | "B" | "C" | "renfo"
+export type Zone = "A" | "B" | "C"
 
 /** Plage de dates [start, end] autorisée pour une zone dans une semaine donnée,
  *  clippée aux bornes réelles de la semaine (S1 partielle). null si la zone ne
  *  tombe pas dans la fenêtre disponible (ex. démarrage un jeudi → pas de zone A). */
 export function zoneRangeForWeek(bounds: WeekBounds, zone: Zone): { start: string; end: string } | null {
-  if (zone === "renfo") return { start: bounds.start, end: bounds.end }
-
   const monday = mondayOf(bounds.start)
-  const spans: Record<Exclude<Zone, "renfo">, [number, number]> = {
+  const spans: Record<Zone, [number, number]> = {
     A: [0, 1], // lundi → mardi
     B: [2, 4], // mercredi → vendredi
     C: [5, 6], // samedi → dimanche
@@ -114,16 +112,15 @@ export function zoneRangeForWeek(bounds: WeekBounds, zone: Zone): { start: strin
   return { start: clippedStart, end: clippedEnd }
 }
 
-/** Zones disponibles (plage non vide) dans une semaine, dans l'ordre A, B, C, renfo. */
+/** Zones disponibles (plage non vide) dans une semaine, dans l'ordre A, B, C. */
 export function availableZones(bounds: WeekBounds): Zone[] {
-  return (["A", "B", "C", "renfo"] as Zone[]).filter((z) => zoneRangeForWeek(bounds, z) !== null)
+  return (["A", "B", "C"] as Zone[]).filter((z) => zoneRangeForWeek(bounds, z) !== null)
 }
 
 const ZONE_LABEL: Record<Zone, string> = {
   A: "A (facile)",
   B: "B (qualité)",
   C: "C (sortie longue)",
-  renfo: "renfo",
 }
 
 /**

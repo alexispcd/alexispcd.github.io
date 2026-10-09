@@ -2,6 +2,7 @@ import { data } from 'react-router-dom'
 import { hasModule, whenAccessReady } from '../lib/access'
 import cotes from './cotes/module'
 import training from './training/module'
+import renfo from './renfo/module'
 import revisions from './revisions/module'
 import veille from './veille/module'
 import admin from './admin/module'
@@ -10,7 +11,7 @@ import admin from './admin/module'
 // désactivé dans le code : seuls les droits du compte (user_modules) décident de ce
 // qui est visible et accessible, admin compris.
 // Ajouter un module : créer src/apps/<id>/module.js puis l'ajouter ici.
-export const modules = [cotes, training, revisions, veille, admin]
+export const modules = [cotes, training, renfo, revisions, veille, admin]
 
 export const categoryOrder = ['Sport', 'Études', 'Dev']
 

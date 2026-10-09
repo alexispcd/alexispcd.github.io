@@ -48,7 +48,7 @@ const AppLayout = () => {
       }}>
         <Outlet />
       </Box>
-      {/* Masqué pendant qu'un overlay plein écran (player renfo) occupe l'écran :
+      {/* Masqué pendant qu'un overlay plein écran (player d'un module) occupe l'écran :
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
       {!overlay && (

@@ -1,27 +1,6 @@
 import { Box, Typography, Slider, TextField } from '@mui/material'
-import { ZONE_STYLE } from '../constants'
-
-// Zones de douleur avec latéralité. Les codes sont figés (persistés en BDD et
-// relus par les Edge Functions), les libellés servent uniquement à l'UI.
-const PAIN_AREAS = [
-  { base: 'mollet', label: 'Mollet', sided: true },
-  { base: 'genou', label: 'Genou', sided: true },
-  { base: 'achille', label: 'Achille', sided: true },
-  { base: 'quadri', label: 'Cuisse', sided: true },
-  { base: 'tfl', label: 'Hanche / TFL', sided: true },
-  { base: 'dos', label: 'Dos', sided: false },
-  { base: 'autre', label: 'Autre', sided: false },
-]
-
-// Développe la config en liste plate de chips { code, label }.
-const PAIN_CHIPS = PAIN_AREAS.flatMap((a) =>
-  a.sided
-    ? [
-        { code: `${a.base}_g`, label: `${a.label} G` },
-        { code: `${a.base}_d`, label: `${a.label} D` },
-      ]
-    : [{ code: a.base, label: a.label }]
-)
+import { alpha, useTheme } from '@mui/material/styles'
+import { PAIN_CHIPS } from '../lib/feedback'
 
 const rpeHelper = (rpe) => {
   if (rpe <= 3) return 'Facile'
@@ -30,14 +9,16 @@ const rpeHelper = (rpe) => {
   return 'Maximal'
 }
 
-const accent = ZONE_STYLE.renfo
-
 /**
  * Saisie du ressenti post-séance : effort perçu (RPE 1-10), zones douloureuses
  * et note libre. Composant contrôlé, sans logique de soumission.
  * value = { rpe, painAreas, note }, onChange reçoit le nouvel objet complet.
+ * `accentColor` : couleur d'accent (#rrggbb), couleur primaire du thème par défaut.
  */
-const RpeForm = ({ value, onChange }) => {
+const RpeForm = ({ value, onChange, accentColor }) => {
+  const theme = useTheme()
+  const main = accentColor ?? theme.palette.primary.main
+  const accent = { main, bg: alpha(main, 0.14) }
   const { rpe, painAreas, note } = value
   const set = (patch) => onChange({ ...value, ...patch })
 
@@ -56,7 +37,7 @@ const RpeForm = ({ value, onChange }) => {
       </Typography>
       <Box sx={{ textAlign: 'center', mb: 0.5 }}>
         <Typography sx={{ fontSize: '2.4rem', fontWeight: 750, lineHeight: 1, color: rpe == null ? 'text.disabled' : accent.main, fontVariantNumeric: 'tabular-nums' }}>
-          {rpe == null ? '–' : rpe}
+          {rpe == null ? '?' : rpe}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           {rpe == null ? 'Glisse pour noter ton effort' : `${rpeHelper(rpe)} · sur 10`}

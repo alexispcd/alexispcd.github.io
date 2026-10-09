@@ -1,34 +1,6 @@
 import supabase from './supabase'
+import { callFunction } from './functions'
 import { totalMeters, totalSeconds } from '../apps/training/sessionMath'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Edge Functions — helper commun (auth + fetch + gestion d'erreur)
-// ─────────────────────────────────────────────────────────────────────────────
-const callFunction = async (name, body) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Non authentifié')
-
-  const res = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${name}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    }
-  )
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    const error = new Error(err.detail ?? err.error ?? `Erreur serveur (${res.status})`)
-    error.status = res.status
-    error.body = err
-    throw error
-  }
-  return res.json()
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LECTURES
@@ -217,7 +189,6 @@ export const unskipSession = async (sessionId) => {
         // pv.type absent des previous_version d'avant cette évolution : ne le
         // restaure que s'il existe, sinon on laisse le type courant.
         ...(pv.type ? { type: pv.type } : {}),
-        strength_content: pv.strength_content ?? null,
         status: 'planned',
         adapted_at: null,
         adapted_by_session_id: null,
@@ -266,15 +237,6 @@ export const unskipSession = async (sessionId) => {
   return { corosError: null }
 }
 
-/** Persiste le contenu renfo recomposé (durée + blocs). */
-export const updateStrengthContent = async (sessionId, strengthContent) => {
-  const { error } = await supabase
-    .from('training_sessions')
-    .update({ strength_content: strengthContent })
-    .eq('id', sessionId)
-  if (error) throw error
-}
-
 /** Réinitialise une séance complétée à l'état "planned". */
 export const resetSession = async (sessionId) => {
   const { data, error } = await supabase
@@ -305,8 +267,6 @@ export const generatePlan = (payload) => callFunction('generate-plan', payload)
 /** Régénère les semaines restantes. → { plan_id } */
 export const regeneratePlan = (planId) => callFunction('regenerate-plan', { plan_id: planId })
 
-/** Régénère le contenu renfo des séances futures planifiées. → { updated, sessions } */
-export const regenerateRenfo = (planId) => callFunction('regenerate-renfo', { plan_id: planId })
 
 /** Adapte les séances suivant une séance sautée. → { sessions } */
 export const adaptSessions = (sessionId) => callFunction('adapt-sessions', { session_id: sessionId })
@@ -317,7 +277,7 @@ export const corosMatch = (sessionId) => callFunction('coros-match', { session_i
 /**
  * Complète une séance (avec ou sans activité Coros). → { session }
  * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou
- * null si aucune activité (renfo, délier). Le serveur les trie par start_timestamp
+ * null si aucune activité (validation manuelle, délier). Le serveur les trie par start_timestamp
  * croissant puis concatène leurs laps. feedback = { rpe, pain_areas,
  * feedback_note } ou null (ressenti post-séance). completedDate = date réelle de
  * la séance (yyyy-MM-dd), transmise seulement sur le chemin manuel sans Coros ;

@@ -15,9 +15,26 @@ const spaFallback = () => ({
   },
 })
 
-// Tables lues hors ligne : Training en lecture seule, plus les droits du compte
-// (fetchAccess). Aucune Edge Function, aucun appel d'auth, aucune autre table.
-const OFFLINE_TABLES = ['training_plans', 'training_weeks', 'training_sessions', 'profiles', 'user_modules']
+// Tables lues hors ligne : Training et Renfo en lecture seule, plus les droits du
+// compte (fetchAccess). Aucune Edge Function, aucun appel d'auth, aucune autre table.
+const OFFLINE_TABLES = [
+  'training_plans', 'training_weeks', 'training_sessions',
+  'strength_profiles', 'strength_bands', 'strength_cycles', 'strength_sessions',
+  'profiles', 'user_modules',
+]
+
+// Photos des exercices Renfo (public/renfo) : hors précache, mises en cache à la
+// première consultation pour rester visibles dans le player hors ligne.
+const renfoImagesRule = {
+  urlPattern: /\/renfo\/[^/]+\.webp$/,
+  method: 'GET',
+  handler: 'CacheFirst',
+  options: {
+    cacheName: 'cairn-renfo-images',
+    expiration: { maxEntries: 200, maxAgeSeconds: 90 * 24 * 60 * 60 },
+    cacheableResponse: { statuses: [200] },
+  },
+}
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
 
@@ -78,7 +95,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
-          runtimeCaching: dataCacheRule(env.VITE_SUPABASE_URL),
+          runtimeCaching: [...dataCacheRule(env.VITE_SUPABASE_URL), renfoImagesRule],
         },
       }),
       spaFallback(),

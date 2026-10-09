@@ -112,7 +112,7 @@ export function foldSteps(flat: PlanStep[] | undefined | null): CompactStep[] {
   return out
 }
 
-/** Déplie tout un plan : renfo inchangé, séances de course → steps aplatis. */
+/** Déplie tout un plan : steps des séances de course aplatis. */
 export function expandPlan(plan: GeneratedPlan): ExpandedPlan {
   return {
     ...plan,

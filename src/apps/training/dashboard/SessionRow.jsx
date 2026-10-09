@@ -10,15 +10,8 @@ import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, f
 // qu'un swipe compte. En deçà, la carte revient à l'origine (dragSnapToOrigin).
 const SWIPE_THRESHOLD = 80
 
-/** Sous-titre « volume » dérivé de l'agrégat des steps ou du renfo. */
+/** Sous-titre « volume » dérivé de l'agrégat des steps. */
 const subtitle = (s) => {
-  if (s.type === 'renfo') {
-    const sc = s.strength_content
-    const min = sc?.target_duration_min
-    const blocks = Array.isArray(sc?.blocks) ? sc.blocks.length : null
-    return [formatMin(min), blocks ? `${blocks} bloc${blocks > 1 ? 's' : ''}` : null]
-      .filter(Boolean).join(' · ') || TYPE_LABEL[s.type]
-  }
   const km = formatKm(s.agg_distance_m)
   const min = s.agg_duration_sec ? Math.round(s.agg_duration_sec / 60) : null
   return [km ? `${km} km` : null, min ? `~${formatMin(min)}` : null].filter(Boolean).join(' · ')
@@ -81,7 +74,7 @@ const SessionRow = ({ session, onSkip, onOpen, onPush, canSkip, canPush }) => {
   const isSkipped = session.status === 'skipped'
 
   // Séance faite et synchronisée : on affiche le réalisé + un point de verdict.
-  const realized = isDone && session.type !== 'renfo' ? realizedSubtitle(session) : null
+  const realized = isDone ? realizedSubtitle(session) : null
   const verdictColor = realized ? VERDICT[session.analysis?.verdict]?.color : null
 
   // Swipe gauche : "Envoyer" vers la montre si la séance est éligible et pas

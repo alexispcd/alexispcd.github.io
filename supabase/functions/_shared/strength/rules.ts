@@ -96,6 +96,14 @@ export const WEEK_PHASES: WeekPhaseRule[] = [
   },
 ]
 
+/** Libellés d'affichage des phases. */
+export const PHASE_LABELS: Record<WeekPhase, string> = {
+  base: "Base",
+  progression: "Progression",
+  pic: "Pic",
+  decharge: "Décharge",
+}
+
 // ── Bornes de dosage ─────────────────────────────────────────────────────────
 export const REPS_MIN = 3
 export const REPS_MAX = 30
