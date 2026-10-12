@@ -3,7 +3,7 @@
 import { EXERCISE_INDEX } from "./catalog.ts"
 import type { Dose, SessionBlock } from "./rules.ts"
 
-/** Transition entre deux exercices d'un échauffement, d'un retour au calme ou entre A et B. */
+/** Transition entre deux exercices d'un échauffement, d'un retour au calme ou d'un superset. */
 export const TRANSITION_SEC = 10
 /** Pause entre deux blocs. */
 export const BETWEEN_BLOCKS_SEC = 60
@@ -14,6 +14,10 @@ export function workSeconds(dose: Dose): number {
   const base = dose.duration_sec ?? (dose.reps ?? 0) * (exercise?.sec_per_rep ?? 0)
   return exercise?.unilateral ? base * 2 : base
 }
+
+/** Membres d'un superset dans l'ordre de jeu : A, B, puis C pour un triset. */
+const supersetMembers = (block: { a: Dose; b: Dose; c?: Dose }): Dose[] =>
+  block.c ? [block.a, block.b, block.c] : [block.a, block.b]
 
 const listSeconds = (items: Dose[]): number =>
   items.reduce((sum, item) => sum + workSeconds(item), 0) + Math.max(items.length - 1, 0) * TRANSITION_SEC
@@ -28,9 +32,11 @@ function blockSeconds(block: SessionBlock): number {
       return block.items.reduce((sum, item, i) =>
         sum + item.sets * workSeconds(item) + (item.sets - 1) * item.rest_sec +
         (i < block.items.length - 1 ? item.rest_sec : 0), 0)
-    case "superset":
-      return block.rounds * (workSeconds(block.a) + workSeconds(block.b) + TRANSITION_SEC) +
-        (block.rounds - 1) * block.rest_sec
+    case "superset": {
+      // Superset A+B ou triset A, B, C : transition entre membres, repos après le dernier.
+      const members = supersetMembers(block)
+      return block.rounds * listSeconds(members) + (block.rounds - 1) * block.rest_sec
+    }
   }
 }
 

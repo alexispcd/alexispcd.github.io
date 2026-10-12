@@ -10,7 +10,7 @@ import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { completeSession, deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
 import { painAreaLabel } from '../../../lib/feedback'
 import { KIND_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
-import { bandOf, blockLabel, doseLabel, mainDoseLabel, supersetLabel } from '../content'
+import { bandOf, blockLabel, doseLabel, mainDoseLabel, supersetLabel, supersetMembers } from '../content'
 import ConfirmDialog from '../ConfirmDialog'
 import EquipmentBox from './EquipmentBox'
 import ExerciseRow from './ExerciseRow'
@@ -174,7 +174,7 @@ const SessionPage = () => {
               )}
             </Box>
             {block.type === 'superset'
-              ? [renderRow(block.a, 'a', doseLabel(block.a), 'A'), renderRow(block.b, 'b', doseLabel(block.b), 'B')]
+              ? supersetMembers(block).map(({ dose, role }) => renderRow(dose, role, doseLabel(dose), role))
               : (block.items ?? []).map((item, j) =>
                 renderRow(item, j, block.type === 'main' ? mainDoseLabel(item) : doseLabel(item)))}
           </Box>
@@ -254,6 +254,8 @@ const SessionPage = () => {
       {player && (
         <RenfoPlayer
           content={content}
+          kindLabel={KIND_LABELS[session.kind] ?? session.kind}
+          weekLabel={free ? 'Séance libre' : session.week_index ? `Semaine ${session.week_index}` : null}
           bands={bands}
           initialBandsUsed={session.bands_used}
           beeps={player.beeps}

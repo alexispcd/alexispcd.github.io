@@ -2,14 +2,49 @@
 // Partagé par l'accueil, la page séance et le player.
 
 import { EXERCISE_INDEX } from '../../../supabase/functions/_shared/strength/catalog.ts'
+import { TRISET_FOCUS_LABELS } from '../../../supabase/functions/_shared/strength/rules.ts'
 
-/** Libellés des blocs, dans l'ordre du schéma. */
+/** Rôles des membres d'un superset, dans l'ordre de jeu. */
+const ROLES = ['A', 'B', 'C']
+
+/**
+ * Membres d'un superset dans l'ordre de jeu, avec leur rôle : A, B, puis C pour un
+ * triset. Les anciennes séances n'ont que A et B.
+ */
+export const supersetMembers = (block) =>
+  [block.a, block.b, block.c]
+    .map((dose, i) => (dose ? { dose, role: ROLES[i] } : null))
+    .filter(Boolean)
+
+const isTriset = (block) => Boolean(block.focus || block.c)
+
+/** Rang d'un superset parmi les supersets de la séance (1, 2, 3) et leur nombre. */
+const supersetRank = (index, blocks) => ({
+  n: blocks.slice(0, index + 1).filter((b) => b.type === 'superset').length,
+  total: blocks.filter((b) => b.type === 'superset').length,
+})
+
+/**
+ * Libellé d'un bloc : "Échauffement", "Bloc principal", "Superset 2",
+ * "Triset 1 · Jambes" (triset avec focus) ou "Triset 1" (trois membres sans focus).
+ */
 export const blockLabel = (block, index, blocks) => {
   if (block.type === 'warmup') return 'Échauffement'
   if (block.type === 'main') return 'Bloc principal'
   if (block.type === 'cooldown') return 'Retour au calme'
-  const n = blocks.slice(0, index + 1).filter((b) => b.type === 'superset').length
-  return `Superset ${n}`
+  const { n } = supersetRank(index, blocks)
+  if (!isTriset(block)) return `Superset ${n}`
+  const focus = TRISET_FOCUS_LABELS[block.focus]
+  return focus ? `Triset ${n} · ${focus}` : `Triset ${n}`
+}
+
+/** Libellé avec le rang sur le total pour les supersets : "Triset 2 sur 3 · Haut du corps". */
+export const blockHeading = (block, index, blocks) => {
+  if (block.type !== 'superset') return blockLabel(block, index, blocks)
+  const { n, total } = supersetRank(index, blocks)
+  const word = isTriset(block) ? 'Triset' : 'Superset'
+  const focus = TRISET_FOCUS_LABELS[block.focus]
+  return `${word} ${n} sur ${total}${focus ? ` · ${focus}` : ''}`
 }
 
 export const ANCHOR_LABELS = {
@@ -31,8 +66,7 @@ export const listDoses = (content) => {
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   blocks.forEach((block, blockIndex) => {
     if (block.type === 'superset') {
-      if (block.a) out.push({ dose: block.a, block, blockIndex, role: 'A' })
-      if (block.b) out.push({ dose: block.b, block, blockIndex, role: 'B' })
+      for (const { dose, role } of supersetMembers(block)) out.push({ dose, block, blockIndex, role })
     } else {
       for (const dose of block.items ?? []) out.push({ dose, block, blockIndex, role: null })
     }
@@ -77,8 +111,9 @@ export const mainDoseLabel = (item) => {
   return `${item.sets} × ${value}${side} · repos ${item.rest_sec} s`
 }
 
-/** En-tête d'un superset : "3 tours · repos 75 s après B". */
-export const supersetLabel = (block) => `${block.rounds} tours · repos ${block.rest_sec} s après B`
+/** En-tête d'un superset : "3 tours · repos 75 s après B", ou "après C" pour un triset. */
+export const supersetLabel = (block) =>
+  `${block.rounds} tours · repos ${block.rest_sec} s après ${supersetMembers(block).at(-1)?.role ?? 'B'}`
 
 /** Chemin d'une photo d'exercice (frame 0 = départ, 1 = arrivée), ou null sans photo. */
 export const photoUrl = (slug, frame) =>

@@ -1,18 +1,15 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  Box, Typography, Button, IconButton, LinearProgress,
+  Box, Typography, Button, IconButton, LinearProgress, useMediaQuery,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
-import { useTheme } from '@mui/material/styles'
 import Close from '@mui/icons-material/Close'
 import VolumeUp from '@mui/icons-material/VolumeUpOutlined'
 import VolumeOff from '@mui/icons-material/VolumeOffOutlined'
-import Pause from '@mui/icons-material/Pause'
-import PlayArrow from '@mui/icons-material/PlayArrow'
 import SkipNext from '@mui/icons-material/SkipNext'
 import SkipPrevious from '@mui/icons-material/SkipPrevious'
-import RestartAlt from '@mui/icons-material/RestartAlt'
+import ListAlt from '@mui/icons-material/ListAlt'
 import Check from '@mui/icons-material/Check'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useBlocker } from 'react-router-dom'
@@ -20,14 +17,19 @@ import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { useAppCtx } from '../../../lib/context'
 import { formatClock } from '../dates'
-import { ANCHOR_LABELS, listDoses } from '../content'
-import BandChip from '../BandChip'
-import ExerciseThumb from '../session/ExerciseThumb'
-import { buildSequence, lastAnchorBefore, nextWorkStep } from './sequence'
-import ProgressRing from './ProgressRing'
+import { ANCHOR_LABELS, blockHeading, listDoses } from '../content'
+import { blockProgress, buildSequence, lastAnchorBefore, nextWorkStep, upcomingWork } from './sequence'
+import { pauseContext, pauseTitle, sideLabel, stepPosition } from './labels'
+import BandButton from './BandButton'
+import BandPicker from './BandPicker'
+import BlockProgressBar from './BlockProgressBar'
+import ExercisePhoto from './ExercisePhoto'
+import MainButton from './MainButton'
+import PlanSheet from './PlanSheet'
 import RecapTile from './RecapTile'
 import RestPreview from './RestPreview'
-import BandPicker from './BandPicker'
+import RoleChips from './RoleChips'
+import UpNextCard from './UpNextCard'
 
 const SOUND_KEY = 'renfo:player_sound'
 
@@ -58,16 +60,19 @@ const writeSound = (on) => {
   }
 }
 
-/** "Superset 1 · Tour 2/4 · A", "Bloc principal · Série 2/3", "Échauffement". */
-const stepContext = (step) => {
-  const parts = [step.blockLabel]
-  if (step.round) parts.push(`Tour ${step.round}/${step.roundCount}`)
-  if (step.set) parts.push(`Série ${step.set}/${step.setCount}`)
-  if (step.role) parts.push(step.role)
-  return parts.filter(Boolean).join(' · ')
-}
+// Bouton icône du player : cible tactile de 44 px au moins.
+const TOUCH = 44
+// Hauteur des boutons principaux, portrait et paysage.
+const MAIN_H = 68
+const MAIN_H_LANDSCAPE = 60
 
-const restTitle = (step) => (step.kind === 'prep' ? 'Préparation' : step.restType === 'transition' ? 'Transition' : 'Récupération')
+const PORTRAIT_MAX_W = 520
+const LONG_NAME = 22
+
+const secondarySx = {
+  flex: 1, minWidth: 0, minHeight: TOUCH, px: 1, borderRadius: `${TOUCH / 2}px`, textTransform: 'none',
+  fontWeight: 700, fontSize: '0.9rem', whiteSpace: 'nowrap', color: 'text.primary', borderColor: 'divider',
+}
 
 /**
  * Player Renfo plein écran. `beeps` est créé dans le geste utilisateur du bouton
@@ -78,10 +83,10 @@ const restTitle = (step) => (step.kind === 'prep' ? 'Préparation' : step.restTy
  * Rendu dans un portail sur document.body, header applicatif masqué le temps de
  * la séance (son bouton retour captait le tap sur iOS). Fonctionne hors ligne.
  */
-const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValidate }) => {
-  const theme = useTheme()
-  const accent = theme.palette.primary.main
+const RenfoPlayer = ({ content, kindLabel, weekLabel, bands, initialBandsUsed, beeps, onClose, onValidate }) => {
   const { setOverlay } = useAppCtx()
+  const landscape = useMediaQuery('(orientation: landscape) and (max-height: 500px)')
+  const shortScreen = useMediaQuery('(max-height: 739.98px)')
   const { steps, totalSeconds } = useMemo(() => buildSequence(content), [content])
   const exerciseCount = useMemo(() => listDoses(content).filter(({ block }) => block.type !== 'cooldown' && block.type !== 'warmup').length, [content])
 
@@ -93,9 +98,10 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
   const [display, setDisplay] = useState(() => ({ remainingSec: steps[0]?.duration_sec ?? 0, fraction: 1 }))
   // Décalage de la fin du repos courant (boutons -15 s / +15 s).
   const [restShift, setRestShift] = useState(0)
-  // Vignette affichée sur un step de travail : 0 départ, 1 arrivée.
-  const [frame, setFrame] = useState(0)
   const [realSec, setRealSec] = useState(0)
+  // Temps écoulé depuis le début de la séance, affiché dans l'en-tête.
+  const [elapsedSec, setElapsedSec] = useState(0)
+  const [planOpen, setPlanOpen] = useState(false)
   const [bandsUsed, setBandsUsed] = useState(() => ({ ...(initialBandsUsed ?? {}) }))
   const [picker, setPicker] = useState(null) // slug dont on choisit la bande
   const [soundOn, setSoundOn] = useState(readSound)
@@ -106,6 +112,12 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
   const beepedRef = useRef(false)
 
   useEffect(() => { startedAtRef.current = Date.now() }, [])
+
+  useEffect(() => {
+    if (finished) return undefined
+    const id = setInterval(() => setElapsedSec(Math.round((Date.now() - startedAtRef.current) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [finished])
 
   useEffect(() => {
     setOverlay(true)
@@ -179,10 +191,11 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
   const primeStep = useCallback((idx) => {
     setDisplay({ remainingSec: steps[idx]?.duration_sec ?? 0, fraction: 1 })
     setRestShift(0)
-    setFrame(0)
   }, [steps])
 
+  // Changer de step relance le décompte : une pause en cours est levée.
   const goNext = useCallback(() => {
+    setPaused(false)
     if (cursor >= steps.length - 1) {
       setRealSec(Math.round((Date.now() - startedAtRef.current) / 1000))
       setFinished(true)
@@ -194,12 +207,14 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
 
   const goPrev = useCallback(() => {
     if (finished) { setFinished(false); return }
+    setPaused(false)
     if (cursor > 0) {
       primeStep(cursor - 1)
       setCursor(cursor - 1)
     }
   }, [finished, cursor, primeStep])
 
+  // Recommence le step courant ; une pause en cours est conservée.
   const resetStep = useCallback(() => {
     reanchor()
     primeStep(cursor)
@@ -267,21 +282,20 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
   }
 
   const { remainingSec, fraction } = display
-  const progress = steps.length ? Math.round((cursor / steps.length) * 100) : 100
 
   const shell = {
     position: 'fixed', inset: 0, zIndex: PLAYER_Z,
     bgcolor: 'background.default',
     display: 'flex', flexDirection: 'column',
     pt: 'max(12px, env(safe-area-inset-top, 0px))',
-    pb: 'calc(max(16px, env(safe-area-inset-bottom, 0px)) + 24px)',
+    pb: landscape ? 'max(12px, env(safe-area-inset-bottom, 0px))' : 'max(16px, env(safe-area-inset-bottom, 0px))',
     pl: 'max(16px, env(safe-area-inset-left, 0px))',
     pr: 'max(16px, env(safe-area-inset-right, 0px))',
   }
 
   if (finished) {
     return createPortal(
-      <Box sx={shell}>
+      <Box sx={{ ...shell, overflowY: 'auto' }}>
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', maxWidth: 460, mx: 'auto', width: '100%', textAlign: 'center', px: 1 }}>
           <Box sx={{ width: 72, height: 72, borderRadius: '50%', mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', color: 'primary.main' }}>
             <Check sx={{ fontSize: 40 }} />
@@ -310,166 +324,293 @@ const RenfoPlayer = ({ content, bands, initialBandsUsed, beeps, onClose, onValid
     )
   }
 
-  // ── Aperçu pendant un repos ou la préparation ──────────────────────────────
+  // ── Données du step courant ────────────────────────────────────────────────
+  const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   const next = isPause ? nextWorkStep(steps, cursor) : null
+  // Exercice courant pour la progression et le plan : le prochain pendant une pause.
+  const focusStep = isWork ? step : next
+  const segments = blockProgress(steps, cursor)
+  const headingIndex = focusStep?.blockIndex ?? segments[0]?.blockIndex ?? 0
+  const heading = blocks[headingIndex] ? blockHeading(blocks[headingIndex], headingIndex, blocks) : ''
+
   const prevWork = isPause ? [...steps.slice(0, cursor)].reverse().find((s) => s.kind === 'work') : null
   const lastAnchor = lastAnchorBefore(steps, cursor)
   const nextUsesBar = next?.anchor && next.exercise?.equipment.includes('bar')
   const moveBarTo = nextUsesBar && next.anchor !== lastAnchor ? next.anchor : null
-  const stepBand = isWork ? bandFor(step.slug, step.band_kg) : null
-  const partnerName = isWork && step.partner ? EXERCISE_INDEX[step.partner]?.name : null
+
+  const usesBand = isWork && step.exercise?.equipment.includes('band')
+  const stepBand = usesBand ? bandFor(step.slug, step.band_kg) : null
+  const usesBar = isWork && step.anchor && step.exercise?.equipment.includes('bar')
+  const upcoming = isWork ? upcomingWork(steps, cursor, landscape || shortScreen ? 1 : 2) : []
+
+  const elapsedFraction = Math.max(0, Math.min(1, 1 - fraction))
+  const plan = () => setPlanOpen(true)
+
+  // ── Briques communes ───────────────────────────────────────────────────────
+  const photo = (
+    <ExercisePhoto
+      key={(isWork ? step : next)?.slug ?? 'none'}
+      slug={(isWork ? step : next)?.slug}
+      paused={paused}
+      sx={landscape ? { height: '100%' } : { height: 'clamp(180px, 32vh, 280px)' }}
+    />
+  )
+
+  const contextRow = isWork && (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 28 }}>
+      <Typography sx={{ flex: 1, fontSize: '0.9rem', fontWeight: 800, color: 'primary.main' }}>
+        {stepPosition(step) ?? step.blockLabel}
+      </Typography>
+      {step.side && (
+        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'text.secondary' }}>{sideLabel(step.side)}</Typography>
+      )}
+      {step.roles && <RoleChips roles={step.roles} current={step.role} />}
+    </Box>
+  )
+
+  // Bande (modifiable) et hauteur de barre, à côté du nom.
+  const equipment = isWork && (stepBand != null || usesBar) && (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+      {stepBand != null && (
+        <BandButton kg={stepBand} bands={bands} onClick={() => setPicker(step.slug)} chipSx={{ height: 30, minWidth: 60, fontSize: '0.85rem' }} />
+      )}
+      {usesBar && (
+        <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary' }}>{ANCHOR_LABELS[step.anchor]}</Typography>
+      )}
+    </Box>
+  )
+
+  // Nom en gros, réduit au-delà de LONG_NAME caractères pour tenir sur deux lignes.
+  const longName = (step?.exercise?.name ?? '').length > LONG_NAME
+  const name = isWork && (
+    <Typography sx={{ fontSize: landscape ? (longName ? '1.2rem' : '1.4rem') : (longName ? '1.5rem' : '1.875rem'), fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', minWidth: 0 }}>
+      {step.exercise?.name ?? step.slug}
+    </Typography>
+  )
+
+  // Nom et dosage : répétitions à droite du nom, ou décompte sous le nom.
+  const dose = isWork && (isManual ? (
+    <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        {name}
+        {equipment}
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0 }}>
+        <Typography sx={{ fontSize: landscape ? '3rem' : '4rem', fontWeight: 800, lineHeight: 0.9, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+          {step.reps}
+        </Typography>
+        <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: 'text.secondary' }}>reps</Typography>
+      </Box>
+    </Box>
+  ) : (
+    <Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>{name}</Box>
+        {equipment}
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1, mt: 0.5 }}>
+        <Typography sx={{ fontSize: landscape ? '3.25rem' : '4.5rem', fontWeight: 800, lineHeight: 1, color: paused ? 'text.disabled' : 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+          {formatClock(remainingSec)}
+        </Typography>
+        <Typography sx={{ fontSize: '0.95rem', fontWeight: 700, color: 'text.secondary' }}>
+          {paused ? 'en pause · ' : ''}sur {formatClock(step.duration_sec)}
+        </Typography>
+      </Box>
+      <LinearProgress
+        variant="determinate" value={elapsedFraction * 100}
+        sx={{ mt: 0.75, height: 6, borderRadius: 3, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main', borderRadius: 3, transition: 'none' } }}
+      />
+    </Box>
+  ))
+
+  // À suivre : cartes compactes, sans surtitre en portrait pour tenir sans défiler.
+  const upNext = upcoming.length > 0 && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+      {upcoming.map(({ step: s, rest: r }) => (
+        <UpNextCard
+          key={s.index}
+          step={s}
+          rest={r}
+          title={landscape ? 'Ensuite' : null}
+          bandKg={s.exercise?.equipment.includes('band') ? bandFor(s.slug, s.band_kg) : null}
+          bands={bands}
+          onBandClick={() => setPicker(s.slug)}
+        />
+      ))}
+    </Box>
+  )
+
+  // Pause (repos, transition, préparation) : titre, décompte, réglage, suivant.
+  const pausePanel = isPause && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: landscape ? 1 : 1.5, minHeight: 0 }}>
+      <Box>
+        <Typography sx={{ fontSize: landscape ? '1.2rem' : '1.5rem', fontWeight: 800, lineHeight: 1.15 }}>{pauseTitle(step)}</Typography>
+        <Typography variant="body2" color="text.secondary">{pauseContext(step)}</Typography>
+      </Box>
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography sx={{ flex: 1, fontSize: landscape ? '3.25rem' : '4.5rem', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {formatClock(remainingSec)}
+          </Typography>
+          {step.kind === 'rest' && (
+            <>
+              <Button variant="outlined" onClick={() => shiftRest(-REST_STEP_SEC)} sx={{ ...secondarySx, flex: 'none', minWidth: 64 }}>-15 s</Button>
+              <Button variant="outlined" onClick={() => shiftRest(REST_STEP_SEC)} sx={{ ...secondarySx, flex: 'none', minWidth: 64 }}>+15 s</Button>
+            </>
+          )}
+        </Box>
+        <LinearProgress
+          variant="determinate" value={elapsedFraction * 100}
+          sx={{ mt: 0.75, height: 6, borderRadius: 3, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: 'text.secondary', borderRadius: 3, transition: 'none' } }}
+        />
+      </Box>
+      <RestPreview
+        next={next}
+        newExercise={next && next.slug !== prevWork?.slug}
+        bandKg={next?.exercise?.equipment.includes('band') ? bandFor(next.slug, next.band_kg) : null}
+        bands={bands}
+        moveBarTo={moveBarTo}
+        onBandClick={() => next && setPicker(next.slug)}
+        photo={!landscape}
+        paused={paused}
+      />
+    </Box>
+  )
+
+  // Bouton principal selon le step.
+  const mainAction = isManual
+    ? { label: 'Série faite', tone: 'primary', onClick: goNext }
+    : isWork
+      ? { label: paused ? 'Reprendre' : 'Pause', tone: 'outlined', onClick: togglePause }
+      : { label: 'Passer le repos', tone: 'neutral', onClick: goNext }
+
+  // Commandes secondaires (portrait).
+  const secondary = isWork ? (
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <Button variant="outlined" onClick={goPrev} disabled={cursor === 0} sx={secondarySx}>Précédent</Button>
+      {isManual
+        ? usesBand && <Button variant="outlined" onClick={() => setPicker(step.slug)} sx={secondarySx}>Bande</Button>
+        : <Button variant="outlined" onClick={resetStep} sx={secondarySx}>Recommencer</Button>}
+      <Button variant="outlined" onClick={goNext} sx={secondarySx}>Passer</Button>
+    </Box>
+  ) : step.kind === 'rest' && (
+    <Box sx={{ display: 'flex', gap: 1 }}>
+      <Button variant="outlined" onClick={goPrev} startIcon={<SkipPrevious />} sx={secondarySx}>Précédent</Button>
+    </Box>
+  )
+
+  const soundButton = (
+    <IconButton onClick={toggleSound} sx={{ width: TOUCH, height: TOUCH, color: soundOn ? 'primary.main' : 'text.disabled' }} aria-label={soundOn ? 'Couper le son' : 'Activer le son'}>
+      {soundOn ? <VolumeUp /> : <VolumeOff />}
+    </IconButton>
+  )
+  const closeButton = (
+    <IconButton onClick={() => setConfirmQuit(true)} sx={{ width: TOUCH, height: TOUCH, color: 'text.secondary' }} aria-label="Quitter la séance">
+      <Close />
+    </IconButton>
+  )
+
+  const animated = (children, sx) => (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={cursor}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ...sx }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  )
+
+  const body = landscape ? (
+    // ── Paysage : photo à gauche, tout le reste à droite, sans défilement ────
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 2 }}>
+      <Box sx={{ width: '46%', minHeight: 0, display: 'flex' }}>{photo}</Box>
+      <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <BlockProgressBar segments={segments} heading={heading} onOpenPlan={plan} compact />
+          </Box>
+          <IconButton onClick={plan} sx={{ width: TOUCH, height: TOUCH, color: 'primary.main' }} aria-label="Voir le plan de la séance">
+            <ListAlt />
+          </IconButton>
+          {closeButton}
+        </Box>
+        {animated(
+          isWork ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, minHeight: 0, overflow: 'hidden' }}>
+              {contextRow}
+              {dose}
+              {upNext}
+            </Box>
+          ) : pausePanel,
+          { flex: 1, overflow: 'hidden' },
+        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
+          <IconButton onClick={goPrev} disabled={cursor === 0} aria-label="Précédent" sx={{ width: MAIN_H_LANDSCAPE, height: MAIN_H_LANDSCAPE, border: '1px solid', borderColor: 'divider', color: 'text.primary' }}>
+            <SkipPrevious />
+          </IconButton>
+          <MainButton {...mainAction} height={MAIN_H_LANDSCAPE} />
+          <IconButton onClick={goNext} aria-label="Passer" sx={{ width: MAIN_H_LANDSCAPE, height: MAIN_H_LANDSCAPE, border: '1px solid', borderColor: 'divider', color: 'text.primary' }}>
+            <SkipNext />
+          </IconButton>
+        </Box>
+      </Box>
+    </Box>
+  ) : (
+    // ── Portrait ──────────────────────────────────────────────────────────────
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', maxWidth: PORTRAIT_MAX_W, mx: 'auto', width: '100%' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+        {closeButton}
+        <Typography noWrap sx={{ flex: 1, textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+          {[kindLabel, formatClock(elapsedSec)].filter(Boolean).join(' · ')}
+        </Typography>
+        {soundButton}
+      </Box>
+      <Box sx={{ flexShrink: 0 }}>
+        <BlockProgressBar segments={segments} heading={heading} onOpenPlan={plan} />
+      </Box>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', pt: 1 }}>
+        {animated(
+          isWork ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {photo}
+              {contextRow}
+              {dose}
+              {upNext}
+            </Box>
+          ) : pausePanel,
+        )}
+      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 1.25, flexShrink: 0 }}>
+        {secondary}
+        <MainButton {...mainAction} height={MAIN_H} />
+      </Box>
+    </Box>
+  )
 
   return createPortal(
     <Box sx={shell}>
-      {/* Barre du haut : fermer, son */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexShrink: 0 }}>
-        <IconButton onClick={() => setConfirmQuit(true)} sx={{ color: 'text.secondary' }} aria-label="Fermer">
-          <Close />
-        </IconButton>
-        <Box sx={{ flex: 1 }} />
-        <IconButton onClick={toggleSound} sx={{ color: soundOn ? 'primary.main' : 'text.disabled' }} aria-label="Son">
-          {soundOn ? <VolumeUp /> : <VolumeOff />}
-        </IconButton>
-      </Box>
+      {body}
 
-      <LinearProgress
-        variant="determinate" value={progress}
-        sx={{ height: 5, borderRadius: 3, flexShrink: 0, bgcolor: 'action.hover', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main', borderRadius: 3 } }}
+      <PlanSheet
+        open={planOpen}
+        onClose={() => setPlanOpen(false)}
+        zIndex={DIALOG_Z}
+        content={content}
+        steps={steps}
+        cursor={cursor}
+        finished={finished}
+        current={focusStep}
+        bandFor={bandFor}
+        bands={bands}
+        kindLabel={kindLabel}
+        weekLabel={weekLabel}
+        totalSeconds={totalSeconds}
       />
-
-      {/* Step courant */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 460, mx: 'auto', width: '100%', minHeight: 0, overflowY: 'auto' }}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={cursor}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -14 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            style={{ width: '100%' }}
-          >
-            <Box sx={{ textAlign: 'center', px: 1, py: 1 }}>
-              {isPause ? (
-                <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'text.disabled' }}>
-                  {restTitle(step)}
-                </Typography>
-              ) : (
-                <>
-                  <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'primary.main' }}>
-                    {stepContext(step)}
-                  </Typography>
-                  <Typography variant="h5" fontWeight={800} sx={{ mt: 0.5, letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-                    {step.exercise?.name ?? step.slug}
-                  </Typography>
-                  {step.side && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Côté {step.side}</Typography>
-                  )}
-                  {partnerName && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                      A : {step.role === 'A' ? step.exercise?.name : partnerName} · B : {step.role === 'B' ? step.exercise?.name : partnerName}
-                    </Typography>
-                  )}
-                  {step.round === 1 && step.role === 'A' && (
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontWeight: 600, color: 'primary.main' }}>
-                      Enchaîne A puis B, repos après B
-                    </Typography>
-                  )}
-
-                  {/* Vignette (départ, arrivée au toucher), bande, hauteur de barre */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, mt: 2 }}>
-                    <Box onClick={() => setFrame((f) => 1 - f)} sx={{ cursor: 'pointer' }}>
-                      <ExerciseThumb slug={step.slug} frame={frame} size={112} radius={18} />
-                    </Box>
-                    {(stepBand != null || step.anchor) && (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
-                        {stepBand != null && <BandChip kg={stepBand} bands={bands} onClick={() => setPicker(step.slug)} sx={{ height: 32, minWidth: 64, fontSize: '0.85rem' }} />}
-                        {step.anchor && step.exercise?.equipment.includes('bar') && (
-                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                            {ANCHOR_LABELS[step.anchor]}
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-                </>
-              )}
-
-              {/* Décompte ou répétitions */}
-              <Box sx={{ mt: 2.5, mb: 1 }}>
-                {isAuto ? (
-                  <ProgressRing
-                    fraction={fraction}
-                    remainingSec={remainingSec}
-                    size={isPause ? 200 : 220}
-                    sub={paused ? 'en pause' : isPause ? (step.kind === 'prep' ? 'en place' : 'repos') : null}
-                    color={isPause ? '#94a3b8' : accent}
-                  />
-                ) : (
-                  <Box sx={{ py: 1 }}>
-                    <Typography sx={{ fontSize: '4.5rem', fontWeight: 800, lineHeight: 1, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
-                      {step?.reps}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'text.secondary', mt: 0.5 }}>
-                      répétitions
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-
-              {isPause && step.kind === 'rest' && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.5 }}>
-                  <Button variant="outlined" size="small" onClick={() => shiftRest(-REST_STEP_SEC)} sx={{ borderRadius: '16px', minWidth: 72, fontWeight: 700 }}>
-                    -15 s
-                  </Button>
-                  <Button variant="outlined" size="small" onClick={() => shiftRest(REST_STEP_SEC)} sx={{ borderRadius: '16px', minWidth: 72, fontWeight: 700 }}>
-                    +15 s
-                  </Button>
-                </Box>
-              )}
-
-              {isPause && (
-                <RestPreview
-                  next={next}
-                  newExercise={next && next.slug !== prevWork?.slug}
-                  bandKg={next ? bandFor(next.slug, next.band_kg) : null}
-                  bands={bands}
-                  moveBarTo={moveBarTo}
-                  onBandClick={() => next && setPicker(next.slug)}
-                />
-              )}
-            </Box>
-          </motion.div>
-        </AnimatePresence>
-      </Box>
-
-      {/* Contrôles */}
-      <Box sx={{ maxWidth: 460, mx: 'auto', width: '100%', flexShrink: 0, pt: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5 }}>
-          <IconButton onClick={resetStep} sx={{ width: 40, height: 40, color: 'text.disabled' }} aria-label="Recommencer">
-            <RestartAlt sx={{ fontSize: 22 }} />
-          </IconButton>
-          <IconButton onClick={goPrev} disabled={cursor === 0} sx={{ color: 'text.secondary' }} aria-label="Précédent">
-            <SkipPrevious sx={{ fontSize: 32 }} />
-          </IconButton>
-          {/* Bouton central : valide la série en répétitions, met en pause un décompte. */}
-          <IconButton
-            onClick={isManual ? goNext : togglePause}
-            aria-label={isManual ? 'Série terminée' : (paused ? 'Reprendre' : 'Pause')}
-            sx={{
-              width: 72, height: 72, border: '2px solid', borderColor: 'primary.main',
-              color: isManual ? 'primary.contrastText' : 'primary.main',
-              bgcolor: isManual ? 'primary.main' : 'transparent',
-              '&:hover': { bgcolor: isManual ? 'primary.main' : 'action.hover' },
-            }}
-          >
-            {isManual ? <Check sx={{ fontSize: 40 }} /> : (paused ? <PlayArrow sx={{ fontSize: 32 }} /> : <Pause sx={{ fontSize: 32 }} />)}
-          </IconButton>
-          <IconButton onClick={goNext} sx={{ color: 'text.secondary' }} aria-label="Suivant">
-            <SkipNext sx={{ fontSize: 32 }} />
-          </IconButton>
-          <Box sx={{ width: 40, flexShrink: 0 }} />
-        </Box>
-      </Box>
 
       <BandPicker
         open={Boolean(picker)}

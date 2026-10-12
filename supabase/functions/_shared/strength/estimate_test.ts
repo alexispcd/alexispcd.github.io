@@ -61,3 +61,28 @@ Deno.test("estimateSessionMinutes : séance connue calculée à la main", () => 
   // 161 + 726 + 393 + 666 + 260 = 2206 s, + 4 × 60 s entre blocs = 2446 s, soit 40,8 min
   assertEquals(estimateSessionMinutes(session), 41)
 })
+
+Deno.test("estimateSessionMinutes : triset A, B, C, repos après C seulement", () => {
+  const triset: SessionContent = {
+    title: "Triset",
+    estimated_min: 0,
+    blocks: [
+      // 3×(60 + 36 + 100 + 2×10) + 2×75 = 3×216 + 150 = 798 s
+      {
+        type: "superset", focus: "legs", rounds: 3, rest_sec: 75,
+        a: { slug: "squat_bulgare", reps: 10 },
+        b: { slug: "sdt_roumain_elastique", reps: 12, band_kg: 20 },
+        c: { slug: "mollet_excentrique", reps: 10 },
+      },
+      // 3×(45 + 36 + 10) + 2×60 = 393 s, identique à l'ancien calcul A+B
+      {
+        type: "superset", rounds: 3, rest_sec: 60,
+        a: { slug: "planche", duration_sec: 45 },
+        b: { slug: "curl_biceps", reps: 12, band_kg: 15 },
+      },
+    ],
+  }
+  // 798 + 393 + 60 entre blocs = 1251 s, soit 20,85 min
+  assertEquals(estimateSessionMinutes(triset), 21)
+  assertEquals(estimateSessionMinutes({ blocks: [triset.blocks[0]] }), 13)
+})

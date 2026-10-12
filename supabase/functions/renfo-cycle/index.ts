@@ -6,7 +6,7 @@ import { errorMessage, internalError } from "../_shared/http.ts"
 import { availableExercises } from "../_shared/strength/catalog.ts"
 import { generateSessions, loadStrengthSetup, PROFILE_MISSING } from "../_shared/strength/generate.ts"
 import { buildCycleWeekPrompt, buildSystemPrompt, type PriorSession } from "../_shared/strength/prompt.ts"
-import { KINDS_BY_FREQUENCY, type MainItem, type SessionKind } from "../_shared/strength/rules.ts"
+import { BLOCK_CATEGORIES, KINDS_BY_FREQUENCY, lockedSlugs, type SessionKind } from "../_shared/strength/rules.ts"
 import { addDaysISO, dayTs, mondayOf, todayISO } from "../_shared/training/weeks.ts"
 
 // Global fourni par le runtime Supabase. edge-runtime.d.ts est importé plus haut mais
@@ -34,6 +34,10 @@ interface CycleRow {
 }
 
 const json = (status: number, body: unknown) => Response.json(body, { status })
+
+/** Verrou exploitable : 9 slugs pour le corps complet (trisets), au moins un sinon. */
+const isUsableLock = (kind: SessionKind, slugs: string[] | undefined): boolean =>
+  !!slugs?.length && (BLOCK_CATEGORIES[kind].layout !== "trisets" || slugs.length === 9)
 
 /** Rejette après `ms` (garde-fou anti-blocage). */
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
@@ -84,11 +88,15 @@ async function runWeekAndChain(admin: SupabaseClient, cycleId: string): Promise<
       const kinds = KINDS_BY_FREQUENCY[cycle.frequency]
       if (!kinds) throw new Error(`fréquence inconnue : ${cycle.frequency}`)
 
+      // Exercices figés par type. Un type sans verrou (semaine 1, ou verrou retiré pour
+      // regénérer la suite du cycle) est généré librement et son verrou est posé après.
       let mainSlugs: MainExercises | null = null
       if (week > 1) {
-        mainSlugs = cycle.main_exercises
-        const missing = kinds.filter((k) => !mainSlugs?.[k]?.length)
-        if (missing.length) throw new Error(`exercices principaux absents pour ${missing.join(", ")}`)
+        mainSlugs = Object.fromEntries(kinds
+          .filter((k) => isUsableLock(k, cycle.main_exercises?.[k]))
+          .map((k) => [k, cycle.main_exercises![k]!]))
+        const missing = kinds.filter((k) => !mainSlugs?.[k])
+        if (missing.length) console.warn(`${tag} semaine ${week} : verrou absent pour ${missing.join(", ")}, génération libre`)
       }
 
       // Reprise : retire une éventuelle semaine partiellement enregistrée.
@@ -145,12 +153,13 @@ async function runWeekAndChain(admin: SupabaseClient, cycleId: string): Promise<
       if (insertError) throw new Error(`insertion semaine ${week} : ${insertError.message}`)
 
       const update: Record<string, unknown> = { generated_weeks: week }
-      if (week === 1) {
-        update.main_exercises = Object.fromEntries(result.sessions.map((s) => {
-          const main = s.content.blocks.find((b) => b.type === "main")
-          const items = (main?.type === "main" ? main.items : []) as MainItem[]
-          return [s.kind, items.map((i) => i.slug)]
-        }))
+      const newLocks = result.sessions.filter((s) => !mainSlugs?.[s.kind])
+      if (newLocks.length) {
+        // Fusion : les verrous des autres types restent tels quels.
+        update.main_exercises = {
+          ...(week > 1 ? cycle.main_exercises ?? {} : {}),
+          ...Object.fromEntries(newLocks.map((s) => [s.kind, lockedSlugs(s.kind, s.content)])),
+        }
       }
       if (week >= WEEKS_PER_CYCLE) update.generation_status = "ready"
       const { error: updateError } = await admin.from("strength_cycles").update(update).eq("id", cycleId)
