@@ -162,9 +162,13 @@ export function validateSessionContent(content: unknown, ctx: ValidationContext)
         errors.push(`${label} : au moins ${what} ${categories.join(" ou ")} attendu${min > 1 ? "s" : ""}`)
       }
     }
-    const heights = new Set(members.filter((e) => e.equipment.includes("bar")).map((e) => e.anchor))
-    if (heights.size > 1) {
-      errors.push(`${label} : barre utilisée à des hauteurs différentes (${[...heights].join(", ")}), une seule par triset`)
+    const onBar = members.filter((e) => e.equipment.includes("bar"))
+    if (new Set(onBar.map((e) => e.anchor)).size > 1) {
+      const detail = onBar.map((e) => `${e.slug} barre ${e.anchor}`).join(", ")
+      errors.push(
+        `${label} : barre utilisée à des hauteurs différentes (${detail}), une seule par triset : ` +
+          "garde des exercices à barre de même hauteur ou remplace par un exercice sans barre",
+      )
     }
   }
 

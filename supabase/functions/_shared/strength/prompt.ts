@@ -21,6 +21,20 @@ const kindRules = (kind: SessionKind, available: Exercise[]): string => {
   return `- ${kind} (${KIND_LABELS[kind]}) : ${trisets.join(" ; ")}`
 }
 
+/** Exercices à barre disponibles regroupés par hauteur, pour composer des trisets à une seule hauteur. */
+const barHeightsSummary = (available: Exercise[]): string[] => {
+  const onBar = available.filter((e) => e.equipment.includes("bar") && e.anchor)
+  if (!onBar.length) return []
+  return [
+    "",
+    "Exercices à barre par hauteur (un triset ne mélange jamais deux de ces lignes) :",
+    ...(["high", "mid", "low"] as const)
+      .map((anchor) => [anchor, onBar.filter((e) => e.anchor === anchor).map((e) => e.slug)] as const)
+      .filter(([, slugs]) => slugs.length)
+      .map(([anchor, slugs]) => `- ${anchor} : ${slugs.join(", ")}`),
+  ]
+}
+
 /** Prompt système : rôle, schéma, règles, catalogue disponible et bandes du compte. */
 export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): string {
   const bands = bandsKg.length
@@ -67,7 +81,10 @@ export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): str
     "- Échauffement court et ciblé sur les muscles travaillés dans la séance. Retour au calme ciblé aussi.",
     "- Triset foot_calf et triset legs du corps complet : privilégie le mollet excentrique (prévention du coureur), sans l'imposer.",
     "- Limite les déplacements de la barre : un triset utilise une seule hauteur de barre,",
-    "  et deux hauteurs au plus sur toute la séance.",
+    "  et deux hauteurs au plus sur toute la séance. Règle stricte, vérifiée : avant de répondre,",
+    "  contrôle la hauteur de chaque exercice à barre de chaque triset (liste ci-dessous).",
+    "  Triset de tirage ou de haut du corps : soit tous ses exercices à barre à la même hauteur,",
+    "  soit un seul exercice à barre complété par des exercices sans barre.",
     "",
     "## Dosage",
     "- Trisets : 3 à 4 tours, 60 à 90 s de repos après C.",
@@ -84,6 +101,7 @@ export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): str
     `Bandes : ${bands}.`,
     "Catalogue des exercices disponibles (slug · mode · matériel · hauteur de barre · unilat · assist · dosage de référence) :",
     catalogSummary(available),
+    ...barHeightsSummary(available),
     "",
     "## Sortie",
     'Uniquement du JSON : { "sessions": [ { "kind", "content" } ] }, une entrée par type de séance demandé, dans l\'ordre demandé.',
