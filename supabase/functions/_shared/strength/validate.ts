@@ -1,25 +1,23 @@
 // Validation du contenu d'une séance Renfo produit par le modèle. Module pur,
 // aussi importé par le front. Renvoie la liste des erreurs en français (vide si valide).
 
-import { type Anchor, type Equipment, EXERCISE_INDEX, type Exercise } from "./catalog.ts"
+import { type Anchor, availableExercises, type Equipment, EXERCISE_INDEX, type Exercise } from "./catalog.ts"
 import {
-  BLOCK_CATEGORIES, blockOrder, type BlockRules, COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN,
-  DURATION_MAX_SEC, DURATION_MIN_SEC, MAIN_ITEMS_MAX, MAIN_ITEMS_MIN, MAIN_REST_MAX_SEC,
-  MAIN_REST_MIN_SEC, MAIN_SETS_MAX, MAIN_SETS_MIN, REPS_MAX, REPS_MIN, type SessionKind,
-  SUPERSET_REST_MAX_SEC, SUPERSET_REST_MIN_SEC, SUPERSET_ROUNDS_MAX, SUPERSET_ROUNDS_MIN,
-  type TrisetFocus, TRISET_FOCUS_LABELS, TRISET_RULES, WARMUP_EXTRAS, WARMUP_ITEMS_MAX, WARMUP_ITEMS_MIN,
+  blockOrder, COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, DURATION_MAX_SEC, DURATION_MIN_SEC,
+  effectiveTrisetRules, REPS_MAX, REPS_MIN, type SessionKind, SUPERSET_REST_MAX_SEC,
+  SUPERSET_REST_MIN_SEC, SUPERSET_ROUNDS_MAX, SUPERSET_ROUNDS_MIN, type TrisetFocus,
+  TRISET_FOCUS_LABELS, TRISETS_BY_KIND, WARMUP_EXTRAS, WARMUP_ITEMS_MAX, WARMUP_ITEMS_MIN,
 } from "./rules.ts"
 
 export interface ValidationContext {
   kind: SessionKind
-  /** Matériel hors élastiques (chair, bar). */
+  /** Matériel hors élastiques (chair, bar). Avec bandsKg, fixe aussi les règles effectives des trisets. */
   equipment: Equipment[]
   /** Bandes du compte, en kg. */
   bandsKg: number[]
   /**
-   * Exercices figés sur le cycle en cours (lockedSlugs) : bloc principal dans
-   * n'importe quel ordre, ou pour le corps complet les 9 slugs des trisets à plat,
-   * comparés triset par triset (ordre libre à l'intérieur d'un triset).
+   * Exercices figés sur le cycle en cours (lockedSlugs) : les 9 slugs des trisets
+   * à plat, comparés triset par triset (ordre libre à l'intérieur d'un triset).
    */
   mainSlugs?: string[]
 }
@@ -55,7 +53,8 @@ export function validateSessionContent(content: unknown, ctx: ValidationContext)
     return errors
   }
 
-  const rules = BLOCK_CATEGORIES[ctx.kind]
+  const trisets = TRISETS_BY_KIND[ctx.kind]
+  const available = availableExercises(ctx.equipment, ctx.bandsKg)
   const seen = new Set<string>()
   const anchors = new Set<Anchor>()
 
@@ -131,90 +130,41 @@ export function validateSessionContent(content: unknown, ctx: ValidationContext)
     }
   }
 
-  if (rules.layout === "trisets") {
-    // ── Trisets (corps complet) ──
-    rules.trisets.forEach((focus, i) => checkTriset(blocks[i + 1] as Rec, i + 1, focus))
-    if (ctx.mainSlugs) {
-      rules.trisets.forEach((_, i) => {
-        const block = blocks[i + 1] as Rec
-        const got = [block.a, block.b, block.c].map((d) => isRecord(d) ? d.slug : undefined)
-        const want = ctx.mainSlugs!.slice(i * 3, i * 3 + 3)
-        if (!sameSet(got, want)) {
-          errors.push(`Triset ${i + 1} : exercices imposés pour ce cycle : ${want.join(", ")}`)
-        }
-      })
-    }
-  } else {
-    checkMainLayout(rules)
+  // ── Trisets ──
+  trisets.forEach((focus, i) => checkTriset(blocks[i + 1] as Rec, i + 1, focus))
+  if (ctx.mainSlugs) {
+    trisets.forEach((_, i) => {
+      const block = blocks[i + 1] as Rec
+      const got = [block.a, block.b, block.c].map((d) => isRecord(d) ? d.slug : undefined)
+      const want = ctx.mainSlugs!.slice(i * 3, i * 3 + 3)
+      if (!sameSet(got, want)) {
+        errors.push(`Triset ${i + 1} : exercices imposés pour ce cycle : ${want.join(", ")}`)
+      }
+    })
   }
 
   function checkTriset(block: Rec, n: number, focus: TrisetFocus) {
     const label = `Triset ${n}`
-    const focusRules = TRISET_RULES[focus]
+    const rules = effectiveTrisetRules(focus, available)
     checkRoundsAndRest(block, label)
     if (block.focus !== focus) {
       errors.push(`${label} : focus « ${focus} » (${TRISET_FOCUS_LABELS[focus]}) attendu à cette position`)
     }
     if (block.c === undefined) errors.push(`${label} : trois exercices a, b et c attendus`)
-    const allowed = (e: Exercise) => focusRules.categories.includes(e.category)
+    const allowed = (e: Exercise) => rules.categories.includes(e.category)
     const members = (["a", "b", "c"] as const)
       .filter((key) => key !== "c" || block.c !== undefined)
       .map((key) => checkDose(block[key], `${label} ${key.toUpperCase()}`, allowed))
       .filter((e): e is Exercise => e !== null)
-    for (const group of focusRules.requires) {
-      if (members.length && !members.some((e) => group.includes(e.category))) {
-        errors.push(`${label} : au moins un exercice ${group.join(" ou ")} attendu`)
+    for (const { categories, min } of rules.requires) {
+      if (members.length && members.filter((e) => categories.includes(e.category)).length < min) {
+        const what = min > 1 ? `${min} exercices` : "un exercice"
+        errors.push(`${label} : au moins ${what} ${categories.join(" ou ")} attendu${min > 1 ? "s" : ""}`)
       }
     }
     const heights = new Set(members.filter((e) => e.equipment.includes("bar")).map((e) => e.anchor))
     if (heights.size > 1) {
       errors.push(`${label} : barre utilisée à des hauteurs différentes (${[...heights].join(", ")}), une seule par triset`)
-    }
-  }
-
-  function checkMainLayout(rules: BlockRules) {
-    // ── Bloc principal ──
-    const main = (blocks as unknown[])[1] as Rec
-    const mainExercises = checkList(main, "Bloc principal", MAIN_ITEMS_MIN, MAIN_ITEMS_MAX,
-      (e) => rules.main.includes(e.category))
-    if (Array.isArray(main.items)) {
-      main.items.forEach((item, i) => {
-        if (!isRecord(item)) return
-        if (!isIntIn(item.sets, MAIN_SETS_MIN, MAIN_SETS_MAX)) {
-          errors.push(`Bloc principal ${i + 1} : sets entier entre ${MAIN_SETS_MIN} et ${MAIN_SETS_MAX}`)
-        }
-        if (!isIntIn(item.rest_sec, MAIN_REST_MIN_SEC, MAIN_REST_MAX_SEC)) {
-          errors.push(`Bloc principal ${i + 1} : rest_sec entier entre ${MAIN_REST_MIN_SEC} et ${MAIN_REST_MAX_SEC}`)
-        }
-      })
-    }
-    const mainCategories = mainExercises.filter((e): e is Exercise => e !== null).map((e) => e.category)
-    for (const group of rules.mainRequires) {
-      if (mainExercises.length && !mainCategories.some((c) => group.includes(c))) {
-        errors.push(`Bloc principal : au moins un exercice ${group.join(" ou ")} attendu`)
-      }
-    }
-    if (ctx.mainSlugs && Array.isArray(main.items)) {
-      const got = main.items.map((item) => isRecord(item) ? item.slug : undefined)
-      if (!sameSet(got, ctx.mainSlugs)) {
-        errors.push(`Bloc principal : exercices imposés pour ce cycle : ${ctx.mainSlugs.join(", ")}`)
-      }
-    }
-
-    // ── Supersets ──
-    for (const [n, index] of [[1, 2], [2, 3]]) {
-      const block = (blocks as unknown[])[index] as Rec
-      const label = `Superset ${n}`
-      checkRoundsAndRest(block, label)
-      if (block.c !== undefined || block.focus !== undefined) {
-        errors.push(`${label} : deux exercices a et b seulement, ni c ni focus (trisets réservés au corps complet)`)
-      }
-      const allowed = (e: Exercise) => rules.superset.includes(e.category)
-      const a = checkDose(block.a, `${label} A`, allowed)
-      const b = checkDose(block.b, `${label} B`, allowed)
-      if (a?.equipment.includes("bar") && b?.equipment.includes("bar") && a.anchor !== b.anchor) {
-        errors.push(`${label} : A et B utilisent la barre à des hauteurs différentes (${a.anchor}, ${b.anchor})`)
-      }
     }
   }
 

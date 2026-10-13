@@ -174,7 +174,7 @@ const FULL = {
   ],
 }
 
-// Séance jambes au format actuel.
+// Ancienne séance jambes (bloc principal et supersets A+B), toujours jouée.
 const LEGS = {
   title: 'Jambes',
   estimated_min: 0,
@@ -225,7 +225,7 @@ test('triset sans focus : libellé Triset n', () => {
   assert.equal(steps[1].blockLabel, 'Triset 1')
 })
 
-test('séance jambes : bloc principal puis supersets A+B, aucun c', () => {
+test('ancienne séance jambes : bloc principal puis supersets A+B, aucun c', () => {
   const { steps } = buildSequence(LEGS)
   assert.ok(works(steps).every((s) => s.role !== 'C'))
   assert.equal(steps.find((s) => s.blockIndex === 2 && s.kind === 'work').blockLabel, 'Superset 1')
@@ -277,4 +277,25 @@ test('blockProgress : un segment par bloc, poids et fraction faite', () => {
   assert.ok(mid[2].done > 0 && mid[2].done < 1, 'repos d\'entrée du bloc compté comme fait')
   // Fin : tout est fait.
   assert.ok(blockProgress(steps, steps.length).every((s) => s.done === 1))
+})
+
+test('séance jambes en trisets : libellés des focus propres au type', () => {
+  const content = {
+    blocks: [
+      { type: 'warmup', items: [{ slug: 'cercles_hanche', reps: 8 }] },
+      { type: 'superset', focus: 'quads', rounds: 3, rest_sec: 75,
+        a: { slug: 'squat_bulgare', reps: 10 }, b: { slug: 'step_up', reps: 10 }, c: { slug: 'sdt_roumain_elastique', reps: 12, band_kg: 20 } },
+      { type: 'superset', focus: 'posterior', rounds: 3, rest_sec: 75,
+        a: { slug: 'pont_fessier_unipodal', reps: 12 }, b: { slug: 'abduction_elastique', reps: 15, band_kg: 10 }, c: { slug: 'fente_arriere', reps: 10 } },
+      { type: 'superset', focus: 'foot_calf', rounds: 3, rest_sec: 60,
+        a: { slug: 'mollet_excentrique', reps: 10 }, b: { slug: 'releves_pointes', reps: 20 }, c: { slug: 'equilibre_unipodal', duration_sec: 30 } },
+      { type: 'cooldown', items: [{ slug: 'pigeon', duration_sec: 40 }] },
+    ],
+  }
+  const { steps, totalSeconds } = buildSequence(content)
+  const labels = [...new Set(works(steps).map((s) => s.blockLabel))]
+  assert.deepEqual(labels, [
+    'Échauffement', 'Triset 1 · Quadriceps', 'Triset 2 · Chaîne postérieure', 'Triset 3 · Pied et mollet', 'Retour au calme',
+  ])
+  assert.equal(Math.round(totalSeconds / 60), estimateSessionMinutes(content))
 })

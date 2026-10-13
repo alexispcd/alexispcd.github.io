@@ -2,31 +2,24 @@
 
 import { catalogSummary, type Exercise } from "./catalog.ts"
 import {
-  BLOCK_CATEGORIES, blockOrder, COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, DURATION_MAX_SEC, DURATION_MIN_SEC,
-  KIND_LABELS, MAIN_ITEMS_MAX, MAIN_ITEMS_MIN, MAIN_REST_MAX_SEC, MAIN_REST_MIN_SEC, MAIN_SETS_MAX,
-  MAIN_SETS_MIN, REPS_MAX, REPS_MIN, type SessionKind, SUPERSET_REST_MAX_SEC, SUPERSET_REST_MIN_SEC,
-  SUPERSET_ROUNDS_MAX, SUPERSET_ROUNDS_MIN, TRISET_RULES, WARMUP_EXTRAS, WARMUP_ITEMS_MAX,
-  WARMUP_ITEMS_MIN, WEEK_PHASES,
+  blockOrder, COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, DURATION_MAX_SEC, DURATION_MIN_SEC,
+  effectiveTrisetRules, KIND_LABELS, REPS_MAX, REPS_MIN, type SessionKind, SUPERSET_REST_MAX_SEC,
+  SUPERSET_REST_MIN_SEC, SUPERSET_ROUNDS_MAX, SUPERSET_ROUNDS_MIN, TRISETS_BY_KIND, type TrisetRequirement,
+  WARMUP_EXTRAS, WARMUP_ITEMS_MAX, WARMUP_ITEMS_MIN, WEEK_PHASES,
 } from "./rules.ts"
 
-const requiresText = (groups: string[][]): string => groups.map((g) => `au moins un ${g.join(" ou ")}`).join(", ")
+const requiresText = (requires: TrisetRequirement[]): string =>
+  requires.map((r) => `au moins ${r.min} ${r.categories.join(" ou ")}`).join(", ")
 
-const kindRules = (kind: SessionKind): string => {
-  const r = BLOCK_CATEGORIES[kind]
-  if (r.layout === "trisets") {
-    const trisets = r.trisets.map((focus, i) => {
-      const t = TRISET_RULES[focus]
-      return `triset ${i + 1} focus ${focus} : ${t.categories.join(", ")} (${requiresText(t.requires)})`
-    })
-    return `- ${kind} (${KIND_LABELS[kind]}) : pas de bloc principal, trois trisets ; ${trisets.join(" ; ")}`
-  }
-  const requires = requiresText(r.mainRequires)
-  return `- ${kind} (${KIND_LABELS[kind]}) : bloc principal ${r.main.join(", ")}` +
-    (requires ? ` (${requires})` : "") + ` ; supersets ${r.superset.join(", ")}`
+/** Trisets d'un type, dans l'ordre, avec les catégories et exigences effectives (matériel du compte). */
+const kindRules = (kind: SessionKind, available: Exercise[]): string => {
+  const trisets = TRISETS_BY_KIND[kind].map((focus, i) => {
+    const t = effectiveTrisetRules(focus, available)
+    const requires = requiresText(t.requires)
+    return `triset ${i + 1} focus ${focus} : ${t.categories.join(", ")}${requires ? ` (${requires})` : ""}`
+  })
+  return `- ${kind} (${KIND_LABELS[kind]}) : ${trisets.join(" ; ")}`
 }
-
-/** Le type de séance a-t-il des trisets (corps complet) plutôt qu'un bloc principal ? */
-const hasTrisets = (kind: SessionKind): boolean => BLOCK_CATEGORIES[kind].layout === "trisets"
 
 /** Prompt système : rôle, schéma, règles, catalogue disponible et bandes du compte. */
 export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): string {
@@ -38,71 +31,54 @@ export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): str
     "avec une barre de traction mobile (trois hauteurs : high en haut, mid à mi-hauteur, low en bas),",
     "des élastiques de résistances connues et une chaise, selon le matériel disponible ci-dessous.",
     "",
-    "## Schéma d'une séance (champ content)",
-    "Séances autres que full :",
+    "## Schéma d'une séance (champ content), identique pour tous les types",
     "{",
     '  "title": string,',
     '  "blocks": [',
     '    { "type": "warmup",   "items": [ { "slug", "reps" | "duration_sec", "band_kg"? } ] },',
-    '    { "type": "main",     "items": [ { "slug", "sets", "reps" | "duration_sec", "rest_sec", "band_kg"? } ] },',
-    '    { "type": "superset", "rounds", "rest_sec", "a": { "slug", "reps" | "duration_sec", "band_kg"? }, "b": { ... } },',
-    '    { "type": "superset", ... },',
+    '    { "type": "superset", "focus", "rounds", "rest_sec",',
+    '      "a": { "slug", "reps" | "duration_sec", "band_kg"? }, "b": { ... }, "c": { ... } },',
+    '    { "type": "superset", "focus", ... },',
+    '    { "type": "superset", "focus", ... },',
     '    { "type": "cooldown", "items": [ { "slug", "duration_sec" } ] }',
-    "  ]",
-    "}",
-    "Séance full (corps complet), trois trisets et pas de bloc principal :",
-    "{",
-    '  "title": string,',
-    '  "blocks": [',
-    '    { "type": "warmup", "items": [ ... ] },',
-    '    { "type": "superset", "focus": "legs", "rounds", "rest_sec", "a": { ... }, "b": { ... }, "c": { ... } },',
-    '    { "type": "superset", "focus": "upper", ... },',
-    '    { "type": "superset", "focus": "core_runner", ... },',
-    '    { "type": "cooldown", "items": [ ... ] }',
     "  ]",
     "}",
     "",
     "## Règles du schéma",
-    `- Séances autres que full : exactement 5 blocs dans cet ordre : ${blockOrder("legs").join(", ")}.`,
-    `  Bloc principal en séries (${MAIN_ITEMS_MIN} à ${MAIN_ITEMS_MAX} exercices), deux supersets A puis B (repos après B seulement).`,
-    "  Ces supersets n'ont ni c ni focus.",
-    `- Séance full : exactement 5 blocs dans cet ordre : ${blockOrder("full").join(", ")}.`,
-    "  Chaque superset est un triset : a, b et c enchaînés, repos après c seulement, et son focus,",
-    "  dans cet ordre : legs, puis upper, puis core_runner.",
+    `- Exactement 5 blocs dans cet ordre : ${blockOrder("full").join(", ")}.`,
+    "- Chaque superset est un triset : a, b et c enchaînés, repos après c seulement, avec le focus",
+    "  attendu à sa position pour le type de séance (voir plus bas).",
     `- Échauffement : ${WARMUP_ITEMS_MIN} à ${WARMUP_ITEMS_MAX} exercices, joués une fois, vise ${WARMUP_ITEMS_MAX}.`,
     `  Retour au calme : ${COOLDOWN_ITEMS_MIN} à ${COOLDOWN_ITEMS_MAX} exercices, vise ${COOLDOWN_ITEMS_MAX}.`,
     "- reps ou duration_sec selon le mode de l'exercice (reps ou duration), jamais les deux.",
     "  Pour un exercice unilat, la valeur est par côté.",
     `- Bornes : reps ${REPS_MIN} à ${REPS_MAX}, duration_sec ${DURATION_MIN_SEC} à ${DURATION_MAX_SEC},`,
-    `  sets ${MAIN_SETS_MIN} à ${MAIN_SETS_MAX} et rest_sec ${MAIN_REST_MIN_SEC} à ${MAIN_REST_MAX_SEC} pour le bloc principal,`,
-    `  rounds ${SUPERSET_ROUNDS_MIN} à ${SUPERSET_ROUNDS_MAX} et rest_sec ${SUPERSET_REST_MIN_SEC} à ${SUPERSET_REST_MAX_SEC} pour un superset ou un triset. Valeurs entières.`,
+    `  rounds ${SUPERSET_ROUNDS_MIN} à ${SUPERSET_ROUNDS_MAX} et rest_sec ${SUPERSET_REST_MIN_SEC} à ${SUPERSET_REST_MAX_SEC} pour un triset. Valeurs entières.`,
     "- band_kg présent si et seulement si l'exercice utilise band, égal à l'une des bandes du compte.",
     "- Aucun exercice en double dans une séance.",
     "- Échauffement : catégorie warmup, ou l'un de ces exercices : " + WARMUP_EXTRAS.join(", ") + ".",
     "- Retour au calme : catégorie cooldown uniquement.",
-    "- Catégories autorisées par type de séance :",
-    ...(Object.keys(KIND_LABELS) as SessionKind[]).map(kindRules),
+    "- Trisets de chaque type de séance, dans l'ordre (focus, catégories autorisées, exigences) :",
+    ...(Object.keys(KIND_LABELS) as SessionKind[]).map((kind) => kindRules(kind, available)),
     "- Ne renvoie pas estimated_min, la durée est calculée à part.",
     "",
     "## Choix des exercices",
     "- Choisis uniquement des slugs du catalogue ci-dessous. N'invente aucun exercice ni aucun texte d'exercice.",
     "- Échauffement court et ciblé sur les muscles travaillés dans la séance. Retour au calme ciblé aussi.",
-    "- Séances jambes et bas du corps : privilégie le mollet excentrique (prévention du coureur), sans l'imposer.",
-    "- Limite les déplacements de la barre : un superset ou un triset utilise une seule hauteur de barre,",
+    "- Triset foot_calf et triset legs du corps complet : privilégie le mollet excentrique (prévention du coureur), sans l'imposer.",
+    "- Limite les déplacements de la barre : un triset utilise une seule hauteur de barre,",
     "  et deux hauteurs au plus sur toute la séance.",
     "",
     "## Dosage",
-    "- Bloc principal : 3 à 4 séries, 60 à 120 s de repos. Supersets : 3 à 4 tours, 60 à 90 s de repos après B.",
-    "- Trisets du corps complet : 3 à 4 tours, 60 à 90 s de repos après C.",
+    "- Trisets : 3 à 4 tours, 60 à 90 s de repos après C.",
     "- Choix des bandes : vise un effort difficile sur les dernières répétitions.",
     "  Pour un exercice assist, une bande plus forte aide davantage : la progression consiste à passer à une bande plus légère.",
     "",
     "## Cycle de 4 semaines",
     ...WEEK_PHASES.map((p, i) => `- Semaine ${i + 1}, phase ${p.phase} : ${p.instruction}`),
-    "- Séances autres que full : exercices principaux figés sur le cycle, les mêmes pour un type de séance donné",
-    "  sur les 4 semaines, choisis en semaine 1. Supersets, échauffement et retour au calme varient d'une semaine à l'autre.",
-    "- Séance full : les 9 exercices des trisets sont figés sur le cycle, chacun dans son triset ;",
-    "  seul leur dosage progresse. Échauffement et retour au calme varient d'une semaine à l'autre.",
+    "- Pour tous les types, les 9 exercices des trisets sont figés sur le cycle, chacun dans son triset,",
+    "  choisis à la première semaine générée ; seul leur dosage progresse.",
+    "  Échauffement et retour au calme varient chaque semaine.",
     "",
     "## Matériel du compte",
     `Bandes : ${bands}.`,
@@ -114,7 +90,7 @@ export function buildSystemPrompt(available: Exercise[], bandsKg: number[]): str
   ].join("\n")
 }
 
-/** Dosage compact d'un exercice : 3×10 (30 kg). */
+/** Dosage compact d'un exercice : 10 (30 kg), ou 3×10 pour une ancienne série. */
 const formatDose = (item: Record<string, unknown>): string => {
   const sets = typeof item.sets === "number" ? `${item.sets}×` : ""
   const value = item.reps != null ? `${item.reps}` : `${item.duration_sec} s`
@@ -144,8 +120,8 @@ const summarizeSuperset = (block: Record<string, unknown>): string => {
 }
 
 /**
- * Exercices figés d'une séance, résumés avec leur dosage : bloc principal, ou trisets
- * du corps complet (séance au nouveau format, avec focus ou membre c).
+ * Exercices figés d'une séance, résumés avec leur dosage : les trisets. Repli sur le
+ * bloc principal pour une ancienne séance, qui peut figurer dans l'historique.
  */
 export function summarizeMain(content: unknown): string {
   const blocks = blocksOf(content)
@@ -184,9 +160,8 @@ export interface CycleWeekPromptInput {
   previousMain: Partial<Record<SessionKind, string[]>> | null
 }
 
-/** Consigne d'exercices imposés pour un type : liste à plat, ou par triset pour le corps complet. */
+/** Consigne d'exercices imposés pour un type, triset par triset. */
 const lockedLine = (kind: SessionKind, slugs: string[]): string => {
-  if (!hasTrisets(kind)) return `- ${kind} (bloc principal, exactement ces slugs) : ${slugs.join(", ")}`
   const trisets = [0, 1, 2].map((i) => `triset ${i + 1} : ${slugs.slice(i * 3, i * 3 + 3).join(", ")}`)
   return `- ${kind} (trisets, exactement ces slugs dans chaque triset, ordre libre) : ${trisets.join(" ; ")}`
 }
@@ -208,7 +183,7 @@ export function buildCycleWeekPrompt(input: CycleWeekPromptInput): string {
   if (free.length) {
     if (locked.length) lines.push("")
     lines.push(
-      `Choisis les exercices figés de ${free.join(", ")} (bloc principal, ou les 9 exercices des trisets pour full) :`,
+      `Choisis les 9 exercices des trisets de ${free.join(", ")} :`,
       "ils resteront les mêmes jusqu'à la fin du cycle, seul leur dosage progressera.",
     )
   }
@@ -231,7 +206,7 @@ export function buildCycleWeekPrompt(input: CycleWeekPromptInput): string {
 export function buildFreeSessionPrompt(kind: SessionKind, weekSessions: PriorSession[]): string {
   const lines = [
     `Génère une séance libre, hors cycle, de type ${kind} (${KIND_LABELS[kind]}).`,
-    "Pas d'exercices principaux imposés. Dosage proche des références du catalogue.",
+    "Pas d'exercices imposés. Dosage proche des références du catalogue.",
     "",
     "Séances déjà prévues ou faites cette semaine (évite de répéter les mêmes exercices) :",
   ]

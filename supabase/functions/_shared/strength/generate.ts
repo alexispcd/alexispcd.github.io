@@ -46,7 +46,7 @@ export interface GenerateParams {
   userPrompt: string
   kinds: SessionKind[]
   setup: StrengthSetup
-  /** Exercices principaux imposés par type, ou null. */
+  /** Exercices figés imposés par type (9 slugs des trisets), ou null. */
   mainSlugs: Partial<Record<SessionKind, string[]>> | null
   maxTokens: number
   timeoutMs?: number

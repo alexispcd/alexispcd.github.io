@@ -1,8 +1,8 @@
-// Règles du module Renfo : types de séance, catégories autorisées par bloc,
+// Règles du module Renfo : types de séance, trisets et leurs catégories,
 // phases du cycle, bornes de dosage et schéma du contenu d'une séance.
 // Module pur, sans import Deno ni npm : il est aussi importé par le front.
 
-import type { Category } from "./catalog.ts"
+import type { Category, Exercise } from "./catalog.ts"
 
 export type SessionKind = "full" | "lower_core" | "upper_core" | "legs" | "upper" | "core_runner"
 
@@ -35,76 +35,91 @@ export const WARMUP_EXTRAS: string[] = [
   "marche_laterale", "rotation_externe", "releves_pointes", "flexion_hanche_elastique",
 ]
 
-export interface BlockRules {
-  layout: "main"
-  main: Category[]
-  superset: Category[]
-  /** Chaque groupe doit être représenté par au moins un exercice du bloc principal. */
-  mainRequires: Category[][]
-}
-
-/** Thème d'un triset du corps complet. */
-export type TrisetFocus = "legs" | "upper" | "core_runner"
-
-/** Focus des trisets du corps complet : le triset n vaut TRISET_FOCUSES[n - 1]. */
-export const TRISET_FOCUSES: TrisetFocus[] = ["legs", "upper", "core_runner"]
+/** Thème d'un triset. */
+export type TrisetFocus =
+  | "legs" | "upper" | "core_runner"
+  | "lower_legs" | "posterior_calves" | "trunk"
+  | "pull" | "push"
+  | "quads" | "posterior" | "foot_calf"
+  | "shoulders_arms"
+  | "core_stability" | "balance_foot" | "runner_hips"
 
 export const TRISET_FOCUS_LABELS: Record<TrisetFocus, string> = {
-  legs: KIND_LABELS.legs,
-  upper: KIND_LABELS.upper,
-  core_runner: KIND_LABELS.core_runner,
+  legs: "Jambes",
+  upper: "Haut du corps",
+  core_runner: "Tronc et coureur",
+  lower_legs: "Jambes",
+  posterior_calves: "Chaîne postérieure et mollets",
+  trunk: "Tronc",
+  pull: "Tirage",
+  push: "Poussée",
+  quads: "Quadriceps",
+  posterior: "Chaîne postérieure",
+  foot_calf: "Pied et mollet",
+  shoulders_arms: "Épaules et bras",
+  core_stability: "Gainage",
+  balance_foot: "Équilibre et pied",
+  runner_hips: "Hanches du coureur",
+}
+
+/** Au moins `min` exercices du triset appartiennent à l'une de ces catégories. */
+export interface TrisetRequirement {
+  categories: Category[]
+  min: number
 }
 
 export interface TrisetRules {
   categories: Category[]
-  /** Chaque groupe doit être représenté par au moins un exercice du triset. */
-  requires: Category[][]
+  requires: TrisetRequirement[]
 }
+
+const req = (categories: Category[], min: number): TrisetRequirement => ({ categories, min })
 
 export const TRISET_RULES: Record<TrisetFocus, TrisetRules> = {
-  legs: { categories: ["legs", "posterior_chain", "calves_feet"], requires: [["legs"]] },
-  upper: { categories: ["pull", "push", "arms"], requires: [["pull"], ["push"]] },
-  core_runner: { categories: ["core", "balance", "calves_feet"], requires: [["core"]] },
+  legs: { categories: ["legs", "posterior_chain", "calves_feet"], requires: [req(["legs"], 1)] },
+  upper: { categories: ["pull", "push", "arms"], requires: [req(["pull"], 1), req(["push"], 1)] },
+  core_runner: { categories: ["core", "balance", "calves_feet"], requires: [req(["core"], 1)] },
+  lower_legs: { categories: ["legs", "posterior_chain"], requires: [req(["legs"], 2)] },
+  posterior_calves: {
+    categories: ["posterior_chain", "calves_feet"],
+    requires: [req(["posterior_chain"], 1), req(["calves_feet"], 1)],
+  },
+  trunk: { categories: ["core", "balance"], requires: [req(["core"], 1)] },
+  pull: { categories: ["pull", "arms"], requires: [req(["pull"], 2)] },
+  push: { categories: ["push", "arms"], requires: [req(["push"], 2)] },
+  quads: { categories: ["legs", "posterior_chain"], requires: [req(["legs"], 2)] },
+  posterior: { categories: ["posterior_chain", "legs"], requires: [req(["posterior_chain"], 2)] },
+  foot_calf: { categories: ["calves_feet", "balance"], requires: [req(["calves_feet"], 1)] },
+  shoulders_arms: { categories: ["arms", "pull", "push"], requires: [req(["arms"], 1)] },
+  core_stability: { categories: ["core", "balance"], requires: [req(["core"], 2)] },
+  balance_foot: { categories: ["balance", "calves_feet"], requires: [req(["balance"], 1)] },
+  runner_hips: { categories: ["posterior_chain", "core"], requires: [req(["posterior_chain"], 1)] },
 }
 
-/** Corps complet : trois trisets, un par focus, sans bloc principal. */
-export interface TrisetLayout {
-  layout: "trisets"
-  trisets: TrisetFocus[]
+/** Trisets de chaque type de séance, dans l'ordre : le triset n vaut TRISETS_BY_KIND[kind][n - 1]. */
+export const TRISETS_BY_KIND: Record<SessionKind, TrisetFocus[]> = {
+  full: ["legs", "upper", "core_runner"],
+  lower_core: ["lower_legs", "posterior_calves", "trunk"],
+  upper_core: ["pull", "push", "trunk"],
+  legs: ["quads", "posterior", "foot_calf"],
+  upper: ["pull", "push", "shoulders_arms"],
+  core_runner: ["core_stability", "balance_foot", "runner_hips"],
 }
 
-export const BLOCK_CATEGORIES: Record<SessionKind, BlockRules | TrisetLayout> = {
-  full: { layout: "trisets", trisets: TRISET_FOCUSES },
-  lower_core: {
-    layout: "main",
-    main: ["legs", "posterior_chain"],
-    superset: ["core", "posterior_chain", "calves_feet", "balance"],
-    mainRequires: [],
-  },
-  upper_core: {
-    layout: "main",
-    main: ["pull", "push"],
-    superset: ["core", "arms", "pull", "push"],
-    mainRequires: [],
-  },
-  legs: {
-    layout: "main",
-    main: ["legs", "posterior_chain"],
-    superset: ["legs", "posterior_chain", "calves_feet"],
-    mainRequires: [],
-  },
-  upper: {
-    layout: "main",
-    main: ["pull", "push"],
-    superset: ["arms", "pull", "push"],
-    mainRequires: [["pull"]],
-  },
-  core_runner: {
-    layout: "main",
-    main: ["core"],
-    superset: ["core", "balance", "calves_feet"],
-    mainRequires: [],
-  },
+/**
+ * Règles d'un focus adaptées au catalogue disponible (matériel du compte) :
+ * catégories sans exercice disponible retirées, chaque minimum ramené au nombre
+ * d'exercices disponibles dans ses catégories, exigence à 0 supprimée.
+ */
+export function effectiveTrisetRules(focus: TrisetFocus, available: Exercise[]): TrisetRules {
+  const rules = TRISET_RULES[focus]
+  const count = (categories: Category[]) => available.filter((e) => categories.includes(e.category)).length
+  return {
+    categories: rules.categories.filter((c) => count([c]) > 0),
+    requires: rules.requires
+      .map((r) => ({ categories: r.categories, min: Math.min(r.min, count(r.categories)) }))
+      .filter((r) => r.min > 0),
+  }
 }
 
 export type WeekPhase = "base" | "progression" | "pic" | "decharge"
@@ -119,12 +134,12 @@ export const WEEK_PHASES: WeekPhaseRule[] = [
   { phase: "base", instruction: "Dosage prudent, proche des références du catalogue." },
   {
     phase: "progression",
-    instruction: "Une ou deux répétitions, une série ou un tour de plus sur les exercices figés par rapport à la semaine 1.",
+    instruction: "Une ou deux répétitions, ou un tour de plus, sur les trisets par rapport à la semaine 1.",
   },
   { phase: "pic", instruction: "Volume maximal du cycle ou bande plus exigeante." },
   {
     phase: "decharge",
-    instruction: "Une série ou un tour de moins et environ 30 % de volume en moins, mêmes exercices figés.",
+    instruction: "Un tour de moins et environ 30 % de volume en moins, mêmes exercices.",
   },
 ]
 
@@ -141,10 +156,6 @@ export const REPS_MIN = 3
 export const REPS_MAX = 30
 export const DURATION_MIN_SEC = 10
 export const DURATION_MAX_SEC = 90
-export const MAIN_SETS_MIN = 2
-export const MAIN_SETS_MAX = 5
-export const MAIN_REST_MIN_SEC = 45
-export const MAIN_REST_MAX_SEC = 180
 export const SUPERSET_ROUNDS_MIN = 2
 export const SUPERSET_ROUNDS_MAX = 4
 export const SUPERSET_REST_MIN_SEC = 45
@@ -153,8 +164,6 @@ export const SUPERSET_REST_MAX_SEC = 120
 // ── Structure d'une séance ───────────────────────────────────────────────────
 export const WARMUP_ITEMS_MIN = 1
 export const WARMUP_ITEMS_MAX = 2
-export const MAIN_ITEMS_MIN = 2
-export const MAIN_ITEMS_MAX = 3
 export const COOLDOWN_ITEMS_MIN = 1
 export const COOLDOWN_ITEMS_MAX = 2
 
@@ -174,9 +183,10 @@ export interface WarmupBlock { type: "warmup"; items: Dose[] }
 
 export interface MainItem extends Dose { sets: number; rest_sec: number }
 
+/** Bloc principal des anciennes séances : lu et joué, plus jamais généré. */
 export interface MainBlock { type: "main"; items: MainItem[] }
 
-/** Superset A+B, ou triset A, B, C quand c est présent (corps complet). */
+/** Triset A, B, C avec son focus ; les anciennes séances ont des supersets A+B sans focus. */
 export interface SupersetBlock {
   type: "superset"
   rounds: number
@@ -185,7 +195,7 @@ export interface SupersetBlock {
   a: Dose
   b: Dose
   c?: Dose
-  /** Thème du triset, corps complet uniquement. */
+  /** Thème du triset (absent des anciens supersets). */
   focus?: TrisetFocus
 }
 
@@ -195,12 +205,10 @@ export type SessionBlock = WarmupBlock | MainBlock | SupersetBlock | CooldownBlo
 
 export type BlockType = SessionBlock["type"]
 
-const MAIN_ORDER: BlockType[] = ["warmup", "main", "superset", "superset", "cooldown"]
 const TRISET_ORDER: BlockType[] = ["warmup", "superset", "superset", "superset", "cooldown"]
 
-/** Ordre exact des blocs d'une séance selon son type. */
-export const blockOrder = (kind: SessionKind): BlockType[] =>
-  BLOCK_CATEGORIES[kind].layout === "trisets" ? TRISET_ORDER : MAIN_ORDER
+/** Ordre exact des blocs d'une séance générée : identique pour tous les types. */
+export const blockOrder = (_kind: SessionKind): BlockType[] => TRISET_ORDER
 
 export interface SessionContent {
   title: string
@@ -215,20 +223,15 @@ const slugOf = (dose: unknown): string | null => {
 }
 
 /**
- * Exercices figés sur un cycle : slugs du bloc principal, ou pour le corps complet
- * les 9 slugs des trisets à plat (triset 1 A, B, C, puis triset 2, puis triset 3).
+ * Exercices figés sur un cycle : les 9 slugs des trisets à plat (triset 1 A, B, C,
+ * puis triset 2, puis triset 3), pour tous les types de séance.
  */
-export function lockedSlugs(kind: SessionKind, content: unknown): string[] {
+export function lockedSlugs(_kind: SessionKind, content: unknown): string[] {
   const blocks = (content as { blocks?: unknown } | null)?.blocks
   if (!Array.isArray(blocks)) return []
   const slugs: (string | null)[] = []
-  if (BLOCK_CATEGORIES[kind].layout === "trisets") {
-    for (const block of blocks) {
-      if (block?.type === "superset") slugs.push(slugOf(block.a), slugOf(block.b), slugOf(block.c))
-    }
-  } else {
-    const main = blocks.find((b) => b?.type === "main")
-    if (Array.isArray(main?.items)) slugs.push(...main.items.map(slugOf))
+  for (const block of blocks) {
+    if (block?.type === "superset") slugs.push(slugOf(block.a), slugOf(block.b), slugOf(block.c))
   }
   return slugs.filter((s): s is string => s !== null)
 }

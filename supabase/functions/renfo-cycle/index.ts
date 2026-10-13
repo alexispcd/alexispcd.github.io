@@ -6,7 +6,7 @@ import { errorMessage, internalError } from "../_shared/http.ts"
 import { availableExercises } from "../_shared/strength/catalog.ts"
 import { generateSessions, loadStrengthSetup, PROFILE_MISSING } from "../_shared/strength/generate.ts"
 import { buildCycleWeekPrompt, buildSystemPrompt, type PriorSession } from "../_shared/strength/prompt.ts"
-import { BLOCK_CATEGORIES, KINDS_BY_FREQUENCY, lockedSlugs, type SessionKind } from "../_shared/strength/rules.ts"
+import { KINDS_BY_FREQUENCY, lockedSlugs, type SessionKind } from "../_shared/strength/rules.ts"
 import { addDaysISO, dayTs, mondayOf, todayISO } from "../_shared/training/weeks.ts"
 
 // Global fourni par le runtime Supabase. edge-runtime.d.ts est importé plus haut mais
@@ -35,9 +35,8 @@ interface CycleRow {
 
 const json = (status: number, body: unknown) => Response.json(body, { status })
 
-/** Verrou exploitable : 9 slugs pour le corps complet (trisets), au moins un sinon. */
-const isUsableLock = (kind: SessionKind, slugs: string[] | undefined): boolean =>
-  !!slugs?.length && (BLOCK_CATEGORIES[kind].layout !== "trisets" || slugs.length === 9)
+/** Verrou exploitable : les 9 slugs des trisets. Un ancien verrou de bloc principal est ignoré. */
+const isUsableLock = (slugs: string[] | undefined): boolean => slugs?.length === 9
 
 /** Rejette après `ms` (garde-fou anti-blocage). */
 function withTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
@@ -93,7 +92,7 @@ async function runWeekAndChain(admin: SupabaseClient, cycleId: string): Promise<
       let mainSlugs: MainExercises | null = null
       if (week > 1) {
         mainSlugs = Object.fromEntries(kinds
-          .filter((k) => isUsableLock(k, cycle.main_exercises?.[k]))
+          .filter((k) => isUsableLock(cycle.main_exercises?.[k]))
           .map((k) => [k, cycle.main_exercises![k]!]))
         const missing = kinds.filter((k) => !mainSlugs?.[k])
         if (missing.length) console.warn(`${tag} semaine ${week} : verrou absent pour ${missing.join(", ")}, génération libre`)
