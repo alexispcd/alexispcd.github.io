@@ -1,0 +1,1 @@
+import{Et as e,P as t}from"./index-BKHYzwRa.js";var n=e(),r=({children:e,sx:r})=>(0,n.jsx)(t,{variant:`overline`,sx:{display:`block`,color:`text.disabled`,letterSpacing:`0.12em`,fontSize:`0.62rem`,fontWeight:600,mt:2.5,mb:1,px:.5,...r},children:e});export{r as t};
