@@ -306,9 +306,17 @@ async function handleRequest(req: Request): Promise<Response> {
   const orderedIds = fetched.map((f) => f.id)
   // Concaténation des laps bout à bout dans l'ordre chronologique.
   const laps = fetched.flatMap((f) => f.laps)
+  // Index du premier lap de chaque activité dans la liste concaténée : une
+  // fraction coupée par un redémarrage de montre peut chevaucher une jonction.
+  const activityStarts: number[] = []
+  let lapOffset = 0
+  for (const f of fetched) {
+    activityStarts.push(lapOffset)
+    lapOffset += f.laps.length
+  }
 
   // 8. Matching + comparaison (100% en code)
-  const { actualLaps, comparisons } = matchStepsToLaps(steps, laps)
+  const { actualLaps, comparisons } = matchStepsToLaps(steps, laps, activityStarts)
 
   // Laps auto-km : même forme que actual_laps (lap_index, avg_pace_sec, avg_hr…)
   // mais sans rattachement à un step. Purement visuel côté client.
@@ -486,14 +494,19 @@ async function fetchLaps(corosToken: string, labelId: string, stepCount: number,
   return { laps, kmLaps }
 }
 
-/** Groupe auto-kilomètre Coros : lapDistance en centièmes de mètre = 100000 (1 km). */
+/**
+ * Groupe auto-kilomètre Coros : le groupe de type 10 non vide en priorité. Repli :
+ * lapDistance en centièmes de mètre = 100000 (1 km), hors groupe de type 2 (le
+ * découpage structuré de la séance porte aussi lapDistance 100000).
+ */
 function pickKmGroup(lapGroups: unknown[]): unknown[] | null {
-  for (const g of lapGroups) {
-    const rec = g as Record<string, unknown> | null
-    const laps = rec?.laps
-    if (rec?.lapDistance === 100000 && Array.isArray(laps) && laps.length > 0) return laps
-  }
-  return null
+  const groups = lapGroups.map((g) => g as Record<string, unknown> | null)
+  const nonEmpty = (rec: Record<string, unknown> | null): rec is Record<string, unknown> =>
+    Array.isArray(rec?.laps) && (rec.laps as unknown[]).length > 0
+  const byType = groups.find((rec) => nonEmpty(rec) && rec.type === 10)
+  if (byType) return byType.laps as unknown[]
+  const byDistance = groups.find((rec) => nonEmpty(rec) && rec.lapDistance === 100000 && rec.type !== 2)
+  return byDistance ? byDistance.laps as unknown[] : null
 }
 
 const isFiniteNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v)
@@ -501,12 +514,19 @@ const isFiniteNum = (v: unknown): v is number => typeof v === "number" && Number
 const lapIndexOf = (lap: Record<string, unknown>): number =>
   isFiniteNum(lap.lapIndex) ? lap.lapIndex : Number.MAX_SAFE_INTEGER
 
+/** Lap brut Coros avec une distance strictement positive. */
+const hasDistance = (lap: unknown): boolean => {
+  const d = (lap as Record<string, unknown> | null)?.distance
+  return isFiniteNum(d) && d > 0
+}
+
 /**
- * Choisit le groupe de laps parmi lapGroups[].laps. Un seul groupe non vide : on
- * le prend. Plusieurs : on prend celui dont le nombre de laps est le plus proche
+ * Choisit le groupe de laps parmi lapGroups[].laps. Sont toujours écartés : le
+ * groupe de type -1 (activité entière résumée en un seul lap) et tout groupe dont
+ * aucun lap n'a de distance (ex. type 11, laps à distance 0). Un seul groupe
+ * restant : on le prend. Plusieurs : le groupe de type 2 (découpage structuré de
+ * la séance) s'il existe, sinon celui dont le nombre de laps est le plus proche
  * de stepCount (départage par le premier), et on logge la liste des groupes.
- * Le groupe de type -1 (activité entière résumée en un seul lap) est toujours
- * écarté : il ne peut jamais être le bon découpage.
  */
 function pickLapGroup(lapGroups: unknown[], stepCount: number): unknown[] | null {
   const groups = lapGroups
@@ -518,16 +538,19 @@ function pickLapGroup(lapGroups: unknown[], stepCount: number): unknown[] | null
         lapDistance: (g as Record<string, unknown> | null)?.lapDistance,
       }
     })
-    .filter((g) => g.laps.length > 0 && g.type !== -1)
+    .filter((g) => g.type !== -1 && g.laps.some(hasDistance))
 
   if (groups.length === 0) return null
   if (groups.length === 1) return groups[0].laps
 
   console.warn(
-    "[complete-session] plusieurs groupes de laps, sélection sur proximité avec " +
-      `${stepCount} steps :`,
+    "[complete-session] plusieurs groupes de laps, sélection du type 2 sinon " +
+      `proximité avec ${stepCount} steps :`,
     JSON.stringify(groups.map((g) => ({ type: g.type, lapDistance: g.lapDistance, laps: g.laps.length }))),
   )
+
+  const structured = groups.find((g) => g.type === 2)
+  if (structured) return structured.laps
 
   let best = groups[0]
   for (const g of groups) {
