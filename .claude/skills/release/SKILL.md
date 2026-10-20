@@ -9,7 +9,7 @@ Workflow de release du Cairn. Déclenché manuellement par l'utilisateur.
 
 ## Étapes
 
-0. **Vérifier l'identité git** : `git config user.email` doit valoir `alexis.pocard@gmail.com`. Sinon, s'arrêter et le signaler sans committer.
+0. **Régler l'identité git** : si `git config user.name` ne vaut pas `Alexis` ou `git config user.email` ne vaut pas `alexis.pocard@gmail.com` (cas des sessions cloud), lancer `git config user.name "Alexis"` et `git config user.email "alexis.pocard@gmail.com"` (config du repo, sans `--global`), le signaler en une ligne et continuer.
 1. **Vérifier l'état** : `git status --short` pour voir les fichiers modifiés à committer.
 2. **Bump la version** dans `package.json` :
    - `patch` (défaut) : 0.8.17 → 0.8.18
