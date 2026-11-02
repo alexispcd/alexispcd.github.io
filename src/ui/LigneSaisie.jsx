@@ -4,8 +4,8 @@ import { DURATION, transition } from '../styles/motion'
 import { appuiLigne, focusContourInterieur, sansMouvement } from './appui'
 import { ChevronDroit, Coche } from './Icones'
 
-// Valeur à droite : 16 px semi-gras tabulaire (la fiche dit 15 ; 16 évite le zoom
-// d'iOS à l'entrée dans un champ, même règle que le thème).
+// Valeur à droite : 16 px semi-gras tabulaire (16 évite le zoom d'iOS à l'entrée
+// dans un champ, même règle que le thème).
 const VALEUR = { ...textStyles.bouton, fontVariantNumeric: 'tabular-nums' }
 
 const ligne = (hauteur) => ({

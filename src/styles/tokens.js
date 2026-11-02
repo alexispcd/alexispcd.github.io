@@ -1,7 +1,8 @@
 // Jetons du Design System, dérivés de tokens.json (copie exacte, source de vérité).
 // Les rayons, espacements, hauteurs et traits sont exportés en chaînes « px » : un
 // nombre passé à `sx` serait multiplié par `shape.borderRadius` ou `spacing`.
-import tokens from './tokens.json'
+// Attribut d'import : rend ce module lisible par les tests Node (node --test).
+import tokens from './tokens.json' with { type: 'json' }
 
 const THEMES = tokens.color.themes.map((t) => t.id)
 
@@ -60,10 +61,17 @@ const rgba = (hex, a) => {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`
 }
 
+/**
+ * Composantes du voile par thème : jeton de couleur et opacité. Lues aussi par le
+ * mélange du voile sur bg (src/lib/barreEtat.js).
+ */
+export const VEIL = {
+  light: { token: 'ink', alpha: 0.35 },
+  dark: { token: 'on-ink', alpha: 0.7 },
+}
+
 /** Voile derrière une feuille ou un dialogue : ink à 35 % en clair, on-ink à 70 % en sombre. */
-export const veil = (mode) => (mode === 'dark'
-  ? rgba(colors.dark['on-ink'], 0.7)
-  : rgba(colors.light.ink, 0.35))
+export const veil = (mode) => rgba(colors[mode][VEIL[mode].token], VEIL[mode].alpha)
 
 /**
  * Marge basse d'une barre du bas : zone basse de l'iPhone (34 px en config B), 16 px

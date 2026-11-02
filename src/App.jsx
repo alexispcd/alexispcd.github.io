@@ -13,6 +13,7 @@ import RouteError from './components/RouteError'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import UpdatePrompt from './components/UpdatePrompt'
 import OfflineIndicator from './components/OfflineIndicator'
+import MessageProvider from './ui/MessageProvider'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
 import { fetchAccess, publishAccess, clearAccess } from './lib/access'
@@ -168,15 +169,18 @@ const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AppCtx.Provider value={{ dark, setDark, user, access, refreshAccess, headerActions, setHeaderActions, overlay, setOverlay }}>
-        <AuthGate>
-          <AccessGate>
-            <RouterProvider router={router} />
-          </AccessGate>
-        </AuthGate>
-        <OfflineIndicator />
-        <UpdatePrompt />
-      </AppCtx.Provider>
+      {/* Messages en bas de l'écran (useMessage), au-dessus d'AuthGate pour servir aussi à l'écran de connexion. */}
+      <MessageProvider>
+        <AppCtx.Provider value={{ dark, setDark, user, access, refreshAccess, headerActions, setHeaderActions, overlay, setOverlay }}>
+          <AuthGate>
+            <AccessGate>
+              <RouterProvider router={router} />
+            </AccessGate>
+          </AuthGate>
+          <OfflineIndicator />
+          <UpdatePrompt />
+        </AppCtx.Provider>
+      </MessageProvider>
     </ThemeProvider>
   )
 }
