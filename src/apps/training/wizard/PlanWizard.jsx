@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
+import { useBarreBasMessage } from '../../../ui/useMessage'
 import { Box, Typography, Button, IconButton, CircularProgress, Alert, Link } from '@mui/material'
 import ArrowBack from '@mui/icons-material/ArrowBackRounded'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -86,10 +87,12 @@ const buildPayload = (d) => ({
 
 const PlanWizard = () => {
   const navigate = useAppNavigate()
-  const online = useOnline()
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState(emptyDraft)
   const [generating, setGenerating] = useState(false)
+  // Barre basse fixe : le Message se pose au-dessus d'elle.
+  const barreRef = useRef(null)
+  useBarreBasMessage(barreRef)
   const [error, setError] = useState(null)
   const [conflictPlanId, setConflictPlanId] = useState(null)
 
@@ -113,7 +116,7 @@ const PlanWizard = () => {
         setConflictPlanId(e.body?.plan_id ?? null)
         setError('Un plan actif existe déjà. Archive-le ou supprime-le avant d’en créer un nouveau.')
       } else {
-        setError(e.message)
+        setError(texteErreur(e, 'La génération n\'a pas pu démarrer. Réessaie.'))
       }
       setGenerating(false)
     }
@@ -158,9 +161,9 @@ const PlanWizard = () => {
 
       </Box>
 
-      {/* Barre basse — pattern Côtes : pill primaire pleine largeur + bouton rond retour.
+      {/* Barre basse, pattern Côtes : pill primaire pleine largeur + bouton rond retour.
           Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
-      <Box sx={{
+      <Box ref={barreRef} sx={{
         position: 'fixed', zIndex: 1200,
         left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
         bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
@@ -184,7 +187,7 @@ const PlanWizard = () => {
             fullWidth
             variant="contained"
             onClick={isLast ? handleGenerate : goNext}
-            disabled={!canNext || generating || (isLast && !online)}
+            disabled={!canNext || generating}
             sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
           >
             {generating

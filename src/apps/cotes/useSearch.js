@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { pathLen, samplePath, DEFAULT_PARAMS } from './utils'
+import { texteErreur } from '../../lib/reseau'
+import { useMessage } from '../../ui/useMessage'
 
 const fetchWays = async (lat, lon, radius, signal) => {
   const r = radius / 111320
@@ -50,7 +52,7 @@ export const useSearch = () => {
   const [status, setStatus] = useState('')
   const [results, setResults] = useState([])
   const [params, setParams] = useState(DEFAULT_PARAMS)
-  const [toast, setToast] = useState(null) // { message, severity }
+  const { afficher } = useMessage()
   const abortRef = useRef(null)
 
   const setParam = (key, val) => setParams(p => ({ ...p, [key]: val }))
@@ -62,7 +64,6 @@ export const useSearch = () => {
     const { signal } = abortRef.current
     setPhase('searching')
     setResults([])
-    setToast(null)
 
     try {
       setStatus('Récupération des voies OSM...')
@@ -78,7 +79,7 @@ export const useSearch = () => {
       }
 
       if (!valid.length) {
-        setToast({ message: 'Aucune voie trouvée dans ce périmètre.', severity: 'info' })
+        afficher('Aucune voie trouvée dans ce périmètre.')
         setPhase('placed')
         setStatus('')
         return
@@ -125,7 +126,7 @@ export const useSearch = () => {
 
       found.sort((a, b) => b.slope - a.slope)
       if (!found.length) {
-        setToast({ message: 'Aucune côte trouvée. Essaie d\'élargir les filtres.', severity: 'info' })
+        afficher('Aucune côte trouvée. Essaie d\'élargir les filtres.')
         setPhase('placed')
         setStatus('')
         return
@@ -138,12 +139,12 @@ export const useSearch = () => {
         setPhase('placed')
         setStatus('')
       } else {
-        setToast({ message: 'Erreur réseau, réessaie.', severity: 'error' })
+        afficher(texteErreur(e, 'La recherche n\'a pas abouti. Réessaie.'))
         setPhase('placed')
         setStatus('')
       }
     }
-  }, [params])
+  }, [params, afficher])
 
   const cancel = () => {
     abortRef.current?.abort()
@@ -156,7 +157,5 @@ export const useSearch = () => {
     setStatus('')
   }
 
-  const clearToast = () => setToast(null)
-
-  return { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset, toast, clearToast }
+  return { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset }
 }

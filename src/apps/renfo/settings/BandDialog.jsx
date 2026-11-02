@@ -7,6 +7,7 @@ import Check from '@mui/icons-material/Check'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { BAND_PALETTE, formatKg, isHexColor, textOnColor } from '../bandColor'
 import BandChip from '../BandChip'
+import { texteErreur } from '../../../lib/reseau'
 
 const parseKg = (raw) => {
   const n = Number(String(raw).replace(',', '.').trim())
@@ -17,7 +18,7 @@ const parseKg = (raw) => {
  * Ajout ou modification d'un élastique : poids (unique pour le compte) et couleur.
  * `band` null pour un ajout. `onSave({ kg, color })` lève une erreur lisible en cas d'échec.
  */
-const BandDialog = ({ open, band, bands, disabled, onClose, onSave }) => {
+const BandDialog = ({ open, band, bands, onClose, onSave }) => {
   const [kgInput, setKgInput] = useState('')
   const [color, setColor] = useState(BAND_PALETTE[0].hex)
   const [hexInput, setHexInput] = useState(BAND_PALETTE[0].hex)
@@ -63,7 +64,7 @@ const BandDialog = ({ open, band, bands, disabled, onClose, onSave }) => {
     try {
       await onSave({ kg, color })
     } catch (e) {
-      setError(e.message || "L'enregistrement a échoué")
+      setError(e?.doublon ? e.message : texteErreur(e, "L'enregistrement n'a pas abouti. Réessaie."))
       setSaving(false)
     }
   }
@@ -136,7 +137,7 @@ const BandDialog = ({ open, band, bands, disabled, onClose, onSave }) => {
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={saving} color="inherit">Annuler</Button>
-        <Button onClick={save} disabled={!valid || saving || disabled} variant="contained">
+        <Button onClick={save} disabled={!valid || saving} variant="contained">
           {saving ? <CircularProgress size={18} color="inherit" /> : 'Enregistrer'}
         </Button>
       </DialogActions>

@@ -43,8 +43,9 @@ const useProgress = () => {
         setLoading(false)
       })
       .catch((err) => {
+        console.error('[revisions] chargement :', err)
         if (cancelled) return
-        setError(err.message || 'Chargement impossible.')
+        setError('Les données n\'ont pas pu être chargées.')
         setLoading(false)
       })
     return () => { cancelled = true }

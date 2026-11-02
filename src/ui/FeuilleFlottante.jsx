@@ -79,7 +79,9 @@ const FeuilleFlottante = ({
             left: space[12],
             right: space[12],
             bottom: SPACE_BAS,
-            maxHeight: `calc(100% - ${SPACE_BAS} - env(safe-area-inset-top, 0px) - ${space[12]})`,
+            // S'arrête à 60 px du haut de la page, sous la bande de la barre d'état
+            // (src/lib/barreEtat.js, 44 px au plus).
+            maxHeight: `calc(100% - ${SPACE_BAS} - env(safe-area-inset-top, 0px) - ${size.cible} - ${space[16]})`,
             display: 'flex',
             flexDirection: 'column',
             gap: space[8],

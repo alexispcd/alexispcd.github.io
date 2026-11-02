@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Alert, Box, Button, CircularProgress, IconButton, Snackbar, Switch, ToggleButton,
+  Alert, Box, Button, CircularProgress, IconButton, Switch, ToggleButton,
   ToggleButtonGroup, Typography,
 } from '@mui/material'
 import Add from '@mui/icons-material/Add'
@@ -8,7 +8,8 @@ import EditOutlined from '@mui/icons-material/EditOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx } from '../../styles/glass'
-import { useOnline } from '../../hooks/useOnline'
+import { texteErreur } from '../../lib/reseau'
+import { useMessage } from '../../ui/useMessage'
 import {
   addBand, deleteBand, getActiveCycle, getBands, getProfile, saveProfile, updateBand,
 } from '../../lib/renfo'
@@ -38,14 +39,13 @@ const sameProfile = (a, b) =>
 
 /** Réglages Renfo : fréquence, matériel et inventaire d'élastiques. */
 const SettingsPage = () => {
-  const online = useOnline()
   const [state, setState] = useState({ status: 'loading' })
   const [draft, setDraft] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [bandDialog, setBandDialog] = useState(null) // { band } ; band null pour un ajout
   const [toDelete, setToDelete] = useState(null)
   const [deleting, setDeleting] = useState(false)
-  const [snack, setSnack] = useState(null)
+  const { afficher } = useMessage()
 
   useEffect(() => {
     let cancelled = false
@@ -73,7 +73,7 @@ const SettingsPage = () => {
   if (state.status === 'error') {
     return (
       <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">Impossible de charger les réglages.{!online && ' Tu es hors ligne.'}</Alert>
+        <Alert severity="error">Impossible de charger les réglages.</Alert>
       </Box>
     )
   }
@@ -92,10 +92,8 @@ const SettingsPage = () => {
       const saved = await saveProfile(draft)
       setState((s) => ({ ...s, profile: saved }))
       setDraft(saved)
-      setSnack({ severity: 'success', text: 'Réglages enregistrés' })
     } catch (e) {
-      console.error('[renfo settings]', e)
-      setSnack({ severity: 'error', text: "L'enregistrement a échoué" })
+      afficher(texteErreur(e, "Tes réglages n'ont pas pu être enregistrés. Réessaie."))
     } finally {
       setSaving(false)
     }
@@ -118,8 +116,7 @@ const SettingsPage = () => {
       setState((s) => ({ ...s, bands: s.bands.filter((b) => b.id !== toDelete.id) }))
       setToDelete(null)
     } catch (e) {
-      console.error('[renfo settings]', e)
-      setSnack({ severity: 'error', text: 'La suppression a échoué' })
+      afficher(texteErreur(e, "L'élastique n'a pas pu être supprimé. Réessaie."))
     } finally {
       setDeleting(false)
     }
@@ -129,9 +126,6 @@ const SettingsPage = () => {
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
 
-        {!online && (
-          <Alert severity="info" sx={{ mt: 2 }}>Hors ligne : les réglages sont en lecture seule.</Alert>
-        )}
 
         <SectionLabel>Fréquence</SectionLabel>
         <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 2 }}>
@@ -141,7 +135,6 @@ const SettingsPage = () => {
             fullWidth
             value={draft.frequency}
             onChange={(_, v) => v && setDraft((d) => ({ ...d, frequency: v }))}
-            disabled={!online}
             sx={{ '& .MuiToggleButton-root': { borderRadius: '12px', fontWeight: 700, fontSize: '1rem', py: 1 } }}
           >
             {[1, 2, 3].map((n) => <ToggleButton key={n} value={n}>{n}</ToggleButton>)}
@@ -164,7 +157,6 @@ const SettingsPage = () => {
               <Switch
                 checked={draft.equipment.includes(eq.id)}
                 onChange={() => toggleEquipment(eq.id)}
-                disabled={!online}
               />
             </Box>
           ))}
@@ -174,7 +166,7 @@ const SettingsPage = () => {
           variant="contained"
           fullWidth
           sx={{ mt: 2, height: 46, borderRadius: '23px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }}
-          disabled={!dirty || saving || !online}
+          disabled={!dirty || saving}
           onClick={doSaveProfile}
         >
           {saving ? <CircularProgress size={18} color="inherit" /> : profile ? 'Enregistrer' : 'Valider ces réglages'}
@@ -193,10 +185,10 @@ const SettingsPage = () => {
               <Typography variant="body2" sx={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
                 {formatKg(band.kg)} kg
               </Typography>
-              <IconButton size="small" aria-label="Modifier" disabled={!online} onClick={() => setBandDialog({ band })}>
+              <IconButton size="small" aria-label="Modifier" onClick={() => setBandDialog({ band })}>
                 <EditOutlined fontSize="small" />
               </IconButton>
-              <IconButton size="small" aria-label="Supprimer" disabled={!online} onClick={() => setToDelete(band)}>
+              <IconButton size="small" aria-label="Supprimer" onClick={() => setToDelete(band)}>
                 <DeleteOutlined fontSize="small" />
               </IconButton>
             </Box>
@@ -204,7 +196,6 @@ const SettingsPage = () => {
           <Button
             startIcon={<Add />}
             fullWidth
-            disabled={!online}
             onClick={() => setBandDialog({ band: null })}
             sx={{ mt: 0.5, mb: 0.5, borderRadius: '12px', textTransform: 'none', fontWeight: 600, justifyContent: 'flex-start' }}
           >
@@ -217,7 +208,6 @@ const SettingsPage = () => {
         open={Boolean(bandDialog)}
         band={bandDialog?.band ?? null}
         bands={bands}
-        disabled={!online}
         onClose={() => setBandDialog(null)}
         onSave={saveBand}
       />
@@ -228,21 +218,9 @@ const SettingsPage = () => {
         text={toDelete ? `L'élastique de ${formatKg(toDelete.kg)} kg ne sera plus proposé dans les prochaines séances.` : ''}
         confirmLabel="Supprimer"
         busy={deleting}
-        disabled={!online}
         onCancel={() => setToDelete(null)}
         onConfirm={doDelete}
       />
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={3000}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.text}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }

@@ -11,7 +11,7 @@ import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { corosMatch, completeSession } from '../../../lib/training'
 import { formatKm, formatGoalTime, formatPace } from '../constants'
 import { setTransitionDirection } from '../../../lib/viewTransition'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
 import RpeForm from '../../../components/RpeForm'
 import { emptyFeedback, toFeedbackPayload } from '../../../lib/feedback'
 
@@ -41,7 +41,6 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
   const [pendingActivities, setPendingActivities] = useState(null) // activités choisies [{ id, start_timestamp }], en attente du ressenti
   const [feedback, setFeedback] = useState(emptyFeedback())
   const [manualDate, setManualDate] = useState(scheduledDate ?? '') // date de séance, chemin sans Coros
-  const online = useOnline()
   const [authExpired, setAuthExpired] = useState(false) // token Coros expiré : on propose de se reconnecter
 
   // Remise à zéro à chaque ouverture (ou changement de séance pendant l'ouverture),
@@ -82,7 +81,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
         if (e.status === 503 && e.body?.error === 'Coros authentication required') {
           setAuthExpired(true)
         } else {
-          setError(e.message || 'Coros indisponible pour le moment.')
+          setError(texteErreur(e, 'La recherche de tes activités n\'a pas abouti. Réessaie.'))
         }
         setPhase('choose')
       })
@@ -114,7 +113,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
       const { session } = await completeSession(sessionId, pendingActivities, fb, pendingActivities ? null : manualDate)
       onDone(session)
     } catch (e) {
-      setError(e.message || 'La validation a échoué.')
+      setError(texteErreur(e, 'La validation n\'a pas abouti. Réessaie.'))
       setPhase('feedback')
     }
   }
@@ -271,9 +270,9 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
 
       {phase === 'feedback' && (
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => runComplete(null)} disabled={!online} color="inherit">Passer</Button>
+          <Button onClick={() => runComplete(null)} color="inherit">Passer</Button>
           <Box sx={{ flex: 1 }} />
-          <Button onClick={() => runComplete(toFeedbackPayload(feedback))} disabled={!online} variant="contained">
+          <Button onClick={() => runComplete(toFeedbackPayload(feedback))} variant="contained">
             Valider
           </Button>
         </DialogActions>

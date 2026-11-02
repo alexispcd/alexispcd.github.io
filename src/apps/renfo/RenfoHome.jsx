@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Box, Button, CircularProgress, Snackbar, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import Add from '@mui/icons-material/Add'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx } from '../../styles/glass'
 import { useAppCtx } from '../../lib/context'
-import { useOnline } from '../../hooks/useOnline'
+import { useMessage } from '../../ui/useMessage'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import {
   createFreeSession, getActiveCycle, getBands, getCycleSessions, getCycleStatus, getFreeSessions,
@@ -42,13 +42,12 @@ const loadHome = async () => {
 /** Accueil Renfo : état du profil et du cycle, séances de la semaine, séance libre. */
 const RenfoHome = () => {
   const navigate = useAppNavigate()
-  const online = useOnline()
   const { setHeaderActions } = useAppCtx()
   const [state, setState] = useState({ status: 'loading' })
   const [selectedWeek, setSelectedWeek] = useState(null)
   const [starting, setStarting] = useState(false)
   const [freeOpen, setFreeOpen] = useState(false)
-  const [snack, setSnack] = useState(null)
+  const { afficher } = useMessage()
 
   const reload = useCallback(() => loadHome().then(
     (res) => setState({ status: 'ready', ...res }),
@@ -86,14 +85,14 @@ const RenfoHome = () => {
   const cycle = state.cycle
   const generating = cycle?.generation_status === 'generating'
   useEffect(() => {
-    if (!generating || !online) return undefined
+    if (!generating) return undefined
     const id = setInterval(() => {
       getCycleStatus(cycle.id).then((s) => {
         if (s.generation_status !== cycle.generation_status || s.generated_weeks !== cycle.generated_weeks) reload()
       }).catch((e) => console.error('[renfo home]', e))
     }, POLL_MS)
     return () => clearInterval(id)
-  }, [generating, online, cycle?.id, cycle?.generation_status, cycle?.generated_weeks, reload])
+  }, [generating, cycle?.id, cycle?.generation_status, cycle?.generated_weeks, reload])
 
   const launch = async () => {
     setStarting(true)
@@ -102,7 +101,8 @@ const RenfoHome = () => {
       setSelectedWeek(null)
       await reload()
     } catch (e) {
-      setSnack({ severity: 'error', text: generationErrorMessage(e) })
+      console.error('[renfo home]', e)
+      afficher(generationErrorMessage(e))
       // Un 409 peut venir d'un état déjà avancé côté serveur : on se resynchronise.
       if (e.status === 409) await reload()
     } finally {
@@ -110,14 +110,11 @@ const RenfoHome = () => {
     }
   }
 
+  // L'erreur remonte telle quelle : FreeSessionDialog l'écrit avec generationErrorMessage.
   const createFree = async (kind) => {
-    try {
-      const { session } = await createFreeSession(kind)
-      setFreeOpen(false)
-      navigate(`/renfo/session/${session.id}`, { direction: 'forward' })
-    } catch (e) {
-      throw new Error(generationErrorMessage(e), { cause: e })
-    }
+    const { session } = await createFreeSession(kind)
+    setFreeOpen(false)
+    navigate(`/renfo/session/${session.id}`, { direction: 'forward' })
   }
 
   const openSession = (s) => navigate(`/renfo/session/${s.id}`, { direction: 'forward' })
@@ -133,7 +130,7 @@ const RenfoHome = () => {
     return (
       <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
         <Alert severity="error">
-          Impossible de charger Renfo.{!online && ' Tu es hors ligne et ces données ne sont pas encore en cache.'}
+          Impossible de charger Renfo.
         </Alert>
       </Box>
     )
@@ -142,9 +139,6 @@ const RenfoHome = () => {
   const { profile, bands, sessions, free } = state
   const today = todayISO()
   const thisWeek = mondayOf(today)
-  const offlineNote = !online && (
-    <Alert severity="info" sx={{ mt: 2 }}>Hors ligne : consultation et player disponibles, la génération demande le réseau.</Alert>
-  )
   const primaryBtn = { height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }
 
   // ── Pas de profil ──
@@ -152,7 +146,6 @@ const RenfoHome = () => {
     return (
       <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
         <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
-          {offlineNote}
           <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <FitnessCenter sx={{ fontSize: 38, color: 'text.disabled', mb: 1 }} />
             <Typography variant="body1" fontWeight={700}>Règle ton matériel et ta fréquence pour commencer</Typography>
@@ -180,8 +173,6 @@ const RenfoHome = () => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
-        {offlineNote}
-
         {/* ── Aucun cycle ── */}
         {!cycle && (
           <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
@@ -190,7 +181,7 @@ const RenfoHome = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
               4 semaines progressives, construites avec ton matériel.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2.5 }} disabled={starting || !online} onClick={launch}>
+            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2.5 }} disabled={starting} onClick={launch}>
               {starting ? <CircularProgress size={18} color="inherit" /> : 'Lancer mon premier cycle'}
             </Button>
           </Box>
@@ -219,7 +210,7 @@ const RenfoHome = () => {
               {generatedWeeks > 0 ? `${generatedWeeks} semaine${generatedWeeks > 1 ? 's' : ''} sur 4 prête${generatedWeeks > 1 ? 's' : ''}. ` : ''}
               Relance-la, elle reprendra là où elle s'est arrêtée.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting || !online} onClick={launch}>
+            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting} onClick={launch}>
               {starting ? <CircularProgress size={18} color="inherit" /> : 'Reprendre la génération'}
             </Button>
           </Box>
@@ -232,7 +223,7 @@ const RenfoHome = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Le suivant fera tourner les exercices principaux.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting || !online} onClick={launch}>
+            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting} onClick={launch}>
               {starting ? <CircularProgress size={18} color="inherit" /> : 'Lancer le cycle suivant'}
             </Button>
           </Box>
@@ -311,21 +302,9 @@ const RenfoHome = () => {
 
       <FreeSessionDialog
         open={freeOpen}
-        online={online}
         onClose={() => setFreeOpen(false)}
         onCreate={createFree}
       />
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={5000}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.text}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }

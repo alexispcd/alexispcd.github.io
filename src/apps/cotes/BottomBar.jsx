@@ -6,6 +6,7 @@ import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
 import { SLIDERS, DEFAULT_PARAMS } from './utils'
 import { glassSx } from '../../styles/glass'
+import { useBarreBasMessage } from '../../ui/useMessage'
 
 const EASE = '0.3s ease-out'
 
@@ -21,6 +22,9 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
 
   const filterRef = useRef(null)
   const isClosing = useRef(false)
+  // Carte fixe du bas : le Message se pose au-dessus d'elle, filtres ouverts compris.
+  const carteRef = useRef(null)
+  useBarreBasMessage(carteRef)
 
   const isDefault = Object.keys(DEFAULT_PARAMS).every(k => params[k] === DEFAULT_PARAMS[k])
   const resetParams = () => Object.entries(DEFAULT_PARAMS).forEach(([k, v]) => setParam(k, v))
@@ -135,8 +139,9 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
         />
       )}
 
-      {/* Card — ne bouge jamais */}
+      {/* Card : ne bouge jamais */}
       <Box
+        ref={carteRef}
         sx={{
           position: 'fixed',
           left: '4vw',

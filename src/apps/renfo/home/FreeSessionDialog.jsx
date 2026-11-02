@@ -3,13 +3,14 @@ import {
   Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography,
 } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import { generationErrorMessage } from '../errors'
 import { FREE_KINDS, KIND_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
 
 /**
  * Séance libre : choix du type, puis génération synchrone (jusqu'à 30 s environ).
- * `onCreate(kind)` renvoie la séance créée ou lève une erreur lisible.
+ * `onCreate(kind)` renvoie la séance créée ou lève l'erreur de renfo-session.
  */
-const FreeSessionDialog = ({ open, online, onClose, onCreate }) => {
+const FreeSessionDialog = ({ open, onClose, onCreate }) => {
   const [kind, setKind] = useState(FREE_KINDS[0])
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
@@ -29,7 +30,8 @@ const FreeSessionDialog = ({ open, online, onClose, onCreate }) => {
     try {
       await onCreate(kind)
     } catch (e) {
-      setError(e.message)
+      console.error('[renfo séance libre]', e)
+      setError(generationErrorMessage(e))
       setPending(false)
     }
   }
@@ -74,14 +76,13 @@ const FreeSessionDialog = ({ open, online, onClose, onCreate }) => {
                 )
               })}
             </Box>
-            {!online && <Alert severity="info" sx={{ mt: 2 }}>Hors ligne : la création demande le réseau.</Alert>}
             {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
           </>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={pending} color="inherit">Annuler</Button>
-        <Button onClick={create} disabled={pending || !online} variant="contained">Créer la séance</Button>
+        <Button onClick={create} disabled={pending} variant="contained">Créer la séance</Button>
       </DialogActions>
     </Dialog>
   )

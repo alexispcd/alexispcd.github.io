@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AuthRetryableFetchError } from '@supabase/supabase-js'
-import { estErreurReseau } from './reseau.js'
+import { PAS_DE_CONNEXION, estErreurReseau, texteErreur } from './reseau.js'
 
 test('erreurs réseau reconnues', () => {
   assert.equal(estErreurReseau({ network: true }), true)
@@ -25,4 +25,15 @@ test('autres erreurs non reconnues', () => {
   assert.equal(estErreurReseau(null), false)
   assert.equal(estErreurReseau(undefined), false)
   assert.equal(estErreurReseau('Failed to fetch'), false)
+})
+
+test('texteErreur : phrase ou PAS_DE_CONNEXION, détail en console', (t) => {
+  const erreurs = t.mock.method(console, 'error', () => {})
+  const phrase = 'La séance n\'a pas pu être sautée. Réessaie.'
+  assert.equal(texteErreur(new TypeError('Load failed'), phrase), PAS_DE_CONNEXION)
+  assert.equal(texteErreur({ network: true }, phrase), PAS_DE_CONNEXION)
+  assert.equal(texteErreur(new Error('Erreur serveur (500)'), phrase), phrase)
+  assert.equal(texteErreur({ message: 'refusé', code: '42501' }, phrase), phrase)
+  assert.equal(texteErreur(null, phrase), phrase)
+  assert.equal(erreurs.mock.callCount(), 5)
 })

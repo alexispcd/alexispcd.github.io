@@ -22,3 +22,13 @@ export const estErreurReseau = (e) => {
   const message = String(e.message ?? '').toLowerCase()
   return MOTIFS.some((m) => message.includes(m))
 }
+
+/**
+ * Texte à afficher pour un échec : PAS_DE_CONNEXION si l'erreur vient du réseau,
+ * sinon `phrase` (écrite à la main, tutoyée). Le détail part en console, jamais à
+ * l'écran : aucun e.message affiché.
+ */
+export const texteErreur = (e, phrase) => {
+  console.error(e)
+  return estErreurReseau(e) ? PAS_DE_CONNEXION : phrase
+}

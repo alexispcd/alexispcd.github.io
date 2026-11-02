@@ -12,7 +12,6 @@ import FullScreenLoader from './components/FullScreenLoader'
 import RouteError from './components/RouteError'
 import AppHeader, { HEADER_HEIGHT } from './components/AppHeader'
 import UpdatePrompt from './components/UpdatePrompt'
-import OfflineIndicator from './components/OfflineIndicator'
 import MessageProvider from './ui/MessageProvider'
 import supabase from './lib/supabase'
 import { AppCtx, useAppCtx } from './lib/context'
@@ -177,7 +176,6 @@ const App = () => {
               <RouterProvider router={router} />
             </AccessGate>
           </AuthGate>
-          <OfflineIndicator />
           <UpdatePrompt />
         </AppCtx.Provider>
       </MessageProvider>

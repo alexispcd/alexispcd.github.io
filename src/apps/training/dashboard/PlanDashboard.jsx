@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
+import { useMessage } from '../../../ui/useMessage'
 import {
-  Box, Typography, Chip, Button, CircularProgress, Alert, Snackbar,
+  Box, Typography, Chip, Button, CircularProgress, Alert,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
 import EmojiEvents from '@mui/icons-material/EmojiEvents'
@@ -35,8 +36,7 @@ const PlanDashboard = () => {
   const { planId } = useParams()
   const navigate = useAppNavigate()
   const { setHeaderActions } = useAppCtx()
-  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
-  const online = useOnline()
+  const { afficher } = useMessage()
 
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -62,13 +62,12 @@ const PlanDashboard = () => {
   const [pushDialog, setPushDialog] = useState(null)
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [retrying, setRetrying] = useState(false)
-  const [snack, setSnack] = useState(null)
   const [genTimedOut, setGenTimedOut] = useState(false)
 
   const selectedWeekRef = useRef(null)
   const scrolledRef = useRef(false)
 
-  const flash = (message, severity = 'error') => setSnack({ message, severity })
+  const echec = (e, phrase) => afficher(texteErreur(e, phrase))
 
   const selectWeek = (weekNumber) => {
     sessionStorage.setItem(weekStorageKey, String(weekNumber))
@@ -108,7 +107,10 @@ const PlanDashboard = () => {
     scrolledRef.current = false
     getPlan(planId)
       .then((p) => { if (!cancelled) { setPlan(p); setLoading(false) } })
-      .catch((e) => { if (!cancelled) { setLoadError(e.message); setLoading(false) } })
+      .catch((e) => {
+        console.error('[PlanDashboard] chargement :', e)
+        if (!cancelled) { setLoadError('Les données n\'ont pas pu être chargées.'); setLoading(false) }
+      })
     return () => { cancelled = true }
   }, [planId])
 
@@ -185,14 +187,14 @@ const PlanDashboard = () => {
     if (!plan || plan.generation_status !== 'ready') { setHeaderActions([]); return }
     const actions = []
     if (!readOnly) {
-      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true), disabled: !online })
-      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true), disabled: !online })
+      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true) })
+      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
     }
     actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
     actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings', { direction: 'forward' }) })
     setHeaderActions(actions)
     return () => setHeaderActions([])
-  }, [plan, readOnly, online, navigate, setHeaderActions])
+  }, [plan, readOnly, navigate, setHeaderActions])
 
   // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
   // Même borne que regenerate-plan : semaines à partir de la courante incluse.
@@ -211,8 +213,8 @@ const PlanDashboard = () => {
     try {
       await skipSession(session.id)
     } catch (e) {
-      setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: 'planned' } : s))
-      flash(e.message)
+      setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: session.status } : s))
+      echec(e, 'La séance n\'a pas pu être sautée. Réessaie.')
       return
     }
     setSkipDialog(session)
@@ -221,11 +223,18 @@ const PlanDashboard = () => {
   const handleCancelSkip = async () => {
     const s = skipDialog
     setSkipDialog(null)
-    setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: 'planned' } : x))
+    // Affichée tout de suite comme reprise ; remise à sautée si l'appel échoue.
+    setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: s.status } : x))
     try {
       const { corosError } = await unskipSession(s.id)
-      if (corosError) flash(`Séance restaurée, mais pas sur la montre : ${corosError}`, 'warning')
-    } catch (e) { flash(e.message) }
+      if (corosError) {
+        console.error('[PlanDashboard] restauration sur la montre :', corosError)
+        afficher('Séance restaurée, mais pas sur ta montre.')
+      }
+    } catch (e) {
+      setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: 'skipped' } : x))
+      echec(e, 'La séance n\'a pas pu être reprise. Réessaie.')
+    }
   }
 
   const handleAdapt = async () => {
@@ -235,9 +244,9 @@ const PlanDashboard = () => {
       const { sessions: adapted } = await adaptSessions(s.id)
       await reloadSessions()
       const n = adapted?.length ?? 0
-      flash(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter', 'success')
+      afficher(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
     } catch (e) {
-      flash(e.message)
+      echec(e, 'L\'adaptation n\'a pas abouti. Réessaie.')
     } finally {
       setAdapting(false)
       setSkipDialog(null)
@@ -250,10 +259,12 @@ const PlanDashboard = () => {
   // Swipe "Envoyer" : popup d'envoi vers la montre (séance pas encore envoyée).
   const handlePush = (session) => setPushDialog(session)
 
-  const onPushed = () => {
+  const onPushed = (res) => {
     setPushDialog(null)
-    flash('Séance envoyée vers la montre', 'success')
-    reloadSessions().catch((e) => flash(e.message))
+    afficher(res?.previous_copy?.upcoming
+      ? "Séance envoyée. Supprime l'ancienne copie dans l'app Coros."
+      : 'Séance envoyée sur ta montre')
+    reloadSessions().catch((e) => echec(e, 'Les données n\'ont pas pu être rechargées. Réessaie.'))
   }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
@@ -269,14 +280,14 @@ const PlanDashboard = () => {
       await reloadPlan()
     } catch (e) {
       setRegenBusy(false)
-      flash(e.message)
+      echec(e, 'La régénération n\'a pas pu démarrer. Réessaie.')
     }
   }
 
 
   const doArchive = async () => {
     setConfirmArchive(false)
-    try { await archivePlan(planId); navigate('/training') } catch (e) { flash(e.message) }
+    try { await archivePlan(planId); navigate('/training') } catch (e) { echec(e, 'Le plan n\'a pas pu être archivé. Réessaie.') }
   }
 
   const doRetry = async () => {
@@ -299,12 +310,12 @@ const PlanDashboard = () => {
       navigate(`/training/plan/${plan_id}`, { replace: true })
     } catch (e) {
       setRetrying(false)
-      flash(e.message)
+      echec(e, 'La génération n\'a pas pu redémarrer. Réessaie.')
     }
   }
 
   const doDeleteErrored = async () => {
-    try { await deletePlan(planId); navigate('/training') } catch (e) { flash(e.message) }
+    try { await deletePlan(planId); navigate('/training') } catch (e) { echec(e, 'Le plan n\'a pas pu être supprimé. Réessaie.') }
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────────
@@ -363,10 +374,10 @@ const PlanDashboard = () => {
               : (plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.')}
           </Alert>
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying || !online}>
+            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying}>
               Supprimer
             </Button>
-            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying || !online}>
+            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying}>
               {retrying ? <CircularProgress size={18} color="inherit" /> : 'Réessayer'}
             </Button>
           </Box>
@@ -535,7 +546,7 @@ const PlanDashboard = () => {
                 <ZoneGroup
                   key={group.zone}
                   group={group}
-                  readOnly={readOnly || !online}
+                  readOnly={readOnly}
                   onSkip={handleSkip}
                   onOpen={handleOpen}
                   onPush={handlePush}
@@ -545,7 +556,7 @@ const PlanDashboard = () => {
           )}
         </Box>
 
-        {!readOnly && online && (sessions?.length ?? 0) > 0 && (
+        {!readOnly && (sessions?.length ?? 0) > 0 && (
           <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1, px: 2 }}>
             Tape une séance pour l'ouvrir · glisse à droite pour la sauter, à gauche pour l'envoyer
           </Typography>
@@ -555,8 +566,7 @@ const PlanDashboard = () => {
       {/* Dialog adaptation */}
       <Dialog
         open={Boolean(skipDialog)}
-        // Hors ligne, fermer garde la séance sautée (déjà enregistrée) : l'annulation écrit en base.
-        onClose={() => { if (adapting) return; if (online) handleCancelSkip(); else setSkipDialog(null) }}
+        onClose={() => { if (!adapting) handleCancelSkip() }}
         slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
@@ -568,8 +578,8 @@ const PlanDashboard = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting || !online} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting || !online} variant="contained">
+          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
+          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
             {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
           </Button>
         </DialogActions>
@@ -584,7 +594,6 @@ const PlanDashboard = () => {
         text={'Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées.'
           + (regenOnWatch > 0 ? ` ${onWatchWarning(regenOnWatch)}` : '')}
         confirmLabel="Régénérer"
-        confirmDisabled={!online}
       />
 
       {/* Popup d'envoi vers la montre (swipe) */}
@@ -603,19 +612,7 @@ const PlanDashboard = () => {
         title="Archiver ce plan ?"
         text="Le plan passera en lecture seule et ne sera plus modifiable. Tu pourras toujours le consulter dans tes anciens plans."
         confirmLabel="Archiver"
-        confirmDisabled={!online}
       />
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={5000}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.message}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }
@@ -683,7 +680,7 @@ const SectionLabel = ({ children }) => (
   </Typography>
 )
 
-const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel, confirmDisabled = false }) => (
+const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel }) => (
   <Dialog
     open={open}
     onClose={onClose}
@@ -695,7 +692,7 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel, co
     </DialogContent>
     <DialogActions sx={{ px: 3, pb: 2 }}>
       <Button onClick={onClose} color="inherit">Annuler</Button>
-      <Button onClick={onConfirm} disabled={confirmDisabled} variant="contained">{confirmLabel}</Button>
+      <Button onClick={onConfirm} variant="contained">{confirmLabel}</Button>
     </DialogActions>
   </Dialog>
 )

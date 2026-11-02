@@ -7,7 +7,7 @@ import {
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx, glassSx, GLASS_BACKDROP } from '../../styles/glass'
 import { getCorosStatus, startCorosOauth, disconnectCoros } from '../../lib/training'
-import { useOnline } from '../../hooks/useOnline'
+import { texteErreur } from '../../lib/reseau'
 
 // Coins concentriques : radius carte = inset (16 = p 2) + radius bouton (12) = 28.
 const CARD_INSET = 2
@@ -49,8 +49,6 @@ const SettingsPage = () => {
   // juste apres pour que le message ne persiste pas au rechargement.
   const [notice, setNotice] = useState(() => noticeFromParam(searchParams.get('coros')))
   const [starting, setStarting] = useState(false)
-  // Hors ligne : connexion et déconnexion Coros indisponibles (Edge Function).
-  const online = useOnline()
 
   // Deconnexion : confirmation, appel en cours, erreur affichee dans la modale.
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
@@ -61,7 +59,7 @@ const SettingsPage = () => {
     getCorosStatus()
       .then((res) => setConnected(Boolean(res?.connected)))
       .catch((e) => {
-        setNotice({ severity: 'error', text: e.message || 'Impossible de lire l’état de la connexion Coros.' })
+        setNotice({ severity: 'error', text: texteErreur(e, 'Les données n\'ont pas pu être chargées.') })
         setConnected(false)
       })
   }, [])
@@ -91,7 +89,7 @@ const SettingsPage = () => {
       const { url } = await startCorosOauth()
       window.location.href = url
     } catch (e) {
-      setNotice({ severity: 'error', text: e.message || 'Impossible de démarrer la connexion Coros.' })
+      setNotice({ severity: 'error', text: texteErreur(e, 'La connexion à Coros n\'a pas abouti. Réessaie.') })
       setStarting(false)
     }
   }
@@ -110,7 +108,7 @@ const SettingsPage = () => {
       setConfirmDisconnect(false)
       setNotice({ severity: 'success', text: 'Compte Coros déconnecté.' })
     } catch (e) {
-      setDisconnectError(e.message || 'La déconnexion a échoué.')
+      setDisconnectError(texteErreur(e, 'La déconnexion de Coros n\'a pas abouti. Réessaie.'))
     } finally {
       setDisconnecting(false)
     }
@@ -158,7 +156,7 @@ const SettingsPage = () => {
             variant="contained"
             fullWidth
             sx={{ mt: 2 }}
-            disabled={loading || starting || !online}
+            disabled={loading || starting}
             onClick={handleConnect}
           >
             {starting
@@ -171,7 +169,7 @@ const SettingsPage = () => {
               variant="text"
               fullWidth
               sx={{ mt: 1, color: DISCONNECTED_COLOR }}
-              disabled={starting || !online}
+              disabled={starting}
               onClick={openDisconnect}
             >
               Déconnecter
@@ -200,7 +198,7 @@ const SettingsPage = () => {
           </Button>
           <Button
             onClick={handleDisconnect}
-            disabled={disconnecting || !online}
+            disabled={disconnecting}
             variant="contained"
           >
             {disconnecting ? <CircularProgress size={18} color="inherit" /> : 'Déconnecter'}

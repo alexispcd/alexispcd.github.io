@@ -1,4 +1,5 @@
 // Messages d'erreur des appels de génération Renfo, toujours en français.
+import { PAS_DE_CONNEXION, estErreurReseau } from '../../lib/reseau'
 
 const BY_CODE = {
   profile_missing: "Règle d'abord ton matériel et ta fréquence.",
@@ -8,10 +9,10 @@ const BY_CODE = {
 
 /** Message lisible pour une erreur de renfo-cycle ou renfo-session. */
 export const generationErrorMessage = (err) => {
+  if (estErreurReseau(err)) return PAS_DE_CONNEXION
   const code = err?.body?.code
   if (code && BY_CODE[code]) return BY_CODE[code]
   if (err?.status === 422) return "La séance proposée n'était pas valide. Réessaie."
   if (err?.status === 403) return "Le module Renfo n'est pas attribué à ton compte."
-  if (err?.status == null) return 'Connexion impossible. Vérifie le réseau et réessaie.'
   return 'La génération a échoué. Réessaie dans un instant.'
 }

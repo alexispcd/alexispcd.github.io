@@ -182,11 +182,6 @@ const theme = (dark) => {
           },
         },
       },
-      MuiSnackbarContent: {
-        styleOverrides: {
-          root: { backgroundColor: c.ink, color: c['on-ink'], boxShadow: 'none', borderRadius: radius.inner },
-        },
-      },
       MuiSwitch: {
         defaultProps: { color: 'primary' },
       },

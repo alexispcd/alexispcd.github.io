@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker } from 'react-leaflet'
-import { Box, Typography, CircularProgress, Snackbar, Alert } from '@mui/material'
+import { Box, Typography, CircularProgress } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -30,7 +30,7 @@ const Cotes = () => {
   const [center, setCenter] = useState(null)
   const [activeIdx, setActiveIdx] = useState(0)
   const [mapMoved, setMapMoved] = useState(false)
-  const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset, toast, clearToast } = useSearch()
+  const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset } = useSearch()
 
   // Désactive le scroll/overscroll de la page (iOS bounce notamment)
   useEffect(() => {
@@ -210,18 +210,6 @@ const Cotes = () => {
         setParam={setParam}
       />
 
-      {/* ── TOAST ── */}
-      <Snackbar
-        open={!!toast}
-        autoHideDuration={4000}
-        onClose={clearToast}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{ top: 72 }}
-      >
-        <Alert onClose={clearToast} severity={toast?.severity} variant="filled" sx={{ width: '100%' }}>
-          {toast?.message}
-        </Alert>
-      </Snackbar>
 
     </Box>
   )

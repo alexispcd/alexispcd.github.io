@@ -39,7 +39,8 @@ export const getBands = async () =>
 const UNIQUE_VIOLATION = '23505'
 
 const bandError = (error) => {
-  if (error?.code === UNIQUE_VIOLATION) return new Error('Tu as déjà un élastique de ce poids')
+  // `doublon` : message écrit à la main, affiché tel quel par BandDialog.
+  if (error?.code === UNIQUE_VIOLATION) return Object.assign(new Error('Tu as déjà un élastique de ce poids'), { doublon: true })
   return error
 }
 

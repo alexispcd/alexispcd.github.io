@@ -1,21 +1,21 @@
-// Banc d'essai de la barre d'état de l'iPhone pendant une FeuilleFlottante (lot S3a).
+// Bande en haut de l'écran pendant une FeuilleFlottante, pour teinter la barre d'état
+// de l'iPhone comme le voile (lot S3a, réduit au lot S3b).
 //
-// Fait établi sur iPhone : la barre d'état suit le fond de la page, avec un délai à
-// l'ouverture du voile. La page commence sous la barre d'état (safe-area haut à 0) :
-// le voile ne peut pas la couvrir. Quatre variantes à comparer sur la vraie feuille :
-// - A « fond » : body et metas theme-color passent à la couleur du voile, sans transition ;
-// - B « fond 220 » : pareil, fondu du fond en 220 ms à l'ouverture, 180 ms à la fermeture ;
-// - C « bande 2 » : body et metas inchangés, bande opaque de 2 px en haut de l'écran ;
-// - D « bande 44 » : pareil, 44 px.
-// Les variantes écartées seront retirées au lot suivant, avec ce qui ne sert plus ici.
+// Fait établi sur iPhone : la barre d'état suit ce qui est en haut de la page, avec un
+// délai. La page commence sous la barre d'état (safe-area haut à 0) : le voile ne peut
+// pas la couvrir. Seule une bande opaque de 44 px l'a teintée ; le body et les metas
+// theme-color ne changent plus. Deux réglages de test, choisis dans l'Atelier : la
+// hauteur de la bande et son apparition (d'un coup ou en fondu).
 import { VEIL, colors } from '../styles/tokens.js'
 import { DURATION, transition } from '../styles/motion.js'
 
-export const VARIANTES = ['A', 'B', 'C', 'D']
-export const LIBELLES = { A: 'fond', B: 'fond 220', C: 'bande 2', D: 'bande 44' }
-const HAUTEUR_BANDE = { C: '2px', D: '44px' }
-const DEFAUT = 'B'
-const CLE = 'cairn:barre_etat'
+export const HAUTEURS = [8, 12, 16, 24, 44]
+export const APPARITIONS = [
+  { valeur: 'net', libelle: "D'un coup" },
+  { valeur: 'fondu', libelle: 'Fondu' },
+]
+const DEFAUT = { hauteur: 44, apparition: 'net' }
+const CLE = 'cairn:barre_etat_bande'
 
 // ─── Couleur ────────────────────────────────────────────────────────────────
 
@@ -38,27 +38,33 @@ export const couleurVoileSurFond = (mode) => {
   return melanger(c[VEIL[mode].token], VEIL[mode].alpha, c.bg)
 }
 
-// ─── Variante choisie (gardée sur l'appareil) ───────────────────────────────
+// ─── Réglages de test (gardés sur l'appareil) ───────────────────────────────
+
+const valides = (r) => ({
+  hauteur: HAUTEURS.includes(r?.hauteur) ? r.hauteur : DEFAUT.hauteur,
+  apparition: APPARITIONS.some((a) => a.valeur === r?.apparition) ? r.apparition : DEFAUT.apparition,
+})
 
 const lireStockage = () => {
   try {
-    const v = window.localStorage.getItem(CLE)
-    return VARIANTES.includes(v) ? v : DEFAUT
+    return valides(JSON.parse(window.localStorage.getItem(CLE) ?? 'null'))
   } catch {
     return DEFAUT
   }
 }
 
-let variante = typeof window === 'undefined' ? DEFAUT : lireStockage()
+let reglages = typeof window === 'undefined' ? DEFAUT : lireStockage()
 const abonnes = new Set()
 
-export const lireVariante = () => variante
+/** Réglages courants { hauteur, apparition } ; même objet tant qu'ils ne changent pas. */
+export const lireReglages = () => reglages
 
-export const choisirVariante = (v) => {
-  if (!VARIANTES.includes(v) || v === variante) return
-  variante = v
+export const changerReglages = (patch) => {
+  const suivant = valides({ ...reglages, ...patch })
+  if (suivant.hauteur === reglages.hauteur && suivant.apparition === reglages.apparition) return
+  reglages = suivant
   try {
-    window.localStorage.setItem(CLE, v)
+    window.localStorage.setItem(CLE, JSON.stringify(reglages))
   } catch {
     // Stockage indisponible (navigation privée) : le choix vaut pour la session.
   }
@@ -66,117 +72,94 @@ export const choisirVariante = (v) => {
 }
 
 /** Pour useSyncExternalStore. */
-export const abonnerVariante = (f) => {
+export const abonnerReglages = (f) => {
   abonnes.add(f)
   return () => abonnes.delete(f)
 }
 
-// ─── Application ────────────────────────────────────────────────────────────
+// ─── Bande ──────────────────────────────────────────────────────────────────
 
 let ouvertes = 0
-let minuteur = null
-let image = null
 let bande = null
+let minuteur = null
 
 const mode = () => (document.body.classList.contains('dark') ? 'dark' : 'light')
 
-const poserMetas = (couleur) => {
-  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', couleur))
-}
-
 const reduire = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-const annulerMinuteurs = () => {
-  clearTimeout(minuteur)
-  cancelAnimationFrame(image)
-  minuteur = null
-  image = null
-}
-
-const nettoyerBody = () => {
-  document.body.style.removeProperty('background-color')
-  document.body.style.removeProperty('transition')
-}
-
 const retirerBande = () => {
+  clearTimeout(minuteur)
+  minuteur = null
   bande?.remove()
   bande = null
 }
 
-const appliquer = () => {
-  annulerMinuteurs()
-  retirerBande()
-  const m = mode()
-  const couleur = couleurVoileSurFond(m)
-  // En sombre, le voile mélangé vaut bg : rien à changer, aucune bande.
-  if (couleur === colors[m].bg) {
-    nettoyerBody()
-    return
-  }
-  const v = variante
-  if (v === 'A' || v === 'B') {
-    // La transition du body (src/index.css) est remplacée tant que la feuille est ouverte.
-    document.body.style.transition = v === 'B' && !reduire()
-      ? transition('background-color', DURATION.open)
-      : 'none'
-    document.body.style.backgroundColor = couleur
-    poserMetas(couleur)
-    return
-  }
-  nettoyerBody()
-  bande = document.createElement('div')
-  bande.setAttribute('aria-hidden', 'true')
-  Object.assign(bande.style, {
+const creerBande = (fond) => {
+  const el = document.createElement('div')
+  el.setAttribute('aria-hidden', 'true')
+  Object.assign(el.style, {
     position: 'fixed',
     top: '0',
     left: '0',
     right: '0',
-    height: HAUTEUR_BANDE[v],
-    backgroundColor: couleur,
+    height: `${reglages.hauteur}px`,
+    backgroundColor: fond,
     // Au-dessus du voile et de la feuille (Modal MUI, 1300).
     zIndex: '1301',
     pointerEvents: 'none',
   })
-  document.body.appendChild(bande)
+  document.body.appendChild(el)
+  return el
 }
 
-const retirer = () => {
-  annulerMinuteurs()
-  retirerBande()
-  poserMetas(colors[mode()].bg)
-  const style = document.body.style
-  if (!style.backgroundColor) {
-    nettoyerBody()
+const poser = () => {
+  const m = mode()
+  const couleur = couleurVoileSurFond(m)
+  // En sombre, le voile mélangé vaut bg : aucune bande.
+  if (couleur === colors[m].bg) {
+    retirerBande()
     return
   }
-  if (style.transition !== 'none') {
-    // B : retour au fond en 180 ms, puis plus de style en ligne.
-    style.transition = transition('background-color', DURATION.close)
-    style.backgroundColor = colors[mode()].bg
-    minuteur = setTimeout(() => {
-      minuteur = null
-      nettoyerBody()
-    }, DURATION.close)
+  const fondu = reglages.apparition === 'fondu' && !reduire()
+  if (!fondu) {
+    retirerBande()
+    bande = creerBande(couleur)
     return
   }
-  // A : retour immédiat au fond, transition du body rétablie une image plus tard,
-  // sinon elle rejouerait le changement.
-  style.removeProperty('background-color')
-  image = requestAnimationFrame(() => {
-    image = null
-    style.removeProperty('transition')
-  })
+  // Fondu : depuis bg (ou depuis l'état d'une fermeture en cours), vers le voile en 220 ms.
+  clearTimeout(minuteur)
+  minuteur = null
+  if (!bande) {
+    bande = creerBande(colors[m].bg)
+    // Lecture de mise en page : la couleur de départ est prise en compte avant la transition.
+    void bande.offsetHeight
+  }
+  bande.style.transition = transition('background-color', DURATION.open)
+  bande.style.backgroundColor = couleur
+}
+
+const enlever = () => {
+  if (!bande) return
+  if (reglages.apparition !== 'fondu' || reduire()) {
+    retirerBande()
+    return
+  }
+  // Fondu : retour à bg en 180 ms, puis la bande disparaît.
+  bande.style.transition = transition('background-color', DURATION.close)
+  bande.style.backgroundColor = colors[mode()].bg
+  clearTimeout(minuteur)
+  minuteur = setTimeout(retirerBande, DURATION.close)
 }
 
 /** Une feuille s'ouvre. Compte les feuilles empilées : seule la première agit. */
 export const ouvrirFeuille = () => {
   ouvertes += 1
-  if (ouvertes === 1) appliquer()
+  if (ouvertes === 1) poser()
 }
 
-/** Une feuille se ferme. La dernière remet le body, les metas et retire la bande. */
+/** Une feuille se ferme. La dernière retire la bande. */
 export const fermerFeuille = () => {
   if (ouvertes === 0) return
   ouvertes -= 1
-  if (ouvertes === 0) retirer()
+  if (ouvertes === 0) enlever()
 }

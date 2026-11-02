@@ -7,7 +7,7 @@ import {
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { pushToCoros, getCorosStatus } from '../../../lib/training'
 import { setTransitionDirection } from '../../../lib/viewTransition'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
 import { cleanText, todayISO, addDaysISO, COROS_PUSH_WINDOW_DAYS } from '../constants'
 
 // Date proposée : la date prévue, ramenée à aujourd'hui si elle est passée, et
@@ -38,7 +38,6 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
   const [error, setError] = useState(null)
   const [connected, setConnected] = useState(null) // null = vérification en cours
   const [wasOpen, setWasOpen] = useState(false)
-  const online = useOnline()
 
   // Reset à l'ouverture, ajusté pendant le rendu (pas d'effet).
   if (open && !wasOpen) {
@@ -72,7 +71,7 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
       onDone?.(res)
     } catch (e) {
       if (e.body?.code === 'coros_not_connected') setConnected(false)
-      else setError(e.message || "L'envoi a échoué.")
+      else setError(texteErreur(e, 'L\'envoi sur ta montre n\'a pas abouti. Réessaie.'))
       setPushing(false)
     }
   }
@@ -123,7 +122,7 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
         <Button onClick={onClose} disabled={pushing} color="inherit">Annuler</Button>
         <Button
           onClick={confirm}
-          disabled={pushing || !dateValid || connected !== true || !online}
+          disabled={pushing || !dateValid || connected !== true}
           variant="contained"
         >
           {pushing || connected === null ? <CircularProgress size={18} color="inherit" /> : 'Envoyer'}

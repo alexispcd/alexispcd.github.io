@@ -3,12 +3,13 @@ import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, 
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import RpeForm from '../../../components/RpeForm'
 import { emptyFeedback, toFeedbackPayload } from '../../../lib/feedback'
+import { texteErreur } from '../../../lib/reseau'
 
 /**
  * Ressenti de fin de séance. `onSubmit(feedback | null)` enregistre la séance
- * comme faite et lève une erreur lisible en cas d'échec. Demande le réseau.
+ * comme faite et lève une erreur en cas d'échec.
  */
-const ValidateDialog = ({ open, online, onClose, onSubmit }) => {
+const ValidateDialog = ({ open, onClose, onSubmit }) => {
   const [value, setValue] = useState(emptyFeedback())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -29,7 +30,7 @@ const ValidateDialog = ({ open, online, onClose, onSubmit }) => {
     try {
       await onSubmit(feedback)
     } catch (e) {
-      setError(e.message || "L'enregistrement a échoué")
+      setError(texteErreur(e, "La validation n'a pas abouti. Réessaie."))
       setBusy(false)
     }
   }
@@ -44,12 +45,11 @@ const ValidateDialog = ({ open, online, onClose, onSubmit }) => {
       <DialogTitle sx={{ fontWeight: 700 }}>Ton ressenti</DialogTitle>
       <DialogContent>
         <RpeForm value={value} onChange={setValue} />
-        {!online && <Alert severity="info" sx={{ mt: 2 }}>Hors ligne : la validation demande le réseau.</Alert>}
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={() => submit(null)} disabled={busy || !online} color="inherit">Passer</Button>
-        <Button onClick={() => submit(toFeedbackPayload(value))} disabled={busy || !online} variant="contained">
+        <Button onClick={() => submit(null)} disabled={busy} color="inherit">Passer</Button>
+        <Button onClick={() => submit(toFeedbackPayload(value))} disabled={busy} variant="contained">
           {busy ? <CircularProgress size={18} color="inherit" /> : 'Valider'}
         </Button>
       </DialogActions>

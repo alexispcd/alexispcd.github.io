@@ -1,6 +1,7 @@
-import { Snackbar, Alert, Button, IconButton } from '@mui/material'
-import Close from '@mui/icons-material/Close'
+import { useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { useAppCtx } from '../lib/context'
+import { useMessage } from '../ui/useMessage'
 
 let visibilityHooked = false
 
@@ -15,30 +16,27 @@ const onRegisteredSW = (_swUrl, registration) => {
   })
 }
 
+// « Nouvelle version disponible » en Message fixe, jusqu'au toucher. Jamais pendant
+// un overlay plein écran (player Renfo) : il revient tout seul à sa fermeture.
 const UpdatePrompt = () => {
   const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW({ onRegisteredSW })
+  const { overlay } = useAppCtx()
+  const { afficherFixe, retirerFixe } = useMessage()
+  const visible = needRefresh && !overlay
 
-  return (
-    <Snackbar open={needRefresh} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-      <Alert
-        severity="info"
-        icon={false}
-        sx={{ width: '100%', alignItems: 'center', borderRadius: '12px' }}
-        action={(
-          <>
-            <Button size="small" color="inherit" onClick={() => updateServiceWorker(true)} sx={{ textTransform: 'none', fontWeight: 600 }}>
-              Recharger
-            </Button>
-            <IconButton size="small" color="inherit" aria-label="Fermer" onClick={() => setNeedRefresh(false)}>
-              <Close fontSize="small" />
-            </IconButton>
-          </>
-        )}
-      >
-        Nouvelle version disponible
-      </Alert>
-    </Snackbar>
-  )
+  useEffect(() => {
+    if (!visible) {
+      retirerFixe()
+      return
+    }
+    afficherFixe({
+      texte: 'Nouvelle version disponible',
+      action: { libelle: 'Recharger', onClick: () => updateServiceWorker(true) },
+      onFermer: () => setNeedRefresh(false),
+    })
+  }, [visible, afficherFixe, retirerFixe, updateServiceWorker, setNeedRefresh])
+
+  return null
 }
 
 export default UpdatePrompt

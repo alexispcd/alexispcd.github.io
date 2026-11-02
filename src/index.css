@@ -38,18 +38,15 @@ body {
    data-vt-dir (forward | back), data-vt-skip pour un retour par geste système ou
    bouton du navigateur, posés sur <html> par src/lib/viewTransition.js. */
 
-/* Header fixe, son fond et pastille hors ligne : capturés à part, sans animation. */
+/* Header fixe et son fond : capturés à part, sans animation. */
 ::view-transition-group(app-header),
 ::view-transition-group(app-header-fade),
-::view-transition-group(offline-indicator),
 ::view-transition-new(app-header),
-::view-transition-new(app-header-fade),
-::view-transition-new(offline-indicator) {
+::view-transition-new(app-header-fade) {
   animation: none;
 }
 ::view-transition-old(app-header),
-::view-transition-old(app-header-fade),
-::view-transition-old(offline-indicator) {
+::view-transition-old(app-header-fade) {
   display: none;
 }
 

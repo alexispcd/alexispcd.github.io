@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
+import { useMessage, useBarreBasMessage } from '../../../ui/useMessage'
 import {
-  Box, Typography, Button, CircularProgress, Alert, Snackbar,
+  Box, Typography, Button, CircularProgress, Alert,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
   Menu, MenuItem,
 } from '@mui/material'
@@ -69,10 +70,8 @@ const SessionPage = () => {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [busy, setBusy] = useState(false) // action en cours (reset, délier…)
-  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
-  const online = useOnline()
-  const locked = busy || !online
-  const [snack, setSnack] = useState(null)
+  const locked = busy
+  const { afficher } = useMessage()
 
   const [completeOpen, setCompleteOpen] = useState(false)
   const [skipOpen, setSkipOpen] = useState(false)
@@ -81,8 +80,14 @@ const SessionPage = () => {
   const [pushOpen, setPushOpen] = useState(false)
   const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
 
-  const flash = (message, severity = 'error') => setSnack({ message, severity })
+  const echec = (e, phrase) => afficher(texteErreur(e, phrase))
+  const RECHARGEMENT = 'Les données n\'ont pas pu être rechargées. Réessaie.'
   const backToDashboard = () => navigate(`/training/plan/${planId}`)
+
+  // Barre d'actions fixe : le Message se pose au-dessus d'elle.
+  const barreRef = useRef(null)
+  const aBarre = session?.status === 'planned' || session?.status === 'adapted' || session?.status === 'done'
+  useBarreBasMessage(barreRef, !loading && !loadError && aBarre)
 
   const reload = useCallback(async () => {
     const s = await getSession(sessionId)
@@ -102,7 +107,10 @@ const SessionPage = () => {
     let cancelled = false
     getSession(sessionId)
       .then((s) => { if (!cancelled) { setSession(s); setLoading(false) } })
-      .catch((e) => { if (!cancelled) { setLoadError(e.message); setLoading(false) } })
+      .catch((e) => {
+        console.error('[training séance] chargement :', e)
+        if (!cancelled) { setLoadError('Les données n\'ont pas pu être chargées.'); setLoading(false) }
+      })
     return () => { cancelled = true }
   }, [sessionId])
 
@@ -111,7 +119,7 @@ const SessionPage = () => {
     try {
       await skipSession(sessionId)
       setSkipOpen(true)
-    } catch (e) { flash(e.message) }
+    } catch (e) { echec(e, 'La séance n\'a pas pu être sautée. Réessaie.') }
   }
 
   const handleAdapt = async () => {
@@ -119,9 +127,9 @@ const SessionPage = () => {
     try {
       const { sessions: adapted } = await adaptSessions(sessionId)
       const n = adapted?.length ?? 0
-      flash(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter', 'success')
+      afficher(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
     } catch (e) {
-      flash(e.message)
+      echec(e, 'L\'adaptation n\'a pas abouti. Réessaie.')
     } finally {
       setAdapting(false)
       setSkipOpen(false)
@@ -131,7 +139,7 @@ const SessionPage = () => {
 
   const handleCancelSkip = async () => {
     setSkipOpen(false)
-    try { await unskipSession(sessionId) } catch (e) { flash(e.message) }
+    try { await unskipSession(sessionId) } catch (e) { echec(e, 'La séance n\'a pas pu être reprise. Réessaie.') }
     backToDashboard()
   }
 
@@ -141,7 +149,7 @@ const SessionPage = () => {
     try {
       await resetSession(sessionId)
       await reload()
-    } catch (e) { flash(e.message) } finally { setBusy(false) }
+    } catch (e) { echec(e, 'La séance n\'a pas pu être réinitialisée. Réessaie.') } finally { setBusy(false) }
   }
 
   const doDelink = async () => {
@@ -150,7 +158,7 @@ const SessionPage = () => {
       await resetSession(sessionId)
       await completeSession(sessionId)
       await reload()
-    } catch (e) { flash(e.message) } finally { setBusy(false) }
+    } catch (e) { echec(e, 'La séance n\'a pas pu être déliée. Réessaie.') } finally { setBusy(false) }
   }
 
   const doRestore = async () => {
@@ -158,19 +166,19 @@ const SessionPage = () => {
     try {
       const { corosError } = await unskipSession(sessionId)
       await reload()
-      if (corosError) flash(`Séance restaurée, mais pas sur la montre : ${corosError}`, 'warning')
-    } catch (e) { flash(e.message) } finally { setBusy(false) }
+      if (corosError) {
+        console.error('[training séance] restauration sur la montre :', corosError)
+        afficher('Séance restaurée, mais pas sur ta montre.')
+      }
+    } catch (e) { echec(e, 'La séance n\'a pas pu être restaurée. Réessaie.') } finally { setBusy(false) }
   }
 
   const onPushed = (res) => {
     setPushOpen(false)
-    flash(
-      res?.previous_copy?.upcoming
-        ? "Séance envoyée. Supprime l'ancienne copie dans l'app Coros."
-        : 'Séance envoyée vers la montre',
-      'success',
-    )
-    reload().catch((e) => flash(e.message))
+    afficher(res?.previous_copy?.upcoming
+      ? "Séance envoyée. Supprime l'ancienne copie dans l'app Coros."
+      : 'Séance envoyée sur ta montre')
+    reload().catch((e) => echec(e, RECHARGEMENT))
   }
 
   // Remplace le contenu de la copie Coros par la version actuelle de la séance.
@@ -179,11 +187,14 @@ const SessionPage = () => {
     setBusy(true)
     try {
       const res = await updateOnCoros(sessionId)
-      if (res.status === 'updated') flash('Montre mise à jour', 'success')
-      else if (res.status === 'past') flash('La séance sur la montre est déjà passée.', 'info')
-      else flash(res.error ?? 'Mise à jour de la montre impossible.', 'warning')
+      if (res.status === 'updated') afficher('Montre mise à jour')
+      else if (res.status === 'past') afficher('La séance sur la montre est déjà passée.')
+      else {
+        console.error('[training séance] mise à jour de la montre :', res.error)
+        afficher('La mise à jour de ta montre n\'a pas abouti. Réessaie.')
+      }
       await reload()
-    } catch (e) { flash(e.message) } finally { setBusy(false) }
+    } catch (e) { echec(e, 'La mise à jour de ta montre n\'a pas abouti. Réessaie.') } finally { setBusy(false) }
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────
@@ -343,8 +354,8 @@ const SessionPage = () => {
                 transformOrigin={{ vertical: 'top', horizontal: 'center' }}
                 slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
               >
-                <MenuItem onClick={doUpdateCoros} disabled={!online}>Mettre à jour</MenuItem>
-                <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }} disabled={!online}>
+                <MenuItem onClick={doUpdateCoros}>Mettre à jour</MenuItem>
+                <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }}>
                   Envoyer à une autre date
                 </MenuItem>
               </Menu>
@@ -379,7 +390,7 @@ const SessionPage = () => {
       {/* ── Barre d'actions fixe (pattern wizard/Côtes) ─────────────
           Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
       {(canComplete || isDone) && (
-        <Box sx={{
+        <Box ref={barreRef} sx={{
           position: 'fixed', zIndex: 1200,
           left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
           bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
@@ -453,7 +464,7 @@ const SessionPage = () => {
         sessionId={sessionId}
         scheduledDate={session.scheduled_date}
         onClose={() => setCompleteOpen(false)}
-        onDone={() => { setCompleteOpen(false); reload().catch((e) => flash(e.message)) }}
+        onDone={() => { setCompleteOpen(false); reload().catch((e) => echec(e, RECHARGEMENT)) }}
       />
 
       <CorosPushDialog
@@ -465,8 +476,7 @@ const SessionPage = () => {
 
       <Dialog
         open={skipOpen}
-        // Hors ligne, fermer garde la séance sautée (déjà enregistrée) : l'annulation écrit en base.
-        onClose={() => { if (adapting) return; if (online) handleCancelSkip(); else { setSkipOpen(false); backToDashboard() } }}
+        onClose={() => { if (!adapting) handleCancelSkip() }}
         slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
@@ -478,8 +488,8 @@ const SessionPage = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting || !online} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting || !online} variant="contained">
+          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
+          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
             {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
           </Button>
         </DialogActions>
@@ -498,20 +508,9 @@ const SessionPage = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmReset(false)} color="inherit">Annuler</Button>
-          <Button onClick={doReset} disabled={!online} variant="contained">Réinitialiser</Button>
+          <Button onClick={doReset} variant="contained">Réinitialiser</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={5000}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.message}
-        </Alert>
-      </Snackbar>
 
     </Box>
   )

@@ -5,7 +5,7 @@ import {
 import CloudDownload from '@mui/icons-material/CloudDownloadOutlined'
 import { SectionLabel, GlassCard } from '../WizardParts'
 import { getCorosFitness } from '../../../../lib/training'
-import { useOnline } from '../../../../hooks/useOnline'
+import { texteErreur } from '../../../../lib/reseau'
 import { DURATION, transition } from '../../../../styles/motion'
 
 const MODES = [
@@ -21,7 +21,6 @@ const PREDICTION_LABELS = [
 ]
 
 const StepFitness = ({ draft, patch }) => {
-  const online = useOnline()
   const [loading, setLoading] = useState(false)
   const [importError, setImportError] = useState(null)
 
@@ -40,7 +39,7 @@ const StepFitness = ({ draft, patch }) => {
         runningLevel: f.running_level ?? '',
       })
     } catch (e) {
-      setImportError(e.message)
+      setImportError(texteErreur(e, 'L\'import de ta forme n\'a pas abouti. Réessaie.'))
     } finally {
       setLoading(false)
     }
@@ -92,7 +91,7 @@ const StepFitness = ({ draft, patch }) => {
             fullWidth
             startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <CloudDownload />}
             onClick={importCoros}
-            disabled={loading || !online}
+            disabled={loading}
           >
             {draft.corosLoaded ? 'Réimporter mon bilan Coros' : 'Importer mon bilan Coros'}
           </Button>

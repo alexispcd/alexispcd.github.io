@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Box, Typography, Button, CircularProgress, Snackbar, Alert } from '@mui/material'
+import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material'
 import PersonAdd from '@mui/icons-material/PersonAdd'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { useAppCtx } from '../../lib/context'
+import { texteErreur } from '../../lib/reseau'
+import { useMessage } from '../../ui/useMessage'
 import {
   listUsers, createUser, setUserModules, disableUser, enableUser, deleteUser,
 } from '../../lib/admin'
@@ -23,13 +25,18 @@ const AdminPage = () => {
   const [selectedId, setSelectedId] = useState(null)
   const [addOpen, setAddOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [snack, setSnack] = useState(null)
+  // Échec de création affiché dans le dialogue : un Message passerait sous son voile.
+  const [addError, setAddError] = useState(null)
+  const { afficher } = useMessage()
 
   useEffect(() => {
     let cancelled = false
     fetchUsers().then(
       (res) => { if (!cancelled) setState({ status: 'ready', ...res }) },
-      (err) => { if (!cancelled) setState({ status: 'error', users: [], now: 0, message: err.message }) },
+      (err) => {
+        console.error('[admin] chargement des comptes :', err)
+        if (!cancelled) setState({ status: 'error', users: [], now: 0 })
+      },
     )
     return () => { cancelled = true }
   }, [])
@@ -41,15 +48,16 @@ const AdminPage = () => {
     users: s.users.map(u => u.id === id ? { ...u, ...patch } : u),
   }))
 
-  // Exécute une action admin : verrou, Snackbar de succès ou d'erreur. Renvoie true si réussie.
-  const run = async (action, successMessage) => {
+  // Exécute une action admin : verrou, Message de succès ou d'échec. `succes` : texte,
+  // ou fonction du résultat de l'action. Renvoie true si réussie.
+  const run = async (action, succes, echec) => {
     setBusy(true)
     try {
-      await action()
-      setSnack({ severity: 'success', message: successMessage })
+      const res = await action()
+      afficher(typeof succes === 'function' ? succes(res) : succes)
       return true
     } catch (err) {
-      setSnack({ severity: 'error', message: err.message })
+      afficher(texteErreur(err, echec))
       return false
     } finally {
       setBusy(false)
@@ -61,11 +69,35 @@ const AdminPage = () => {
     setState({ status: 'ready', ...res })
   }
 
-  const handleCreate = (email, mods) => run(async () => {
-    await createUser(email, mods)
-    await reload()
+  const handleCreate = async (email, mods) => {
+    setBusy(true)
+    setAddError(null)
+    try {
+      await createUser(email, mods)
+    } catch (err) {
+      const phrase = err?.status === 409
+        ? 'Un compte existe déjà avec cet e-mail.'
+        : 'Le compte n\'a pas pu être créé. Réessaie.'
+      setAddError(texteErreur(err, phrase))
+      setBusy(false)
+      return false
+    }
+    // Compte créé : un échec du rechargement de la liste ne change pas ce résultat.
+    try {
+      await reload()
+    } catch (err) {
+      console.error('[admin] rechargement des comptes :', err)
+    }
     setAddOpen(false)
-  }, `Compte ${email} créé`)
+    setBusy(false)
+    afficher(`Compte ${email} créé`)
+    return true
+  }
+
+  const openAdd = () => {
+    setAddError(null)
+    setAddOpen(true)
+  }
 
   const handleSetModules = (mods) => run(async () => {
     const res = await setUserModules(selected.id, mods)
@@ -76,26 +108,29 @@ const AdminPage = () => {
         await refreshAccess()
       } catch (err) {
         console.error('refreshAccess error:', err)
-        throw new Error('Droits mis à jour, recharge la page pour les appliquer', { cause: err })
+        return { aRecharger: true }
       }
     }
-  }, 'Droits mis à jour')
+    return {}
+  }, (r) => (r.aRecharger ? 'Modules enregistrés. Recharge pour les appliquer.' : 'Modules enregistrés'),
+  'Les modules n\'ont pas pu être enregistrés. Réessaie.')
 
   const handleToggleDisabled = () => {
     const disable = !selected.disabled
     return run(async () => {
       await (disable ? disableUser(selected.id) : enableUser(selected.id))
       updateUser(selected.id, { disabled: disable })
-    }, disable ? 'Compte désactivé' : 'Compte réactivé')
+    }, disable ? 'Compte désactivé' : 'Compte réactivé',
+    disable ? 'Le compte n\'a pas pu être désactivé. Réessaie.' : 'Le compte n\'a pas pu être réactivé. Réessaie.')
   }
 
   const handleDelete = () => {
-    const { id, email } = selected
+    const { id } = selected
     return run(async () => {
       await deleteUser(id)
       setSelectedId(null)
       setState(s => ({ ...s, users: s.users.filter(u => u.id !== id) }))
-    }, `Compte ${email} supprimé`)
+    }, 'Compte supprimé', 'Le compte n\'a pas pu être supprimé. Réessaie.')
   }
 
   return (
@@ -110,7 +145,7 @@ const AdminPage = () => {
             size="small"
             variant="contained"
             startIcon={<PersonAdd fontSize="small" />}
-            onClick={() => setAddOpen(true)}
+            onClick={openAdd}
             disabled={state.status !== 'ready'}
             sx={{ textTransform: 'none' }}
           >
@@ -126,7 +161,7 @@ const AdminPage = () => {
 
         {state.status === 'error' && (
           <Alert severity="error" sx={{ borderRadius: '12px' }}>
-            Impossible de charger les comptes : {state.message}
+            Impossible de charger les comptes.
           </Alert>
         )}
 
@@ -164,20 +199,10 @@ const AdminPage = () => {
       <AddUserDialog
         open={addOpen}
         busy={busy}
+        erreur={addError}
         onClose={() => setAddOpen(false)}
         onCreate={handleCreate}
       />
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={4000}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.message}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }

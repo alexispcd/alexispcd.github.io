@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import supabase from '../lib/supabase'
+import { texteErreur } from '../lib/reseau'
 import FullScreenLoader from './FullScreenLoader'
 
 // Inscriptions fermées : Supabase refuse l'OTP d'un email sans compte (code otp_disabled).
@@ -39,7 +40,9 @@ const AuthGate = ({ children }) => {
     })
     setLoading(false)
     if (error) {
-      setErrorMsg(isUnknownAccount(error) ? 'Ce compte n\'existe pas. Demande une invitation.' : error.message)
+      setErrorMsg(isUnknownAccount(error)
+        ? 'Ce compte n\'existe pas. Demande une invitation.'
+        : texteErreur(error, 'L\'envoi du code n\'a pas abouti. Réessaie.'))
     } else {
       setStep('code')
     }

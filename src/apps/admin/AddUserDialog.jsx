@@ -9,7 +9,7 @@ import { assignableModules } from '../registry'
 const DEFAULT_MODULES = ['training', 'cotes']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const AddUserDialog = ({ open, busy, onClose, onCreate }) => {
+const AddUserDialog = ({ open, busy, erreur, onClose, onCreate }) => {
   const [email, setEmail] = useState('')
   const [modules, setModules] = useState(DEFAULT_MODULES)
   const valid = EMAIL_RE.test(email.trim())
@@ -73,6 +73,9 @@ const AddUserDialog = ({ open, busy, onClose, onCreate }) => {
           <Typography variant="caption" color="text.secondary">
             La personne se connecte ensuite avec un code reçu par email.
           </Typography>
+          {erreur && (
+            <Typography variant="secondaire" role="alert" sx={{ color: 'ink' }}>{erreur}</Typography>
+          )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>

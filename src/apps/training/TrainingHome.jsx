@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
-import { useOnline } from '../../hooks/useOnline'
+import { texteErreur } from '../../lib/reseau'
 import {
   Box, Typography, Button, IconButton, CircularProgress, Alert,
   Menu, MenuItem, ListItemIcon, ListItemText,
@@ -29,8 +29,6 @@ const formatEndDate = (d) =>
 
 const TrainingHome = () => {
   const navigate = useAppNavigate()
-  // Hors ligne : lecture seule (aucune écriture, aucune Edge Function).
-  const online = useOnline()
   const { setHeaderActions } = useAppCtx()
   const [searchParams] = useSearchParams()
   const historyView = searchParams.get('view') === 'history'
@@ -55,8 +53,9 @@ const TrainingHome = () => {
         setPlans(past)
       })
       .catch((err) => {
+        console.error('[TrainingHome] chargement :', err)
         if (cancelled) return
-        setError(err.message)
+        setError('Les données n\'ont pas pu être chargées.')
         setActivePlan(null)
       })
     return () => { cancelled = true }
@@ -101,7 +100,7 @@ const TrainingHome = () => {
       setPlans((prev) => prev.filter((p) => p.id !== confirmDelete.id))
       setConfirmDelete(null)
     } catch (err) {
-      setError(err.message)
+      setError(texteErreur(err, 'Le plan n\'a pas pu être supprimé. Réessaie.'))
     } finally {
       setDeleting(false)
     }
@@ -155,7 +154,6 @@ const TrainingHome = () => {
             <Button
               variant="contained"
               fullWidth
-              disabled={!online}
               onClick={() => navigate('/training/wizard')}
             >
               Créer un plan
@@ -221,7 +219,7 @@ const TrainingHome = () => {
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
         PaperProps={{ sx: { ...glassSx, minWidth: 180 } }}
       >
-        <MenuItem onClick={askDelete} disabled={!online}>
+        <MenuItem onClick={askDelete}>
           <ListItemIcon><DeleteOutlined fontSize="small" /></ListItemIcon>
           <ListItemText>Supprimer</ListItemText>
         </MenuItem>
@@ -244,7 +242,7 @@ const TrainingHome = () => {
           <Button onClick={() => setConfirmDelete(null)} disabled={deleting} color="inherit">
             Annuler
           </Button>
-          <Button onClick={doDelete} disabled={deleting || !online} color="error" variant="contained">
+          <Button onClick={doDelete} disabled={deleting} color="error" variant="contained">
             {deleting ? <CircularProgress size={18} color="inherit" /> : 'Supprimer'}
           </Button>
         </DialogActions>

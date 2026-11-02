@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Alert, Box, Button, CircularProgress, Snackbar, Typography } from '@mui/material'
+import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
 import PlayArrow from '@mui/icons-material/PlayArrow'
 import Schedule from '@mui/icons-material/Schedule'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { cardSx } from '../../../styles/glass'
-import { useOnline } from '../../../hooks/useOnline'
+import { texteErreur } from '../../../lib/reseau'
+import { useMessage } from '../../../ui/useMessage'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { completeSession, deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
 import { painAreaLabel } from '../../../lib/feedback'
@@ -32,14 +33,13 @@ const sectionTitleSx = {
 const SessionPage = () => {
   const { sessionId } = useParams()
   const navigate = useAppNavigate()
-  const online = useOnline()
   const [state, setState] = useState({ status: 'loading', sessionId })
   const [sheetSlug, setSheetSlug] = useState(null)
   const [validate, setValidate] = useState(null) // { bandsUsed } quand le dialog de ressenti est ouvert
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [snack, setSnack] = useState(null)
+  const { afficher } = useMessage()
 
   // Changement de séance : état de chargement remis au rendu.
   if (state.sessionId !== sessionId) setState({ status: 'loading', sessionId })
@@ -66,7 +66,7 @@ const SessionPage = () => {
   if (state.status === 'error') {
     return (
       <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">Séance introuvable.{!online && ' Tu es hors ligne et elle n\'est pas en cache.'}</Alert>
+        <Alert severity="error">Séance introuvable.</Alert>
       </Box>
     )
   }
@@ -94,7 +94,6 @@ const SessionPage = () => {
     const updated = await completeSession(session.id, { bandsUsed: validate?.bandsUsed, feedback })
     setSession(updated)
     setValidate(null)
-    setSnack({ severity: 'success', text: 'Séance validée' })
   }
 
   const doReset = async () => {
@@ -102,8 +101,7 @@ const SessionPage = () => {
     try {
       setSession(await resetSession(session.id))
     } catch (e) {
-      console.error('[renfo session]', e)
-      setSnack({ severity: 'error', text: "La séance n'a pas pu être remise à faire" })
+      afficher(texteErreur(e, "La séance n'a pas pu être remise à faire. Réessaie."))
     } finally {
       setBusy(false)
     }
@@ -115,8 +113,7 @@ const SessionPage = () => {
       await deleteFreeSession(session.id)
       navigate('/renfo')
     } catch (e) {
-      console.error('[renfo session]', e)
-      setSnack({ severity: 'error', text: 'La suppression a échoué' })
+      afficher(texteErreur(e, "La séance n'a pas pu être supprimée. Réessaie."))
       setBusy(false)
       setConfirmDelete(false)
     }
@@ -208,25 +205,20 @@ const SessionPage = () => {
               <Button variant="contained" startIcon={<PlayArrow />} sx={btn} onClick={startPlayer} disabled={!blocks.length}>
                 Démarrer
               </Button>
-              <Button variant="outlined" sx={btn} onClick={() => setValidate({ bandsUsed: session.bands_used })} disabled={!online || busy}>
+              <Button variant="outlined" sx={btn} onClick={() => setValidate({ bandsUsed: session.bands_used })} disabled={busy}>
                 Valider sans le player
               </Button>
               {free && (
-                <Button color="error" sx={btn} onClick={() => setConfirmDelete(true)} disabled={!online || busy}>
+                <Button color="error" sx={btn} onClick={() => setConfirmDelete(true)} disabled={busy}>
                   Supprimer
                 </Button>
               )}
             </>
           )}
           {done && (
-            <Button variant="outlined" sx={btn} onClick={doReset} disabled={!online || busy}>
+            <Button variant="outlined" sx={btn} onClick={doReset} disabled={busy}>
               {busy ? <CircularProgress size={18} color="inherit" /> : 'Remettre à faire'}
             </Button>
-          )}
-          {!online && (
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
-              Hors ligne : le player fonctionne, la validation attendra le réseau.
-            </Typography>
           )}
         </Box>
       </Box>
@@ -235,7 +227,6 @@ const SessionPage = () => {
 
       <ValidateDialog
         open={Boolean(validate)}
-        online={online}
         onClose={() => setValidate(null)}
         onSubmit={submitValidation}
       />
@@ -246,7 +237,6 @@ const SessionPage = () => {
         text="Elle disparaîtra de ta semaine."
         confirmLabel="Supprimer"
         busy={busy}
-        disabled={!online}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={doDelete}
       />
@@ -267,17 +257,6 @@ const SessionPage = () => {
           }}
         />
       )}
-
-      <Snackbar
-        open={Boolean(snack)}
-        autoHideDuration={3500}
-        onClose={() => setSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack?.severity ?? 'info'} onClose={() => setSnack(null)} sx={{ width: '100%' }}>
-          {snack?.text}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 }
