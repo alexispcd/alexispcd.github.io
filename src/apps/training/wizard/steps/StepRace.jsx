@@ -1,6 +1,7 @@
 import { Box, TextField, Typography } from '@mui/material'
 import { SectionLabel } from '../WizardParts'
 import { nextMondayISO, todayISODate } from '../draft'
+import { DURATION, transition } from '../../../../styles/motion'
 
 // Presets de distance (mètres). 'custom' → champ libre en mètres.
 const PRESETS = [
@@ -26,7 +27,7 @@ const Choice = ({ on, onClick, children }) => (
       borderColor: on ? 'primary.main' : 'divider',
       bgcolor: on ? 'primary.light' : 'transparent',
       color: on ? 'primary.main' : 'text.secondary',
-      transition: 'all .15s',
+      transition: transition(['background-color', 'border-color', 'color'], DURATION.fade),
     }}
   >
     {children}

@@ -15,8 +15,9 @@ const CARD_RADIUS = '28px'
 
 // La palette du projet ne definit ni success ni error : valeurs litterales.
 // Vert aligne sur primary.main, orange deja utilise pour la zone B.
-const connectedColor = (t) => (t.palette.mode === 'dark' ? '#5DCAA5' : '#1D9E75')
-const DISCONNECTED_COLOR = '#f97316'
+// L'état de la connexion se dit par le texte, pas par la couleur : jetons neutres.
+const connectedColor = 'ink'
+const DISCONNECTED_COLOR = 'muted'
 
 // Bandeau unique de la page. Une seule source d'alerte, alimentee par le retour
 // OAuth (parametre de requete), par la deconnexion et par les erreurs d'appel.
@@ -201,7 +202,6 @@ const SettingsPage = () => {
             onClick={handleDisconnect}
             disabled={disconnecting || !online}
             variant="contained"
-            sx={{ bgcolor: DISCONNECTED_COLOR, color: '#fff', '&:hover': { bgcolor: DISCONNECTED_COLOR } }}
           >
             {disconnecting ? <CircularProgress size={18} color="inherit" /> : 'Déconnecter'}
           </Button>

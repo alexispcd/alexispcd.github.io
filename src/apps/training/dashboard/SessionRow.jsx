@@ -1,10 +1,10 @@
 import { useRef } from 'react'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
+import { motion, useMotionValue, useTransform, MotionConfig } from 'framer-motion'
 import { Box, Typography } from '@mui/material'
 import Check from '@mui/icons-material/Check'
 import Redo from '@mui/icons-material/Redo'
 import Watch from '@mui/icons-material/WatchOutlined'
-import { ZONE_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, formatMin, shortDayLabel, cleanText } from '../constants'
+import { NEUTRAL_STYLE, ADAPTED_STYLE, VERDICT, TYPE_LABEL, formatKm, formatPace, formatMin, shortDayLabel, cleanText } from '../constants'
 
 // Déclenchement franc : il faut dépasser ce déplacement horizontal du doigt pour
 // qu'un swipe compte. En deçà, la carte revient à l'origine (dragSnapToOrigin).
@@ -35,7 +35,7 @@ const DayPill = ({ session }) => {
   if (session.status === 'done') {
     const day = shortDayLabel(session.completed_at ?? session.scheduled_date)
     return (
-      <Box sx={{ ...pillBase, color: ZONE_STYLE.A.main, bgcolor: ZONE_STYLE.A.bg }}>
+      <Box sx={{ ...pillBase, color: NEUTRAL_STYLE.main, bgcolor: NEUTRAL_STYLE.bg }}>
         <Check sx={{ fontSize: 13 }} />{day}
       </Box>
     )
@@ -91,68 +91,71 @@ const SessionRow = ({ session, onSkip, onOpen, onPush, canSkip, canPush }) => {
     requestAnimationFrame(() => { draggingRef.current = false })
   }
 
+  // reducedMotion="user" : Framer suit le réglage « Réduire les animations ».
   return (
-    <Box sx={{ position: 'relative', borderRadius: '20px', overflow: 'hidden' }}>
-      {/* Fond révélé au swipe */}
-      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5 }}>
-        {canSkip && (
-          <Typography component={motion.p} style={{ opacity: skipOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary' }}>
-            Sauter
+    <MotionConfig reducedMotion="user">
+      <Box sx={{ position: 'relative', borderRadius: '20px', overflow: 'hidden' }}>
+        {/* Fond révélé au swipe */}
+        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5 }}>
+          {canSkip && (
+            <Typography component={motion.p} style={{ opacity: skipOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'text.secondary' }}>
+              Sauter
+            </Typography>
+          )}
+          <Typography component={motion.p} style={{ opacity: openOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', ml: 'auto' }}>
+            {leftAction}
           </Typography>
-        )}
-        <Typography component={motion.p} style={{ opacity: openOpacity }} sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', ml: 'auto' }}>
-          {leftAction}
-        </Typography>
-      </Box>
+        </Box>
 
-      {/* Carte — drag horizontal avec verrouillage d'axe */}
-      <Box
-        component={motion.div}
-        drag="x"
-        dragDirectionLock
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.55}
-        dragSnapToOrigin
-        style={{ x }}
-        onDragStart={() => { draggingRef.current = true }}
-        onDragEnd={handleDragEnd}
-        onTap={() => { if (!draggingRef.current) onOpen(session) }}
-        sx={{
-          position: 'relative',
-          bgcolor: 'background.paper',
-          border: '1px solid', borderColor: 'divider', borderRadius: '20px',
-          px: 1.9, py: 1.6, cursor: 'pointer', userSelect: 'none',
-          touchAction: 'pan-y',
-          opacity: isDone ? 0.64 : isSkipped ? 0.55 : 1,
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-          <Typography
-            variant="body2"
-            fontWeight={650}
-            noWrap
-            sx={{ minWidth: 0, fontSize: '0.92rem', textDecoration: isDone ? 'line-through' : 'none', textDecorationColor: 'text.disabled' }}
-          >
-            {cleanText(session.title)}
-          </Typography>
-          <DayPill session={session} />
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.5 }}>
-          {verdictColor && (
-            <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: verdictColor }} />
-          )}
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, fontVariantNumeric: 'tabular-nums' }}>
-            {realized ?? subtitle(session)}
-          </Typography>
-          {isPushed && (
-            <Watch
-              titleAccess="Sur la montre"
-              sx={{ fontSize: 14, flexShrink: 0, color: session.coros_sync_error ? 'warning.main' : 'text.disabled' }}
-            />
-          )}
+        {/* Carte — drag horizontal avec verrouillage d'axe */}
+        <Box
+          component={motion.div}
+          drag="x"
+          dragDirectionLock
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.55}
+          dragSnapToOrigin
+          style={{ x }}
+          onDragStart={() => { draggingRef.current = true }}
+          onDragEnd={handleDragEnd}
+          onTap={() => { if (!draggingRef.current) onOpen(session) }}
+          sx={{
+            position: 'relative',
+            bgcolor: 'background.paper',
+            border: '1px solid', borderColor: 'divider', borderRadius: '20px',
+            px: 1.9, py: 1.6, cursor: 'pointer', userSelect: 'none',
+            touchAction: 'pan-y',
+            opacity: isDone ? 0.64 : isSkipped ? 0.55 : 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography
+              variant="body2"
+              fontWeight={650}
+              noWrap
+              sx={{ minWidth: 0, fontSize: '0.92rem', textDecoration: isDone ? 'line-through' : 'none', textDecorationColor: 'text.disabled' }}
+            >
+              {cleanText(session.title)}
+            </Typography>
+            <DayPill session={session} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.5 }}>
+            {verdictColor && (
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: verdictColor }} />
+            )}
+            <Typography variant="caption" color="text.secondary" noWrap sx={{ minWidth: 0, fontVariantNumeric: 'tabular-nums' }}>
+              {realized ?? subtitle(session)}
+            </Typography>
+            {isPushed && (
+              <Watch
+                titleAccess="Sur la montre"
+                sx={{ fontSize: 14, flexShrink: 0, color: session.coros_sync_error ? 'warning.main' : 'text.disabled' }}
+              />
+            )}
+          </Box>
         </Box>
       </Box>
-    </Box>
+    </MotionConfig>
   )
 }
 

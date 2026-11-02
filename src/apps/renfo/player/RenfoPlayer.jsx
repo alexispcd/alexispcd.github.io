@@ -11,7 +11,7 @@ import SkipNext from '@mui/icons-material/SkipNext'
 import SkipPrevious from '@mui/icons-material/SkipPrevious'
 import ListAlt from '@mui/icons-material/ListAlt'
 import Check from '@mui/icons-material/Check'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import { useBlocker } from 'react-router-dom'
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
@@ -295,7 +295,7 @@ const RenfoPlayer = ({ content, kindLabel, weekLabel, bands, initialBandsUsed, b
 
   if (finished) {
     return createPortal(
-      <Box sx={{ ...shell, overflowY: 'auto' }}>
+      <Box sx={{ ...shell, overflowY: 'auto', overscrollBehavior: 'none' }}>
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', maxWidth: 460, mx: 'auto', width: '100%', textAlign: 'center', px: 1 }}>
           <Box sx={{ width: 72, height: 72, borderRadius: '50%', mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover', color: 'primary.main' }}>
             <Check sx={{ fontSize: 40 }} />
@@ -510,19 +510,22 @@ const RenfoPlayer = ({ content, kindLabel, weekLabel, bands, initialBandsUsed, b
     </IconButton>
   )
 
+  // reducedMotion="user" : Framer suit le réglage « Réduire les animations ».
   const animated = (children, sx) => (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={cursor}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.18, ease: 'easeOut' }}
-        style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ...sx }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={cursor}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          style={{ display: 'flex', flexDirection: 'column', minHeight: 0, ...sx }}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </MotionConfig>
   )
 
   const body = landscape ? (
@@ -573,7 +576,7 @@ const RenfoPlayer = ({ content, kindLabel, weekLabel, bands, initialBandsUsed, b
       <Box sx={{ flexShrink: 0 }}>
         <BlockProgressBar segments={segments} heading={heading} onOpenPlan={plan} />
       </Box>
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', pt: 1 }}>
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'none', pt: 1 }}>
         {animated(
           isWork ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

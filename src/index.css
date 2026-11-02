@@ -1,45 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Geist:wght@300;400;500;600&display=swap');
-
-@theme {
-  --font-serif: 'DM Serif Display', serif;
-  --font-sans: 'Geist', sans-serif;
-
-  --color-cairn-bg: #ffffff;
-  --color-cairn-surface: #f7f7f7;
-  --color-cairn-border: #ebebeb;
-  --color-cairn-text: #111111;
-  --color-cairn-muted: #aaaaaa;
-  --color-cairn-accent: #3d6b51;
-  --color-cairn-accent-light: #eaf3ee;
-
-  --color-cairn-dark-bg: #0f0f12;
-  --color-cairn-dark-surface: #161620;
-  --color-cairn-dark-border: #1e1e2a;
-  --color-cairn-dark-text: #e2e8f0;
-  --color-cairn-dark-muted: #444444;
-  --color-cairn-dark-accent: #5a9e78;
-  --color-cairn-dark-accent-light: #0e1f16;
+/* Schibsted Grotesk, fichier variable (graisses 400 à 900), sous-ensemble latin.
+   Servi par l'app et précaché par le service worker : aucune requête externe. */
+@font-face {
+  font-family: 'Schibsted Grotesk';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('/fonts/schibsted-grotesk-latin-wght-normal.woff2') format('woff2');
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
+html,
 body {
-  font-family: var(--font-sans);
-  background-color: var(--color-cairn-bg);
-  color: var(--color-cairn-text);
-  transition: background-color 0.2s, color 0.2s;
-  padding: 0;         
-  margin: 0;          
+  overscroll-behavior: none;
 }
+
+/* --bg et --ink : variables du thème, posées par CssBaseline (src/styles/theme.js).
+   Changement de thème en 200 ms, immédiat si les animations sont réduites. */
+body {
+  font-family: 'Schibsted Grotesk', system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  background-color: var(--bg);
+  color: var(--ink);
+  transition: background-color 200ms cubic-bezier(0.32, 0.72, 0, 1), color 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+
 /* Transitions de page (View Transitions API) : glissement façon iOS. Sens dans
    data-vt-dir (forward | back), data-vt-skip pour un retour par geste système ou
    bouton du navigateur, posés sur <html> par src/lib/viewTransition.js. */
 
-/* Header fixe, fondu haut et pastille hors ligne : capturés à part, sans animation. */
+/* Header fixe, son fond et pastille hors ligne : capturés à part, sans animation. */
 ::view-transition-group(app-header),
 ::view-transition-group(app-header-fade),
 ::view-transition-group(offline-indicator),

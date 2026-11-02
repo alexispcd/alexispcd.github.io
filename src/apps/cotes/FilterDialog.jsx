@@ -23,7 +23,7 @@ const FilterDialog = ({ open, onClose, params, setParam }) => {
     >
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.25rem', fontWeight: 400 }}>
+        <Typography variant="titre-barre">
           Filtres
         </Typography>
         {!isDefault && (

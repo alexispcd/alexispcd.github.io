@@ -148,7 +148,7 @@ const SessionPage = () => {
           <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'primary.main' }}>
             {KIND_LABELS[session.kind] ?? session.kind}
           </Typography>
-          <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontStyle: 'italic', fontSize: '1.7rem', lineHeight: 1.15, mt: 0.25 }}>
+          <Typography variant="titre-section" sx={{ mt: 0.25 }}>
             {session.title}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.75, color: 'text.secondary' }}>

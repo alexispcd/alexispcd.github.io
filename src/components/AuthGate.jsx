@@ -101,8 +101,8 @@ const AuthGate = ({ children }) => {
         gap: 3,
       }}>
         <Box>
-          <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.5rem', fontWeight: 400, mb: 0.5 }}>
-            Le <em>Cairn</em>
+          <Typography variant="titre-app" sx={{ mb: 0.5 }}>
+            Le Cairn
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {step === 'email' ? 'Connexion par code email' : `Code envoyé à ${email}`}

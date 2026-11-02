@@ -5,6 +5,7 @@ import CloseRounded from '@mui/icons-material/CloseRounded'
 import MyLocationRounded from '@mui/icons-material/MyLocationRounded'
 import { useTheme } from '@mui/material/styles'
 import { SLIDERS, DEFAULT_PARAMS } from './utils'
+import { glassSx } from '../../styles/glass'
 
 const EASE = '0.3s ease-out'
 
@@ -15,7 +16,6 @@ const CARD_RADIUS = BTN_RADIUS + INSET // 34
 
 const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center, params, setParam }) => {
   const theme = useTheme()
-  const dark = theme.palette.mode === 'dark'
 
   const [filterExpanded, setFilterExpanded] = useState(false)
 
@@ -86,17 +86,8 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
     }
   }
 
-  const glass = {
-    background: dark
-      ? 'linear-gradient(180deg, rgba(52,52,68,0.28) 0%, rgba(18,18,28,0.36) 100%)'
-      : 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(228,234,252,0.24) 100%)',
-    backdropFilter: 'blur(28px) saturate(180%)',
-    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-    border: dark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.06)',
-    boxShadow: dark
-      ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
-      : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
-  }
+  // Ancien verre, aplati : fond surface, sans flou ni ombre (src/styles/glass.js).
+  const glass = glassSx
 
   const btnBase = {
     borderRadius: `${BTN_RADIUS}px`,
@@ -168,7 +159,7 @@ const BottomBar = ({ phase, onSearch, onCancel, onReset, hasCustomParams, center
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               px: 2.5, pt: 1, mb: 2,
             }}>
-              <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
+              <Typography variant="titre-barre">
                 Filtres
               </Typography>
               {!isDefault && (

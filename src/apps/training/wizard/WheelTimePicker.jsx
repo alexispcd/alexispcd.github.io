@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from 'react'
 import { Box, Typography } from '@mui/material'
+import { DURATION, transition } from '../../../styles/motion'
 
 // Sélecteur de durée « à roues » (heures / minutes / secondes) construit sur le
 // scroll-snap natif : inertie iOS d'origine, snap au centre, aucune dépendance
@@ -67,7 +68,7 @@ const Wheel = ({ items, value, onChange }) => {
               fontVariantNumeric: 'tabular-nums',
               color: sel ? 'text.primary' : 'text.disabled',
               opacity: sel ? 1 : Math.max(0.22, 1 - dist * 0.3),
-              transition: 'font-size .12s ease, color .12s ease',
+              transition: transition(['font-size', 'color'], DURATION.fade),
             }}>
               {String(n).padStart(2, '0')}
             </Typography>

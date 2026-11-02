@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Box } from '@mui/material'
 import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import { photoUrl } from '../content'
+import { DURATION, transition } from '../../../styles/motion'
 
 // Alternance départ et arrivée.
 const ALTERNATE_MS = 1200
@@ -47,7 +48,7 @@ const ExercisePhoto = ({ slug, paused = false, sx }) => {
           alt=""
           sx={{
             position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
-            opacity: frame === f ? 1 : 0, transition: 'opacity 0.25s ease',
+            opacity: frame === f ? 1 : 0, transition: transition('opacity', DURATION.fade),
           }}
         />
       ))}

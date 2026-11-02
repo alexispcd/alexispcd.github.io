@@ -1,5 +1,6 @@
 import { Box, ButtonBase, Typography } from '@mui/material'
 import ListAlt from '@mui/icons-material/ListAlt'
+import { DURATION, transition } from '../../../styles/motion'
 
 /**
  * Progression par bloc : un segment par bloc, largeur proportionnelle à son poids,
@@ -18,7 +19,7 @@ const BlockProgressBar = ({ segments, heading, onOpenPlan, compact = false }) =>
           key={seg.blockIndex}
           sx={{ flex: `${Math.max(seg.weight, 1)} 1 0`, minWidth: 8, height: 6, borderRadius: 3, bgcolor: 'action.hover', overflow: 'hidden' }}
         >
-          <Box sx={{ width: `${Math.round(seg.done * 100)}%`, height: '100%', bgcolor: 'primary.main', borderRadius: 3, transition: 'width 0.3s ease' }} />
+          <Box sx={{ width: `${Math.round(seg.done * 100)}%`, height: '100%', bgcolor: 'primary.main', borderRadius: 3, transition: transition('width', DURATION.fill) }} />
         </Box>
       ))}
     </Box>

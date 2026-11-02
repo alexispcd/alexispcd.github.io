@@ -1,6 +1,7 @@
 import { Card, CardContent, Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import { useAppNavigate } from '../hooks/useAppNavigate'
+import { DURATION, transition } from '../styles/motion'
 
 const AppCard = ({ module }) => {
   const theme = useTheme()
@@ -13,7 +14,7 @@ const AppCard = ({ module }) => {
       sx={{
         cursor: 'pointer',
         border: `2px solid ${theme.palette.primary.main}`,
-        transition: 'all 0.2s',
+        transition: transition(['border-color', 'transform'], DURATION.release),
         '&:hover': {
           borderColor: theme.palette.primary.main,
           transform: 'translateY(-2px)',

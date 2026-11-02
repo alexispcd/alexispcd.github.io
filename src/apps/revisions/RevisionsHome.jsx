@@ -166,10 +166,7 @@ const RevisionsHome = () => {
           <>
             {/* Compteur du jour : exactement ce que la session contiendra. */}
             <Card sx={{ ...cardSx, px: 2.5, py: 3 }}>
-              <Typography sx={{
-                fontFamily: '"DM Serif Display", serif', fontSize: '4.2rem', lineHeight: 0.9,
-                color: 'primary.main', letterSpacing: '-0.02em',
-              }}>
+              <Typography variant="chiffre-widget">
                 {total}
               </Typography>
               <Typography variant="body1" fontWeight={500} sx={{ mt: 0.75 }}>

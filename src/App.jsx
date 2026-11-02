@@ -38,13 +38,14 @@ const AppLayout = () => {
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
-      {/* Pas de viewport-fit=cover (voir CLAUDE.md, section PWA iOS) : iOS remplit les
-          safe-areas (barre de statut, indicateur d'accueil) avec le fond du body, et les
-          env(safe-area-inset-*) valent 0. Ils ne servent que de garde-fou. Chaque page gere
-          sa propre marge basse et scrolle dans son propre conteneur en height 100%. */}
+      {/* viewport-fit=cover (config B, voir CLAUDE.md, section PWA iOS) : la page va
+          jusqu'en bas de l'écran ; mesuré sur iPhone, inset haut 0 et bas 34 px. Chaque
+          page gère sa propre marge basse et défile dans son propre conteneur en height
+          100%, sans rebond (overscroll-behavior sur l'enfant direct, la page). */}
       <Box sx={{
         height: '100%', overflow: 'hidden',
         pt: 'env(safe-area-inset-top, 0px)',
+        '& > *': { overscrollBehavior: 'none' },
       }}>
         <Outlet />
       </Box>
@@ -53,18 +54,16 @@ const AppLayout = () => {
           contrôles de l'overlay. */}
       {!overlay && (
         <>
-          {/* Fondu haut : couleur de fond opaque au tout en haut qui s'estompe de facon
-              diffuse jusqu'a environ la mi-hauteur du header, pour que le contenu scrolle et
-              disparaisse en douceur derriere les pastilles. Derriere le header (zIndex 1200)
-              et devant le contenu. */}
+          {/* Fond du header : plein, en bg comme le body, sur toute la hauteur du header,
+              pour que le contenu qui défile ne passe pas sous les pastilles (et qu'aucune
+              teinte ne se pose sous la barre d'état). Derrière le header (zIndex 1200) et
+              devant le contenu. */}
           <Box sx={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100,
-            height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT / 2}px)`,
+            height: `calc(env(safe-area-inset-top, 0px) + ${HEADER_HEIGHT}px)`,
             pointerEvents: 'none',
             viewTransitionName: 'app-header-fade',
-            background: dark
-              ? 'linear-gradient(to bottom, rgba(15,15,18,1) 0%, rgba(15,15,18,1) 12%, rgba(15,15,18,0) 100%)'
-              : 'linear-gradient(to bottom, rgba(255,255,255,1) 0%, rgba(255,255,255,1) 12%, rgba(255,255,255,0) 100%)',
+            bgcolor: 'background.default',
           }} />
           <AppHeader
           toolName={handle.title ?? null}

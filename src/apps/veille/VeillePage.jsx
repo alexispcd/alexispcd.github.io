@@ -314,7 +314,7 @@ const VeillePage = () => {
       <Box
         ref={scrollRef}
         onScroll={handleScroll}
-        sx={{ flex: 1, overflowY: 'auto', px: 2, display: 'flex', flexDirection: 'column', pb: 'env(safe-area-inset-bottom, 0px)' }}
+        sx={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'none', px: 2, display: 'flex', flexDirection: 'column', pb: 'env(safe-area-inset-bottom, 0px)' }}
       >
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>

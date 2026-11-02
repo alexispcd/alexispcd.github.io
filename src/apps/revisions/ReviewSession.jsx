@@ -145,9 +145,9 @@ const ReviewSession = () => {
               </Typography>
               <Divider sx={{ flex: 1 }} />
             </Box>
-            <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '3.4rem', lineHeight: 1 }}>
+            <Typography variant="chiffre-widget">
               {stats.known}
-              <Box component="span" sx={{ color: 'text.secondary', fontSize: '2rem' }}> / {total}</Box>
+              <Box component="span" sx={{ color: 'text.secondary' }}> / {total}</Box>
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, lineHeight: 1.6 }}>
               {stats.unknown > 0

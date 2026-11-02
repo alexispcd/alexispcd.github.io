@@ -5,6 +5,10 @@ import './index.css'
 import './lib/viewTransition'
 import App from './App.jsx'
 
+// Écouteur vide et passif : sans lui, :active ne réagit pas au doigt sur iPhone (testé
+// sur le banc d'essai L0), donc aucun calque d'appui. Il ne bloque rien.
+document.addEventListener('touchstart', () => {}, { passive: true })
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />

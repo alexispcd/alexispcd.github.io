@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { Box, Typography, useTheme } from '@mui/material'
+import { alpha } from '@mui/material/styles'
+import { opacity } from '../../../styles/tokens'
+import { DURATION, transition } from '../../../styles/motion'
 import { formatPace } from '../constants'
 import {
   estimateStepSeconds, estimateStepMeters, groupSteps, stepSizeLabel, stepShortLabel,
@@ -27,7 +30,6 @@ const STATUS_WORD = { ok: '✓ dans la cible', proche: '≈ proche', ecart: '✗
  */
 const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }) => {
   const theme = useTheme()
-  const dark = theme.palette.mode === 'dark'
   const [sel, setSel] = useState(null)
   const [view, setView] = useState('step')
 
@@ -55,14 +57,17 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
   const padR = showHr ? 30 : PAD_R
 
   // ── Palette ──────────────────────────────────────────────────────────────
+  // Interface en jetons du thème. Données gardées en couleur jusqu'à la refonte de
+  // la page séance (T2) : cible, FC, proche et écart.
+  const P = theme.palette
   const C = {
-    grid: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-    axis: dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+    grid: P.line,
+    axis: P.muted,
     band: 'rgba(96,165,250,0.20)',
     target: '#60a5fa',
-    neutral: dark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.035)',
-    line: dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.45)',
-    dot: theme.palette.background.default,
+    neutral: alpha(P.ink, 0.035),
+    line: P.muted,
+    dot: P.surface,
     ok: theme.palette.primary.main,
     proche: '#eab308',
     ecart: '#ef4444',
@@ -229,9 +234,9 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
                   flex: 1, textAlign: 'center', py: 0.6, borderRadius: '10px', cursor: 'pointer',
                   fontSize: '0.72rem', fontWeight: 600, userSelect: 'none', border: '1px solid',
                   borderColor: on ? 'primary.main' : 'divider',
-                  bgcolor: on ? 'rgba(29,158,117,0.12)' : 'transparent',
+                  bgcolor: on ? 'chip' : 'transparent',
                   color: on ? 'primary.main' : 'text.secondary',
-                  transition: 'all .15s',
+                  transition: transition(['background-color', 'border-color', 'color'], DURATION.fade),
                 }}
               >
                 {label}
@@ -341,7 +346,7 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
               y={PAD_T}
               width={w}
               height={PLOT_H}
-              fill={sel === i ? (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') : 'transparent'}
+              fill={sel === i ? alpha(P.ink, opacity.ligne) : 'transparent'}
               style={{ cursor: 'pointer' }}
               onClick={() => setSel(i)}
             />
@@ -433,7 +438,7 @@ const PaceChart = ({ steps, actualLaps = null, kmLaps = null, comparisons = [] }
                 y={PAD_T}
                 width={w}
                 height={PLOT_H}
-                fill={sel === i ? (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)') : 'transparent'}
+                fill={sel === i ? alpha(P.ink, opacity.ligne) : 'transparent'}
                 style={{ cursor: 'pointer' }}
                 onClick={() => setSel(i)}
               />

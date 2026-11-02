@@ -29,6 +29,7 @@ import {
 } from '../constants'
 import SessionRow from './SessionRow'
 import CorosPushDialog from '../session/CorosPushDialog'
+import { DURATION, transition } from '../../../styles/motion'
 
 const PlanDashboard = () => {
   const { planId } = useParams()
@@ -421,7 +422,7 @@ const PlanDashboard = () => {
                 size="small"
                 sx={{
                   height: 22, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em',
-                  color: 'primary.main', bgcolor: ZONE_STYLE.A.bg,
+                  color: 'primary.main', bgcolor: 'chip',
                   border: '1px solid', borderColor: 'primary.main',
                   '& .MuiChip-icon': { color: 'primary.main' },
                 }}
@@ -453,7 +454,7 @@ const PlanDashboard = () => {
 
           {targetKm != null && (
             <Box sx={{ mt: 1.5, height: 4, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
-              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${(sessionsLoading || sessions === null) ? 0 : donePct}%`, transition: 'width .3s' }} />
+              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${(sessionsLoading || sessions === null) ? 0 : donePct}%`, transition: transition('width', DURATION.fill) }} />
             </Box>
           )}
         </Box>
@@ -476,7 +477,8 @@ const PlanDashboard = () => {
                 sx={{
                   flex: '0 0 58px', borderRadius: '14px', px: 1, py: 1,
                   cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', gap: 0.75, transition: 'all .15s',
+                  alignItems: 'center', gap: 0.75,
+                  transition: transition(['background-color', 'border-color', 'transform'], DURATION.fade),
                   bgcolor: sel ? 'background.paper' : 'transparent',
                   border: '1px solid', borderColor: sel ? 'primary.main' : 'divider',
                   transform: sel ? 'translateY(-2px)' : 'none',

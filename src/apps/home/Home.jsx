@@ -15,18 +15,9 @@ const Home = () => {
 
         {/* Branding */}
         <Box sx={{ mb: 6 }}>
-          <Typography
-            variant="h1"
-            sx={{
-              fontFamily: '"DM Serif Display", serif',
-              fontSize: '2.5rem',
-              fontWeight: 400,
-              lineHeight: 1,
-              mb: 0.5,
-              '& em': { fontStyle: 'italic' }
-            }}
-            dangerouslySetInnerHTML={{ __html: 'Le <em>Cairn</em>' }}
-          />
+          <Typography variant="titre-app" sx={{ mb: 0.5 }}>
+            Le Cairn
+          </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography
               variant="overline"

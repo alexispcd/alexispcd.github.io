@@ -26,7 +26,7 @@ import {
   completeSession, resetSession, updateOnCoros,
 } from '../../../lib/training'
 import {
-  ZONE_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
+  ZONE_STYLE, NEUTRAL_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
   intensityOf, formatKm, formatPace, formatDistance, formatDuration, formatMin,
   cleanText, shortDayLabel, formatLongDay, isCorosCopyUpcoming,
 } from '../constants'
@@ -38,11 +38,12 @@ import CompleteDialog from './CompleteDialog'
 import CorosPushDialog from './CorosPushDialog'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
+// Le statut ne porte pas de couleur : chips neutres, la sautée en muted.
 const STATUS_CHIP = {
-  planned: { main: '#60a5fa', bg: 'rgba(96,165,250,0.14)' },
-  done:    { main: ZONE_STYLE.A.main, bg: ZONE_STYLE.A.bg },
+  planned: NEUTRAL_STYLE,
+  done:    NEUTRAL_STYLE,
   adapted: ADAPTED_STYLE,
-  skipped: { main: '#94a3b8', bg: 'rgba(148,163,184,0.16)' },
+  skipped: { main: 'var(--muted)', bg: 'var(--chip)' },
 }
 
 const STEP_ICON = {
@@ -258,7 +259,7 @@ const SessionPage = () => {
         {/* ── Bandeau séance adaptée ──────────────────────────────── */}
         {isAdapted && (
           <Banner
-            icon={<AutoAwesome sx={{ fontSize: 18, color: '#a78bfa' }} />}
+            icon={<AutoAwesome sx={{ fontSize: 18, color: 'ink' }} />}
             text="Séance adaptée suite à une séance sautée."
             action="Restaurer la version d'origine"
             onAction={doRestore}
@@ -696,7 +697,7 @@ const AnalysisBlock = ({ analysis }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
         <Box sx={{
           width: 38, height: 38, borderRadius: '12px', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: `${color}22`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'chip',
         }}>
           <Icon sx={{ fontSize: 20, color }} />
         </Box>

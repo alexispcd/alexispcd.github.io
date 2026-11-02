@@ -76,8 +76,8 @@ export default defineConfig(({ mode }) => {
           name: 'Le Cairn',
           short_name: 'Cairn',
           description: 'Mes outils perso',
-          theme_color: '#1D9E75',
-          background_color: '#ffffff',
+          theme_color: '#F3F4F1',
+          background_color: '#F3F4F1',
           display: 'standalone',
           start_url: '/',
           icons: [
@@ -95,6 +95,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          // Valeur par défaut de workbox-build (**/*.{js,wasm,css,html}) plus la police.
+          globPatterns: ['**/*.{js,wasm,css,html,woff2}'],
           navigateFallbackDenylist: [/^\/labo\//],
           globIgnores: ['labo/**'],
           runtimeCaching: [...dataCacheRule(env.VITE_SUPABASE_URL), renfoImagesRule],

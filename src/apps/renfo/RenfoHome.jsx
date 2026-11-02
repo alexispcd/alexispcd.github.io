@@ -242,7 +242,7 @@ const RenfoHome = () => {
         {cycle && generatedWeeks > 0 && (
           <>
             <Box sx={{ mt: 3, px: 0.5 }}>
-              <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontStyle: 'italic', fontSize: '1.6rem', lineHeight: 1.1 }}>
+              <Typography variant="titre-section">
                 Cycle {cycle.number}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>

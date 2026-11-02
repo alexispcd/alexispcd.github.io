@@ -42,7 +42,9 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `components/FullScreenLoader.jsx` : loader plein écran partagé
 - `components/RpeForm.jsx` : formulaire de ressenti (RPE, douleurs, note) partagé par Training et Renfo, accent en prop ; zones de douleur et helpers dans `lib/feedback.js`
 - `hooks/useDarkMode.jsx` : mode sombre (localStorage + classe `body.dark`), passé en props `{ dark, setDark }` à chaque app
-- `styles/theme.js` : thème MUI clair et sombre
+- `styles/tokens.json` : copie exacte de `tokens.json` du Design System, source de vérité des valeurs ; `styles/tokens.js` en dérive `colors` (par thème), `cssVars`, `space`, `radius`, `size`, `border`, `opacity`, `textStyles`, `veil` et `SPACE_BAS` ; `styles/motion.js` : courbe `EASE`, `DURATION` et `transition()`
+- `styles/theme.js` : `createTheme(dark)`, thème MUI clair et sombre construit sur les jetons (palette, variantes de texte, transitions, composants) ; `shape` et `spacing` inchangés pour les anciens écrans
+- `styles/glass.js` : ancien style verre aplati (mêmes exports `glassSx`, `cardSx`, `GLASS_BACKDROP`, fond `surface`, sans flou, ombre ni dégradé), à retirer quand les écrans seront refaits
 - `lib/supabase.js` : client Supabase ; `lib/functions.js` : `callFunction` (appel d'Edge Function avec le jeton de session) ; `lib/training.js` : accès données Training ; `lib/renfo.js` : accès données Renfo ; `lib/rss.js` : Veille
 - `lib/access.js` : rôle et modules du compte connecté, `hasModule` (miroir de `_shared/access.ts`), accès publié pour les loaders de route ; `lib/admin.js` : appels à `admin-users`
 
@@ -86,14 +88,19 @@ Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir S
 
 ## Design system (toute l'app)
 
-- Material UI exclusivement, style épuré sobre presque pro
-- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement, importées par chemin (police Tabler retirée)
-- Typo : DM Serif Display (titres, en italique) + Geist (corps)
-- Couleurs (source de vérité : `styles/theme.js`) :
-  - Clair : fond `#ffffff`, surface `#f7f7f7`, accent `#1D9E75`, accent light `#e6f5ef`, bordure `#ebebeb`
-  - Sombre : fond `#0f0f12`, surface `#161620`, accent `#5DCAA5`, accent light `#0e2018`, bordure `#1e1e2a`
-- Support mode sombre ET clair (toggle dans le menu compte)
-- Coins arrondis, fines bordures, pas de fioritures
+Direction visuelle du Design System « Le Cairn » (artefact Design System, `project/README.md` et `project/tokens.json`). Les valeurs vivent dans `src/styles/tokens.json` (copie exacte, source de vérité) ; ne jamais les recopier en dur.
+
+- Material UI, style plat et net : pas de verre dépoli, pas de dégradé, pas d'ombre (`shadows` du thème à `none`). Une carte se distingue du fond par `surface` sur `bg`, rien de plus.
+- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement, importées par chemin
+- Police unique : Schibsted Grotesk, fichier variable `public/fonts/schibsted-grotesk-latin-wght-normal.woff2` (licence OFL, `public/fonts/OFL.txt`), `@font-face` dans `src/index.css`, préchargée et précachée. Plus de DM Serif ni de Geist. Chiffres tabulaires sur `body`.
+- Texte : variantes `Typography` aux noms du Design System (`variant="titre-app"`, `titre-section`, `titre-barre`, `chiffre-widget`, `chiffre`, `corps-fort`, `corps`, `secondaire`, `legende`, `etiquette`, `bouton`, `titre-player`, `chiffre-player`, `chiffre-player-moyen`) ; les anciennes variantes (`h1` à `h6`, `body1`, `caption`, `overline`...) sont rabattues sur les plus proches. Champs de saisie à 16 px (sinon Safari zoome au focus).
+- Couleurs : jetons dans la palette MUI, à la racine (`bgcolor: 'chip'`, `color: 'ink'`, `palette['zone-facile']`) et en variables CSS posées par `CssBaseline` (`var(--ink)`, `var(--zone-facile-tint)`) pour ce qui n'a pas le thème sous la main. Alias : `background.default` = `bg`, `background.paper` = `surface`, `text.primary` = `ink`, `text.secondary` = `muted`, `divider` = `line`, `primary.main` = `ink`, `primary.contrastText` = `on-ink`, `primary.light` = `chip`.
+- La couleur ne dit que l'intensité (zones facile, qualité, longue). Statut, résultat, action principale : neutres. `error`, `warning`, `success`, `info` sont neutres dans le thème. Exceptions : vraies couleurs des bandes Renfo, carte et pentes de Côtes.
+- Appui : calque `::after` de la couleur du texte à 14 % sur `:active` de toute `ButtonBase` (thème), 100 ms à l'appui, 200 ms au relâchement, sans transition si les animations sont réduites ; ondulation coupée. Sur iPhone, `:active` exige l'écouteur `touchstart` de `src/main.jsx`.
+- Mouvement : une courbe `cubic-bezier(0.32, 0.72, 0, 1)` et les durées de `src/styles/motion.js` (aussi dans `theme.transitions`), aucun rebond. Framer Motion sous `MotionConfig reducedMotion="user"`, jamais dans le chunk d'entrée.
+- Voile derrière dialogues et feuilles : `ink` à 35 % en clair, `on-ink` à 70 % en sombre (`veil`).
+- Rayons concentriques (`radius` de `tokens.js`, en chaînes px : un nombre dans `sx` serait multiplié par `shape.borderRadius`).
+- Support mode sombre ET clair (toggle dans le menu compte) ; `theme-color` suit `bg` du thème.
 
 ### AppHeader : composant réutilisable sur tous les outils
 
@@ -101,18 +108,6 @@ Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir S
 - **Gauche** : bouton retour `ArrowBack` (cible définie par `handle.backTo` de la route)
 - **Centre** : nom de l'outil, cliquable avec chevron + menu déroulant si actions configurées, sinon simple texte
 - **Droite** : menu compte `AccountCircle`, identique partout y compris sur la home ; contient : identité/email, « Administration » (admin uniquement), toggle sombre/clair, se déconnecter
-
-### Effet Liquid Glass (menus, popups, dialogs UNIQUEMENT)
-
-```css
-backdrop-filter: blur(24px) saturate(180%);
--webkit-backdrop-filter: blur(24px) saturate(180%);
-/* fond semi-transparent ~0.55 adapté au thème */
-/* inset box-shadow pour reflet de bord */
-```
-
-- Jamais sur les listes qui scrollent (performances mobiles)
-- Gérer les deux thèmes (fond rgba sombre / clair)
 
 ---
 
@@ -422,10 +417,12 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 ## Pièges techniques (déjà payés, ne pas refaire)
 
 ### PWA iOS : bord à bord en bas
-- Résolu en **retirant** `viewport-fit=cover` du meta viewport dans `index.html` : iOS remplit alors les safe-areas avec le fond du `body`.
-- Pistes qui ont toutes échoué : `100dvh` / `100lvh` / `100svh`, `height: 100%` sur html/body/#root, `position: fixed; inset: 0`, `bottom: calc(-1 * env(safe-area-inset-bottom))`.
-- Contrepartie acceptée : la barre de statut reste blanche dans les deux thèmes (pas de `apple-mobile-web-app-status-bar-style`). Ne pas revenir à `cover`.
-- État attendu : viewport `width=device-width, initial-scale=1.0` ; `theme-color` `#ffffff` (clair) / `#0f0f12` (sombre) ; racine `App.jsx` en `position: relative; height: 100dvh`.
+- Config B, validée le 2 novembre 2026 sur iPhone (Safari 27) avec le banc d'essai `public/labo/` : viewport `width=device-width, initial-scale=1.0, viewport-fit=cover`, **sans** `apple-mobile-web-app-status-bar-style`. `cover` est autorisé (l'ancienne interdiction est levée).
+- Mesures en config B : safe-area haut 0 px, bas 34 px, `100dvh` et `innerHeight` à 812 px. La page commence sous la barre d'état et va jusqu'en bas.
+- `theme-color` `#F3F4F1` (clair) / `#0F1112` (sombre), recalé sur `bg` par `useDarkMode` ; manifeste `theme_color` et `background_color` à `#F3F4F1`. Racine `App.jsx` en `position: relative; height: 100dvh`.
+- Marge basse des futures barres du bas : `SPACE_BAS` (`src/styles/tokens.js`, `max(env(safe-area-inset-bottom, 0px), 16px)`).
+- `overscroll-behavior: none` sur `html`, `body` et les conteneurs de page qui défilent (enfant direct de l'`Outlet` dans `App.jsx`) : plus de rebond, aucun blocage du toucher en JavaScript.
+- Appui : sans écouteur `touchstart` (passif, vide, sur `document`, `src/main.jsx`), `:active` ne réagit pas sur iPhone. Ne pas le retirer.
 - Les metas de `index.html` sont figées à l'installation de la PWA : toute modification impose de supprimer puis réinstaller l'icône.
 
 ### Lint React Compiler

@@ -1,6 +1,7 @@
 import { Box, Typography, Slider, TextField } from '@mui/material'
 import { alpha, useTheme } from '@mui/material/styles'
 import { PAIN_CHIPS } from '../lib/feedback'
+import { DURATION, transition } from '../styles/motion'
 
 const rpeHelper = (rpe) => {
   if (rpe <= 3) return 'Facile'
@@ -74,7 +75,7 @@ const RpeForm = ({ value, onChange, accentColor }) => {
                 borderColor: on ? accent.main : 'divider',
                 bgcolor: on ? accent.bg : 'transparent',
                 color: on ? accent.main : 'text.secondary',
-                transition: 'all .15s',
+                transition: transition(['background-color', 'border-color', 'color'], DURATION.fade),
               }}
             >
               {chip.label}

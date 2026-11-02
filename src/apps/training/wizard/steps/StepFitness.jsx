@@ -6,6 +6,7 @@ import CloudDownload from '@mui/icons-material/CloudDownloadOutlined'
 import { SectionLabel, GlassCard } from '../WizardParts'
 import { getCorosFitness } from '../../../../lib/training'
 import { useOnline } from '../../../../hooks/useOnline'
+import { DURATION, transition } from '../../../../styles/motion'
 
 const MODES = [
   { key: 'coros', label: 'Depuis Coros' },
@@ -74,7 +75,7 @@ const StepFitness = ({ draft, patch }) => {
                 borderColor: on ? 'primary.main' : 'divider',
                 bgcolor: on ? 'primary.light' : 'transparent',
                 color: on ? 'primary.main' : 'text.secondary',
-                transition: 'all .15s',
+                transition: transition(['background-color', 'border-color', 'color'], DURATION.fade),
               }}
             >
               {m.label}

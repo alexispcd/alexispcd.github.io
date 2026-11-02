@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import supabase from '../lib/supabase'
+import { colors } from '../styles/tokens'
 
 const PREF_KEY = 'dark_mode'
 
@@ -17,9 +18,9 @@ export function useDarkMode(user) {
     darkRef.current = dark
     document.body.classList.toggle('dark', dark)
     localStorage.setItem('cairn-theme', dark ? 'dark' : 'light')
-    // theme-color dynamique pour Chrome et Android (iOS est couvert par black-translucent).
-    // Les deux metas media reçoivent la meme valeur : le thème applicatif prime sur le systeme.
-    const color = dark ? '#0f0f12' : '#1D9E75'
+    // theme-color = fond bg du thème de l'app. Les deux metas media reçoivent la même
+    // valeur : le thème applicatif prime sur celui du système.
+    const color = colors[dark ? 'dark' : 'light'].bg
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', color))
   }, [dark])
 

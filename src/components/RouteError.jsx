@@ -32,7 +32,7 @@ const RouteError = () => {
       px: 4,
       textAlign: 'center',
     }}>
-      <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontStyle: 'italic', fontSize: '1.5rem', fontWeight: 400 }}>
+      <Typography variant="titre-barre">
         {title}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>

@@ -98,11 +98,6 @@ const SessionBar = ({ filters, onFiltersChange, onStart, startDisabled }) => {
           borderRadius: `${CARD_RADIUS}px`,
           overflow: 'hidden',
           ...glassSx,
-          // Elevation de la barre flottante de Cotes, plus marquee que celle des
-          // dialogs puisqu'elle surplombe une page qui defile.
-          boxShadow: (t) => t.palette.mode === 'dark'
-            ? '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)'
-            : '0 8px 32px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.80)',
         }}
       >
         {/* Panneau de filtres, hauteur animee. */}
@@ -112,7 +107,7 @@ const SessionBar = ({ filters, onFiltersChange, onStart, startDisabled }) => {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               px: 2.5, pt: 1, mb: 2,
             }}>
-              <Typography sx={{ fontFamily: '"DM Serif Display", serif', fontSize: '1.1rem', fontWeight: 400 }}>
+              <Typography variant="titre-barre">
                 Filtres
               </Typography>
               {hasFilters && (

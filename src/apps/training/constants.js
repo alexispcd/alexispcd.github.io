@@ -1,27 +1,32 @@
 // Constantes & helpers partagés de l'outil Training.
 // La pastille d'une séance = couleur de sa zone (plus de TYPE_DOT).
 
+// Variables CSS du thème (src/styles/theme.js) : la couleur suit le thème sans
+// passer par JS. Ce sont des chaînes `var(...)` : aucune opération de couleur dessus.
+// La couleur ne dit que l'intensité : vert facile, orange qualité, bleu sortie longue.
 export const ZONE_STYLE = {
-  A:     { main: '#1D9E75', bg: 'rgba(29,158,117,0.12)' },
-  B:     { main: '#f97316', bg: 'rgba(249,115,22,0.12)' },
-  C:     { main: '#8b5cf6', bg: 'rgba(139,92,246,0.12)' },
+  A:     { main: 'var(--zone-facile)', bg: 'var(--zone-facile-tint)' },
+  B:     { main: 'var(--zone-qualite)', bg: 'var(--zone-qualite-tint)' },
+  C:     { main: 'var(--zone-longue)', bg: 'var(--zone-longue-tint)' },
 }
 
-// Teintes des blocs — distinctes des zones, lisibles en dark mode.
+// Statut, bloc et résultat ne portent pas de couleur : neutres.
+export const NEUTRAL_STYLE = { main: 'var(--ink)', bg: 'var(--chip)' }
+
 export const BLOCK_STYLE = {
-  construction:    { main: '#38bdf8', bg: 'rgba(56,189,248,0.12)' },
-  intensification: { main: '#fb7185', bg: 'rgba(251,113,133,0.12)' },
-  affutage:        { main: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+  construction:    { main: 'var(--muted)', bg: 'var(--chip)' },
+  intensification: { main: 'var(--muted)', bg: 'var(--chip)' },
+  affutage:        { main: 'var(--muted)', bg: 'var(--chip)' },
 }
 
-// Pastille "adaptée" — partagée entre le dashboard (SessionRow) et la vue séance.
-export const ADAPTED_STYLE = { main: '#a78bfa', bg: 'rgba(167,139,250,0.16)' }
+// Pastille "adaptée" : partagée entre le dashboard (SessionRow) et la vue séance.
+export const ADAPTED_STYLE = NEUTRAL_STYLE
 
 // Verdict d'analyse post-séance : label + couleur (icônes côté vue séance).
 export const VERDICT = {
-  reussie:        { label: 'Séance réussie', color: ZONE_STYLE.A.main },
-  partiellement:  { label: 'Séance partiellement réussie', color: '#eab308' },
-  a_retravailler: { label: 'À retravailler', color: '#ef4444' },
+  reussie:        { label: 'Séance réussie', color: 'var(--ink)' },
+  partiellement:  { label: 'Séance partiellement réussie', color: 'var(--ink)' },
+  a_retravailler: { label: 'À retravailler', color: 'var(--ink)' },
 }
 
 // ── Labels FR ────────────────────────────────────────────────────────────────
