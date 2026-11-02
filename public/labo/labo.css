@@ -1,0 +1,233 @@
+/* Banc d'essai PWA iOS, partagé par a.html, b.html et c.html. */
+
+:root {
+  --bg: #F3F4F1;
+  --surface: #FFFFFF;
+  --ink: #15171A;
+  --on-ink: #FFFFFF;
+  --muted: #5A6168;
+  --line: #E1E3DE;
+  /* Voile : ink à 35 % en clair. */
+  --veil: rgba(21, 23, 26, 0.35);
+  --sheet-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F1112;
+  --surface: #191C1E;
+  --ink: #ECEEEA;
+  --on-ink: #0F1112;
+  --muted: #A3AAB0;
+  --line: #2A2E31;
+  /* Voile : on-ink à 70 % en sombre. */
+  --veil: rgba(15, 17, 18, 0.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Rebond bloqué : html, body et le conteneur qui défile. */
+html.no-bounce,
+html.no-bounce body,
+html.no-bounce .scroller {
+  overscroll-behavior: none;
+}
+
+/* Racine comme src/App.jsx : 100dvh, rien ne dépasse. */
+.root {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.scroller {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px calc(96px + env(safe-area-inset-bottom, 0px));
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+/* Mesures sur deux colonnes, libellé à gauche, valeur à droite. */
+.measures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+.measures div { display: flex; justify-content: space-between; gap: 8px; }
+.measures .wide { grid-column: 1 / -1; }
+.measures dt { color: var(--muted); }
+.measures dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ua { margin: 6px 0 0; font-size: 11px; line-height: 1.3; color: var(--muted); word-break: break-word; }
+
+.row { display: flex; gap: 8px; margin-bottom: 8px; }
+.row:last-child { margin-bottom: 0; }
+
+button {
+  font: inherit;
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.row > button { flex: 1 1 0; }
+
+button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
+}
+
+.btn-fill {
+  width: 100%;
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
+  font-weight: 600;
+}
+
+/* Calque d'appui : couleur du texte à 14 %, 100 ms à l'appui, 200 ms au relâchement. */
+.press { position: relative; overflow: hidden; }
+.press::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+.press:active::after {
+  opacity: 0.14;
+  transition-duration: 100ms;
+}
+
+/* Ressort */
+.track {
+  position: relative;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  flex: 2 1 0;
+  overflow: hidden;
+}
+.puck {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 30px;
+  height: 30px;
+  /* Hauteur intérieure 42 px : 6 + 30 + 6. */
+  border-radius: 8px;
+  background: var(--ink);
+}
+
+/* Contenu de 3 écrans */
+.filler { display: none; }
+.scrolls .filler { display: block; }
+.filler-block {
+  height: 100dvh;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Barre du bas : fond surface, filet line au-dessus. */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Témoins de mesure des safe-areas, invisibles. */
+.probe {
+  position: fixed;
+  left: 0;
+  width: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
+.probe-top { top: 0; height: env(safe-area-inset-top, 0px); }
+.probe-bottom { bottom: 0; height: env(safe-area-inset-bottom, 0px); }
+.probe-dvh { top: 0; height: 100dvh; }
+
+/* Voile et feuille */
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--veil);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 220ms ease, visibility 0s linear 220ms;
+}
+.sheet {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 21;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 20px 16px 16px;
+  transform: translateY(calc(100% + 12px + env(safe-area-inset-bottom, 0px)));
+  visibility: hidden;
+  transition: transform 220ms var(--sheet-ease), visibility 0s linear 220ms;
+}
+.sheet h2 { margin: 0 0 8px; font-size: 18px; }
+.sheet p { margin: 0 0 16px; color: var(--muted); }
+
+.veil-open .veil {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 220ms ease, visibility 0s;
+}
+.veil-open .sheet {
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform 220ms var(--sheet-ease), visibility 0s;
+}

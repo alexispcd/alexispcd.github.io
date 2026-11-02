@@ -95,6 +95,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          navigateFallbackDenylist: [/^\/labo\//],
+          globIgnores: ['labo/**'],
           runtimeCaching: [...dataCacheRule(env.VITE_SUPABASE_URL), renfoImagesRule],
         },
       }),
