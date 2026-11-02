@@ -34,6 +34,8 @@ Hub personnel de micro-outils (nom inspiré des empilements de pierres qui balis
 - `apps/renfo/` : outil Renfo (renforcement à la maison, cycles de 4 semaines, player ; voir Specs Renfo)
 - `apps/veille/` : outil Veille dev (RSS + fiches Mistral)
 - `apps/revisions/` : outil Révisions (cartes en répétition espacée)
+- `apps/atelier/` : page temporaire `/atelier` (`adminOnly`, sans catégorie), qui montre chaque composant de `src/ui/` dans tous ses états avec des exemples fictifs. Ouverte par la ligne « Atelier » du menu du compte (admin seulement, `AppHeader.jsx`). Elle et sa ligne de menu sont retirées à la fin de la refonte
+- `ui/` : composants du Design System, un fichier par composant, noms français du Design System (`Bouton`, `Carte`, `Pastille`, `PastilleACocher`, `BoutonIcone`, `ControleSegmente`, `Compteur`, `Option`, `LigneSaisie`, `BarreProgression`, `BarreStructure`, `MarqueSeance`) ; `Icones.jsx` (seul fichier à plusieurs exports, icônes au trait) ; `appui.js` (calque d'une ligne `appuiLigne`, focus clavier, `sansMouvement`) ; hooks `useValeurAnimee` (chiffre qui défile avec une barre) et `useReduireAnimations`. Bâtis sur `ButtonBase`, `Box`, `Typography`, `InputBase`, valeurs de `tokens.js` et `motion.js` uniquement, aucun hexadécimal (sauf la vraie couleur d'une bande reçue en prop), pas de Framer Motion. Pas encore branchés sur les écrans existants : chaque lot de la refonte les remplace écran par écran
 - `components/AppCard.jsx` : carte module de la home (navigation React Router, icône MUI)
 - `components/RouteError.jsx` : `errorElement` de la route racine : « Page introuvable » (404, y compris module non attribué) avec retour à l'accueil, chunk introuvable après déploiement ou erreur générique avec « Recharger »
 - `components/AppHeader.jsx` : header standardisé réutilisable (voir Design system)
@@ -63,7 +65,7 @@ Un module en cours de développement s'ajoute au registre et n'est attribué qu'
 - Arrow functions, un composant par fichier
 - Styles via la prop `sx` de MUI (pas de CSS modules, pas de `styled`)
 - Pas de form HTML natif, uniquement handlers React
-- Anglais pour le code, français pour les labels UI
+- Anglais pour le code, français pour les labels UI. Exception : les composants du Design System dans `src/ui/` (noms de fichiers, de composants et de props) portent les noms français du Design System, pour se retrouver tels quels dans les maquettes
 - App mobile exclusivement (pas de layout desktop)
 - Aucun tiret cadratin ni demi-cadratin, nulle part : code, commentaires, textes UI, messages de commit.
 - Aucune nouvelle dépendance npm ou Deno sans décision explicite de ma part : la signaler, dire ce qu'elle coûte (poids du bundle, maintenance), puis attendre.
@@ -91,12 +93,12 @@ Envoi des séances sur la montre via le MCP Coros en place (`coros-push`, voir S
 Direction visuelle du Design System « Le Cairn » (artefact Design System, `project/README.md` et `project/tokens.json`). Les valeurs vivent dans `src/styles/tokens.json` (copie exacte, source de vérité) ; ne jamais les recopier en dur.
 
 - Material UI, style plat et net : pas de verre dépoli, pas de dégradé, pas d'ombre (`shadows` du thème à `none`). Une carte se distingue du fond par `surface` sur `bg`, rien de plus.
-- Pas d'emoji dans l'UI, icônes `@mui/icons-material` uniquement, importées par chemin
+- Pas d'emoji dans l'UI. Icônes : jeu du Design System dans `src/ui/Icones.jsx` (trait 2, `viewBox` 24, `currentColor`) pour tout ce qui est redessiné ; `@mui/icons-material`, importées par chemin, seulement pour les écrans pas encore refaits
 - Police unique : Schibsted Grotesk, fichier variable `public/fonts/schibsted-grotesk-latin-wght-normal.woff2` (licence OFL, `public/fonts/OFL.txt`), `@font-face` dans `src/index.css`, préchargée et précachée. Plus de DM Serif ni de Geist. Chiffres tabulaires sur `body`.
-- Texte : variantes `Typography` aux noms du Design System (`variant="titre-app"`, `titre-section`, `titre-barre`, `chiffre-widget`, `chiffre`, `corps-fort`, `corps`, `secondaire`, `legende`, `etiquette`, `bouton`, `titre-player`, `chiffre-player`, `chiffre-player-moyen`) ; les anciennes variantes (`h1` à `h6`, `body1`, `caption`, `overline`...) sont rabattues sur les plus proches. Champs de saisie à 16 px (sinon Safari zoome au focus).
+- Texte : variantes `Typography` aux noms du Design System (`variant="titre-app"`, `titre-section`, `titre-barre`, `chiffre-widget`, `chiffre`, `corps-fort`, `corps`, `secondaire`, `legende`, `etiquette`, `bouton`, `titre-player`, `chiffre-player`, `chiffre-player-moyen`) ; les anciennes variantes (`h1` à `h6`, `body1`, `caption`, `overline`...) sont rabattues sur les plus proches. Champs de saisie à 16 px au moins, partout (thème `MuiInputBase` et `LigneSaisie`, même quand une fiche dit 15) : en dessous, Safari zoome à l'entrée dans le champ.
 - Couleurs : jetons dans la palette MUI, à la racine (`bgcolor: 'chip'`, `color: 'ink'`, `palette['zone-facile']`) et en variables CSS posées par `CssBaseline` (`var(--ink)`, `var(--zone-facile-tint)`) pour ce qui n'a pas le thème sous la main. Alias : `background.default` = `bg`, `background.paper` = `surface`, `text.primary` = `ink`, `text.secondary` = `muted`, `divider` = `line`, `primary.main` = `ink`, `primary.contrastText` = `on-ink`, `primary.light` = `chip`.
 - La couleur ne dit que l'intensité (zones facile, qualité, longue). Statut, résultat, action principale : neutres. `error`, `warning`, `success`, `info` sont neutres dans le thème. Exceptions : vraies couleurs des bandes Renfo, carte et pentes de Côtes.
-- Appui : calque `::after` de la couleur du texte à 14 % sur `:active` de toute `ButtonBase` (thème), 100 ms à l'appui, 200 ms au relâchement, sans transition si les animations sont réduites ; ondulation coupée. Sur iPhone, `:active` exige l'écouteur `touchstart` de `src/main.jsx`.
+- Appui : calque `::after` de la couleur du texte à 14 % sur `:active` de toute `ButtonBase` (thème), 100 ms à l'appui, 200 ms au relâchement, sans transition si les animations sont réduites ; ondulation coupée. Une ligne (liste, `LigneSaisie`) prend à la place un calque `ink` à 6 % sur toute sa largeur (`appuiLigne` de `src/ui/appui.js`). Sur iPhone, `:active` exige l'écouteur `touchstart` de `src/main.jsx`.
 - Mouvement : une courbe `cubic-bezier(0.32, 0.72, 0, 1)` et les durées de `src/styles/motion.js` (aussi dans `theme.transitions`), aucun rebond. Framer Motion sous `MotionConfig reducedMotion="user"`, jamais dans le chunk d'entrée.
 - Voile derrière dialogues et feuilles : `ink` à 35 % en clair, `on-ink` à 70 % en sombre (`veil`).
 - Rayons concentriques (`radius` de `tokens.js`, en chaînes px : un nombre dans `sx` serait multiplié par `shape.borderRadius`).

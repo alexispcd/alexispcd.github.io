@@ -10,6 +10,7 @@ import DarkMode from '@mui/icons-material/DarkMode'
 import LightMode from '@mui/icons-material/LightMode'
 import Logout from '@mui/icons-material/Logout'
 import AdminPanelSettings from '@mui/icons-material/AdminPanelSettings'
+import Palette from '@mui/icons-material/Palette'
 import supabase from '../lib/supabase'
 import { clearDataCache } from '../lib/pwa'
 import { useAppNavigate } from '../hooks/useAppNavigate'
@@ -164,6 +165,14 @@ const AppHeader = ({
             <MenuItem onClick={() => { setAccountAnchor(null); navigate('/admin', { direction: 'forward' }) }}>
               <ListItemIcon><AdminPanelSettings fontSize="small" /></ListItemIcon>
               <ListItemText>Administration</ListItemText>
+            </MenuItem>
+          )}
+          {/* Atelier : page temporaire des composants src/ui pendant la refonte (l'app
+              installée n'a pas de barre d'adresse). Retirée avec la page à la fin (F1). */}
+          {isAdmin && (
+            <MenuItem onClick={() => { setAccountAnchor(null); navigate('/atelier', { direction: 'forward' }) }}>
+              <ListItemIcon><Palette fontSize="small" /></ListItemIcon>
+              <ListItemText>Atelier</ListItemText>
             </MenuItem>
           )}
           <MenuItem onClick={() => { setDark(!dark); setAccountAnchor(null) }}>

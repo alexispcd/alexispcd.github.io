@@ -6,12 +6,14 @@ import renfo from './renfo/module'
 import revisions from './revisions/module'
 import veille from './veille/module'
 import admin from './admin/module'
+// Atelier : page temporaire de la refonte, retirée à la fin (lot F1).
+import atelier from './atelier/module'
 
 // Registre unique des modules : routes et home en dérivent. Aucun module n'est
 // désactivé dans le code : seuls les droits du compte (user_modules) décident de ce
 // qui est visible et accessible, admin compris.
 // Ajouter un module : créer src/apps/<id>/module.js puis l'ajouter ici.
-export const modules = [cotes, training, renfo, revisions, veille, admin]
+export const modules = [cotes, training, renfo, revisions, veille, admin, atelier]
 
 export const categoryOrder = ['Sport', 'Études', 'Dev']
 
