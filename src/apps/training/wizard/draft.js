@@ -36,3 +36,52 @@ export const resolveStartDate = (d) => {
   if (d.startChoice === 'custom') return d.startCustom || todayISODate()
   return todayISODate()
 }
+
+/** Brouillon vide de l'assistant. */
+export const emptyDraft = {
+  // Étape 1 : course
+  name: '',
+  date: '',
+  distancePreset: null,   // 5000 | 10000 | 21097 | 42195 | 'custom'
+  distanceCustomM: '',
+  elevationM: '',
+  startChoice: 'today',   // 'today' | 'monday' | 'custom'
+  startCustom: '',        // ISO yyyy-MM-dd si 'custom'
+  // Étape 2 : forme
+  source: 'coros',        // 'coros' | 'manual'
+  corosLoaded: false,
+  vmaKmh: '',
+  thresholdPace: '',      // "m:ss"
+  vo2max: '',
+  predictions: null,
+  runningLevel: '',
+  // Étape 3 : objectif
+  goalSec: null,          // durée cible en secondes (sélecteur à roues)
+  previousRaces: [],      // [{ name, time }]
+  notes: '',
+}
+
+/**
+ * Raison pour laquelle l'étape ne peut pas encore être validée (première condition
+ * non remplie), null si elle l'est. Seule source des conditions : stepValid en dérive.
+ */
+export const stepRaison = (step, d) => {
+  if (step === 0) {
+    const today = todayISODate()
+    if (!d.name.trim()) return 'Indique le nom de ta course.'
+    if (!d.date || d.date <= today) return 'Choisis une date de course à venir.'
+    if (!(resolveDistanceM(d) > 0)) return 'Indique la distance de ta course.'
+    const start = resolveStartDate(d)
+    if (!(start >= today && start <= d.date)) return 'Choisis un début entre aujourd\'hui et la course.'
+    return null
+  }
+  if (step === 1) {
+    const vma = Number(d.vmaKmh)
+    if (Number.isNaN(vma) || vma < 10 || vma > 25) return 'Indique ta VMA, entre 10 et 25 km/h.'
+    return null
+  }
+  return null
+}
+
+/** Validité de l'étape (contrôle le bouton Continuer). */
+export const stepValid = (step, d) => stepRaison(step, d) === null

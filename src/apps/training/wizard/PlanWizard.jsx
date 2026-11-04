@@ -1,17 +1,18 @@
-import { useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
-import { useBarreBasMessage } from '../../../ui/useMessage'
-import { Box, Typography, Button, IconButton, Alert, Link } from '@mui/material'
+import { Box, Typography, Alert, Link } from '@mui/material'
 import BarreAttente from '../../../ui/BarreAttente'
+import BarreBas from '../../../ui/BarreBas'
+import Bouton from '../../../ui/Bouton'
+import GardeChangements from '../../../ui/GardeChangements'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { DUREES } from '../../../lib/durees'
-import ArrowBack from '@mui/icons-material/ArrowBackRounded'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { glassSx } from '../../../styles/glass'
+import { space } from '../../../styles/tokens'
 import { generatePlan } from '../../../lib/training'
 import { parsePaceInput } from '../constants'
-import { resolveDistanceM, resolveStartDate, todayISODate } from './draft'
+import { emptyDraft, resolveDistanceM, resolveStartDate, stepRaison } from './draft'
 import StepRace from './steps/StepRace'
 import StepFitness from './steps/StepFitness'
 import StepGoal from './steps/StepGoal'
@@ -23,48 +24,6 @@ const STEPS = [
   { label: 'Objectif', Component: StepGoal },
   { label: 'Récapitulatif', Component: StepReview },
 ]
-
-// Inset de la barre basse (coins concentriques : 34 = 10 + 24).
-const WIZARD_INSET = 10
-
-const emptyDraft = {
-  // Étape 1 — course
-  name: '',
-  date: '',
-  distancePreset: null,   // 5000 | 10000 | 21097 | 42195 | 'custom'
-  distanceCustomM: '',
-  elevationM: '',
-  startChoice: 'today',   // 'today' | 'monday' | 'custom'
-  startCustom: '',        // ISO yyyy-MM-dd si 'custom'
-  // Étape 2 — forme
-  source: 'coros',        // 'coros' | 'manual'
-  corosLoaded: false,
-  vmaKmh: '',
-  thresholdPace: '',      // "m:ss"
-  vo2max: '',
-  predictions: null,
-  runningLevel: '',
-  // Étape 3 — objectif
-  goalSec: null,          // durée cible en secondes (sélecteur à roues)
-  previousRaces: [],      // [{ name, time }]
-  notes: '',
-}
-
-// ── Validité par étape (contrôle le bouton Suivant) ──────────────────────────
-const stepValid = (step, d) => {
-  if (step === 0) {
-    const today = todayISODate()
-    const future = Boolean(d.date) && d.date > today
-    const start = resolveStartDate(d)
-    const startOk = start >= today && (!d.date || start <= d.date)
-    return Boolean(d.name.trim()) && future && resolveDistanceM(d) > 0 && startOk
-  }
-  if (step === 1) {
-    const vma = Number(d.vmaKmh)
-    return !Number.isNaN(vma) && vma >= 10 && vma <= 25
-  }
-  return true
-}
 
 const buildPayload = (d) => ({
   start_date: resolveStartDate(d),
@@ -94,16 +53,18 @@ const PlanWizard = () => {
   const [draft, setDraft] = useState(emptyDraft)
   const [generating, setGenerating] = useState(false)
   const attenteGeneration = useFinAttente(generating)
-  // Barre basse fixe : le Message se pose au-dessus d'elle.
-  const barreRef = useRef(null)
-  useBarreBasMessage(barreRef)
+  const raisonId = useId()
   const [error, setError] = useState(null)
   const [conflictPlanId, setConflictPlanId] = useState(null)
 
   const patch = (updates) => setDraft((d) => ({ ...d, ...updates }))
   const { Component } = STEPS[step]
   const isLast = step === STEPS.length - 1
-  const canNext = stepValid(step, draft)
+  const raison = stepRaison(step, draft)
+  const canNext = raison === null
+  // Garde : une réponse donnée ou une étape passée. Aucun effet des étapes ne modifie
+  // le brouillon, la comparaison au brouillon vide suffit.
+  const aDesReponses = step > 0 || JSON.stringify(draft) !== JSON.stringify(emptyDraft)
 
   const goNext = () => { if (canNext) setStep((s) => Math.min(s + 1, STEPS.length - 1)) }
   const goPrev = () => setStep((s) => Math.max(s - 1, 0))
@@ -127,8 +88,8 @@ const PlanWizard = () => {
   }
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: 12 }}>
+    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: '1 0 auto', width: '100%', maxWidth: 640, mx: 'auto', px: 2, pb: space[24] }}>
 
         {/* Progression */}
         <Box sx={{ mt: 2, mb: 2.5 }}>
@@ -165,51 +126,43 @@ const PlanWizard = () => {
 
       </Box>
 
-      {/* Barre basse, pattern Côtes : pill primaire pleine largeur + bouton rond retour.
-          Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
-      <Box ref={barreRef} sx={{
-        position: 'fixed', zIndex: 1200,
-        left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
-        bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
-        borderRadius: '34px', overflow: 'hidden', ...glassSx,
-      }}>
-        <Box sx={{ p: `${WIZARD_INSET}px`, display: 'flex', gap: 1 }}>
-          {step > 0 && (
-            <IconButton
-              onClick={goPrev}
-              disabled={generating}
-              aria-label="Étape précédente"
-              sx={{
-                width: 48, height: 48, flexShrink: 0, borderRadius: '24px',
-                border: '1px solid', borderColor: 'divider', color: 'text.secondary',
-              }}
-            >
-              <ArrowBack sx={{ fontSize: 20 }} />
-            </IconButton>
-          )}
-          {attenteGeneration.visible
-            ? (
-              <BarreAttente
-                place="barre"
-                phrase="Génération de ton plan"
-                duree={DUREES.actionCourte}
-                {...attenteGeneration}
-                sx={{ flex: 1, minWidth: 0, height: 48 }}
-              />
-            )
-            : (
-              <Button
-                fullWidth
-                variant="contained"
+      <BarreBas phrase={attenteGeneration.visible ? null : raison} phraseId={raisonId}>
+        {attenteGeneration.visible
+          ? (
+            <BarreAttente
+              place="barre"
+              phrase="Génération de ton plan"
+              duree={DUREES.actionCourte}
+              {...attenteGeneration}
+              sx={{ flex: 1, minWidth: 0 }}
+            />
+          )
+          : (
+            <>
+              {step > 0 && (
+                <Bouton variante="chip" onClick={goPrev} sx={{ flex: 1, minWidth: 0 }}>
+                  Retour
+                </Bouton>
+              )}
+              <Bouton
+                variante="ink"
                 onClick={isLast ? handleGenerate : goNext}
                 disabled={!canNext}
-                sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
+                raisonDansBarre
+                aria-describedby={canNext ? undefined : raisonId}
+                sx={{ flex: 2, minWidth: 0 }}
               >
                 {isLast ? 'Générer mon plan' : 'Continuer'}
-              </Button>
-            )}
-        </Box>
-      </Box>
+              </Bouton>
+            </>
+          )}
+      </BarreBas>
+
+      <GardeChangements
+        actif={aDesReponses && !generating}
+        titre="Tes réponses ne seront pas gardées."
+        action="Quitter l'assistant"
+      />
     </Box>
   )
 }

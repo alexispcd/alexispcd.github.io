@@ -11,6 +11,7 @@ import { cardSx } from '../../styles/glass'
 import { texteErreur } from '../../lib/reseau'
 import { useMessage } from '../../ui/useMessage'
 import FeuilleFlottante from '../../ui/FeuilleFlottante'
+import GardeChangements from '../../ui/GardeChangements'
 import BarreAttente from '../../ui/BarreAttente'
 import { useAction } from '../../ui/useAction'
 import { useFinAttente } from '../../ui/useFinAttente'
@@ -91,6 +92,9 @@ const SettingsPage = () => {
 
   const { profile, bands, hasCycle } = state
   const dirty = !profile || !sameProfile(draft, profile)
+  // Garde : un vrai changement seulement (dirty vaut vrai à la première visite sans
+  // profil). Les élastiques s'enregistrent tout de suite, hors garde.
+  const change = !sameProfile(draft, profile ?? DEFAULT_PROFILE)
 
   const toggleEquipment = (id) => setDraft((d) => ({
     ...d,
@@ -244,6 +248,8 @@ const SettingsPage = () => {
         lignes={[{ libelle: "Supprimer l'élastique", onClick: doDelete }]}
         fermerLibelle="Annuler"
       />
+
+      <GardeChangements actif={change} />
     </Box>
   )
 }

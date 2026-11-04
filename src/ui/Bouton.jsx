@@ -18,6 +18,8 @@ const COULEURS = {
  * - petit : 44 px au lieu de 52.
  * - disabled exige `raison`, affichée en `secondaire` juste au-dessus : jamais de
  *   bouton désactivé sans explication.
+ * - raisonDansBarre : la raison est portée par la BarreBas (sa prop `phrase`), le
+ *   bouton ne l'affiche pas ; un aria-describedby passé en prop est transmis.
  */
 const Bouton = ({
   variante = 'ink',
@@ -26,14 +28,16 @@ const Bouton = ({
   pleineLargeur = false,
   disabled = false,
   raison,
+  raisonDansBarre = false,
   children,
   sx,
   ...rest
 }) => {
   const raisonId = useId()
-  if (disabled && !raison && import.meta.env.DEV) {
+  if (disabled && !raison && !raisonDansBarre && import.meta.env.DEV) {
     console.error('[Bouton] bouton désactivé sans `raison`')
   }
+  const raisonAffichee = disabled && Boolean(raison) && !raisonDansBarre
 
   const couleurs = disabled
     ? { bgcolor: variante === 'texte' ? 'transparent' : 'track', color: 'muted' }
@@ -42,7 +46,7 @@ const Bouton = ({
   const bouton = (
     <ButtonBase
       disabled={disabled}
-      aria-describedby={disabled && raison ? raisonId : undefined}
+      aria-describedby={raisonAffichee ? raisonId : undefined}
       sx={{
         ...textStyles.bouton,
         height: petit ? size.cible : size.ligne,
@@ -61,7 +65,7 @@ const Bouton = ({
     </ButtonBase>
   )
 
-  if (!disabled || !raison) return bouton
+  if (!raisonAffichee) return bouton
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[8], width: pleineLargeur ? '100%' : 'auto' }}>
       <Typography id={raisonId} variant="secondaire" sx={{ color: 'muted' }}>{raison}</Typography>

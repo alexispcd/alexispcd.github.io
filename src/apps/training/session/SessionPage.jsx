@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
-import { useMessage, useBarreBasMessage } from '../../../ui/useMessage'
+import { useMessage } from '../../../ui/useMessage'
 import { Box, Typography, Button, Alert, Menu, MenuItem } from '@mui/material'
 import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
 import Bolt from '@mui/icons-material/BoltOutlined'
@@ -20,9 +20,12 @@ import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx, cardSx } from '../../../styles/glass'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
 import BarreAttente from '../../../ui/BarreAttente'
+import BarreBas from '../../../ui/BarreBas'
+import Bouton from '../../../ui/Bouton'
 import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { DUREES } from '../../../lib/durees'
+import { space } from '../../../styles/tokens'
 import {
   getSession, skipSession, unskipSession,
   completeSession, resetSession, updateOnCoros,
@@ -117,11 +120,8 @@ const SessionPage = () => {
   })
   const actions = [saut, reinit, delier, restaurer, montre]
   const locked = actions.some((a) => a.enCours)
-
-  // Barre d'actions fixe : le Message se pose au-dessus d'elle.
-  const barreRef = useRef(null)
-  const aBarre = session?.status === 'planned' || session?.status === 'adapted' || session?.status === 'done'
-  useBarreBasMessage(barreRef, !loading && !loadError && aBarre)
+  // Action en cours : le toucher est ignoré, la carte d'attente est déjà en tête de page.
+  const siLibre = (fn) => () => { if (!locked) fn() }
 
   const reload = useCallback(async () => {
     const s = await getSession(sessionId)
@@ -248,8 +248,8 @@ const SessionPage = () => {
   const hasHr = [...(laps ?? []), ...(session.km_laps ?? [])].some((l) => l?.avg_hr != null)
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? '90px' : 6 }}>
+    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flex: '1 0 auto', width: '100%', maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? space[24] : 6 }}>
 
         {/* ── Cartes d'attente ────────────────────────────────────── */}
         {actions.map((a, i) => (
@@ -400,73 +400,32 @@ const SessionPage = () => {
 
       </Box>
 
-      {/* ── Barre d'actions fixe (pattern wizard/Côtes) ─────────────
-          Coins concentriques : radius carte = INSET (10) + radius bouton (24) = 34. */}
+      {/* ── Barre du bas ─────────────────────────────────────────── */}
       {(canComplete || isDone) && (
-        <Box ref={barreRef} sx={{
-          position: 'fixed', zIndex: 1200,
-          left: '4vw', right: '4vw', maxWidth: 620, mx: 'auto',
-          bottom: 'max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))',
-          borderRadius: '34px', overflow: 'hidden', ...glassSx,
-        }}>
-          <Box sx={{ p: '10px', display: 'flex', gap: 1 }}>
-            {canComplete && (
-              <>
-                <Button
-                  variant="outlined"
-                  onClick={() => setSautOuvert(true)}
-                  disabled={locked}
-                  sx={{
-                    flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
-                    textTransform: 'none', fontWeight: 600, boxShadow: 'none',
-                    borderColor: 'divider', color: 'text.secondary',
-                  }}
-                >
-                  Sauter
-                </Button>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={() => setCompleteOpen(true)}
-                  disabled={locked}
-                  sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
-                >
-                  Valider & lier Coros
-                </Button>
-              </>
-            )}
-            {isDone && (
-              <>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={() => setReinitOuverte(true)}
-                  disabled={locked}
-                  sx={{
-                    height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
-                    boxShadow: 'none', borderColor: 'divider', color: 'text.secondary',
-                  }}
-                >
-                  Réinitialiser
-                </Button>
-                {session.coros_activity_id && (
-                  <Button
-                    variant="outlined"
-                    onClick={doDelink}
-                    disabled={locked}
-                    sx={{
-                      flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
-                      textTransform: 'none', fontWeight: 600, boxShadow: 'none',
-                      borderColor: 'divider', color: 'text.secondary',
-                    }}
-                  >
-                    Délier Coros
-                  </Button>
-                )}
-              </>
-            )}
-          </Box>
-        </Box>
+        <BarreBas>
+          {canComplete && (
+            <>
+              <Bouton variante="chip" onClick={siLibre(() => setSautOuvert(true))} sx={{ flex: 1, minWidth: 0 }}>
+                Sauter
+              </Bouton>
+              <Bouton variante="ink" onClick={siLibre(() => setCompleteOpen(true))} sx={{ flex: 2, minWidth: 0 }}>
+                Valider & lier Coros
+              </Bouton>
+            </>
+          )}
+          {isDone && (
+            <>
+              <Bouton variante="chip" onClick={siLibre(() => setReinitOuverte(true))} sx={{ flex: 1, minWidth: 0 }}>
+                Réinitialiser
+              </Bouton>
+              {session.coros_activity_id && (
+                <Bouton variante="chip" onClick={siLibre(doDelink)} sx={{ flex: 1, minWidth: 0 }}>
+                  Délier Coros
+                </Bouton>
+              )}
+            </>
+          )}
+        </BarreBas>
       )}
 
       {/* ── Dialogs ──────────────────────────────────────────────── */}

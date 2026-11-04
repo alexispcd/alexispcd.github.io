@@ -74,7 +74,8 @@ export const VEIL = {
 export const veil = (mode) => rgba(colors[mode][VEIL[mode].token], VEIL[mode].alpha)
 
 /**
- * Marge basse d'une barre du bas : zone basse de l'iPhone (34 px en config B), 16 px
- * au moins ailleurs. Pour les lots suivants ; les écrans actuels gardent leurs marges.
+ * Zone basse de l'iPhone (34 px en config B), 16 px au moins ailleurs : marge basse
+ * de la BarreBas des écrans, et écart entre le bas de l'écran et une feuille ou un
+ * Message sans barre du bas.
  */
 export const SPACE_BAS = 'max(env(safe-area-inset-bottom, 0px), 16px)'
