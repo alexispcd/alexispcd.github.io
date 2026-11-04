@@ -2,7 +2,7 @@
 // l'iPhone pendant la refonte. Exemples fictifs : rien n'est chargé ni enregistré, sauf
 // les trois essais de la section Réseau (lecture seule, ou écriture qui ne vise aucune ligne).
 // Page temporaire, retirée avec sa ligne de la page Compte à la fin de la refonte (F1).
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { SPACE_BAS, border, radius, space } from '../../styles/tokens'
@@ -35,6 +35,10 @@ import { PAS_DE_CONNEXION, estErreurReseau } from '../../lib/reseau'
 import { DUREES } from '../../lib/durees'
 import { getCorosStatus } from '../../lib/training'
 import supabase from '../../lib/supabase'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
+import CasesCode from '../../ui/CasesCode'
+import CarteSysteme from '../../components/CarteSysteme'
+import InstallBanner from '../../components/InstallBanner'
 
 const Section = ({ titre, children }) => (
   <Box component="section" sx={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
@@ -333,6 +337,55 @@ const DemoReseau = () => {
   )
 }
 
+// ─── Écrans système ─────────────────────────────────────────────────────────
+
+const ECRANS_SYSTEME = [
+  ['Tes accès n\'ont pas pu être chargés', 'Vérifie ta connexion, puis réessaie.', 'Réessayer'],
+  ['Page introuvable', 'Cette page n\'existe pas ou n\'est plus disponible.', 'Retour à l\'accueil'],
+  ['Cette page n\'a pas pu s\'afficher', 'Réessaie dans un instant.', 'Réessayer'],
+  ['Nouvelle version disponible', 'Le Cairn a été mis à jour. Recharge pour continuer.', 'Recharger'],
+]
+
+// Lève une erreur au rendu : la route l'envoie au vrai RouteError.
+const Explosion = () => {
+  throw new Error('Erreur provoquée depuis l\'Atelier')
+}
+
+const DemoEcransSysteme = () => {
+  const navigate = useAppNavigate()
+  // Cases montées au toucher : leur autoFocus n'ouvre pas le clavier à l'arrivée sur la page.
+  const [cases, setCases] = useState(false)
+  const [code, setCode] = useState('')
+  const [erreur, setErreur] = useState(false)
+
+  // Code complet : les cases se vident au bout de 1 s, pour rejouer.
+  useEffect(() => {
+    if (code.length !== 8) return undefined
+    const minuteur = setTimeout(() => setCode(''), 1000)
+    return () => clearTimeout(minuteur)
+  }, [code])
+
+  return (
+    <Section titre="Écrans système">
+      <Carte sx={{ gap: space[14] }}>
+        {cases
+          ? <CasesCode valeur={code} onChange={(t) => setCode(t.replace(/\D/g, '').slice(0, 8))} lectureSeule={code.length === 8} />
+          : <Bouton pleineLargeur variante="chip" onClick={() => setCases(true)}>Afficher les cases du code</Bouton>}
+      </Carte>
+      <Note>Aucun code demandé : un code complet se vide au bout de 1 s.</Note>
+      {ECRANS_SYSTEME.map(([titre, phrase, bouton]) => (
+        <CarteSysteme key={titre} titre={titre} phrase={phrase} bouton={bouton} onClick={() => {}} />
+      ))}
+      <InstallBanner apercu />
+      <Rangee>
+        <Bouton petit variante="chip" onClick={() => navigate('/atelier-page-introuvable')}>Ouvrir une page introuvable</Bouton>
+        <Bouton petit variante="chip" onClick={() => setErreur(true)}>Provoquer une erreur</Bouton>
+      </Rangee>
+      {erreur && <Explosion />}
+    </Section>
+  )
+}
+
 const AtelierPage = () => {
   const [intensite, setIntensite] = useState('normale')
   const [exercices, setExercices] = useState(3)
@@ -602,6 +655,7 @@ const AtelierPage = () => {
         <DemoMessage />
         <DemoAction />
         <DemoReseau />
+        <DemoEcransSysteme />
       </Box>
     </Box>
   )

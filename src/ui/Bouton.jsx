@@ -16,8 +16,8 @@ const COULEURS = {
  * - niveau : 'dedans' (posé dans une carte ou une barre, radius-inner) ou 'page'
  *   (au niveau des cartes, directement sur bg, radius-card).
  * - petit : 44 px au lieu de 52.
- * - disabled exige `raison`, affichée en `secondaire` juste au-dessus : jamais de
- *   bouton désactivé sans explication.
+ * - disabled exige `raison`, affichée en `secondaire` juste au-dessus (centrée si
+ *   le bouton est pleine largeur) : jamais de bouton désactivé sans explication.
  * - raisonDansBarre : la raison est portée par la BarreBas (sa prop `phrase`), le
  *   bouton ne l'affiche pas ; un aria-describedby passé en prop est transmis.
  */
@@ -68,7 +68,7 @@ const Bouton = ({
   if (!raisonAffichee) return bouton
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[8], width: pleineLargeur ? '100%' : 'auto' }}>
-      <Typography id={raisonId} variant="secondaire" sx={{ color: 'muted' }}>{raison}</Typography>
+      <Typography id={raisonId} variant="secondaire" sx={{ color: 'muted', textAlign: pleineLargeur ? 'center' : undefined }}>{raison}</Typography>
       {bouton}
     </Box>
   )

@@ -1,5 +1,5 @@
-import { Box, Typography, Button } from '@mui/material'
 import FullScreenLoader from './FullScreenLoader'
+import EcranSysteme from './EcranSysteme'
 import { useAppCtx } from '../lib/context'
 
 // Bloque l'app tant que les droits du compte connecté ne sont pas chargés :
@@ -11,18 +11,12 @@ const AccessGate = ({ children }) => {
 
   if (access.error) {
     return (
-      <Box sx={{
-        height: '100dvh', bgcolor: 'background.default',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: 2, px: 4, textAlign: 'center',
-      }}>
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
-          Impossible de charger tes accès. Vérifie ta connexion puis recharge.
-        </Typography>
-        <Button variant="contained" onClick={() => window.location.reload()} sx={{ textTransform: 'none' }}>
-          Recharger
-        </Button>
-      </Box>
+      <EcranSysteme
+        titre="Tes accès n'ont pas pu être chargés"
+        phrase="Vérifie ta connexion, puis réessaie."
+        bouton="Réessayer"
+        onClick={() => window.location.reload()}
+      />
     )
   }
 
