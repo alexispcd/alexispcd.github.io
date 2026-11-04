@@ -22,7 +22,7 @@ const kindRules = (kind: SessionKind, available: Exercise[]): string => {
 }
 
 /** Exercices à barre disponibles regroupés par hauteur, pour composer des trisets à une seule hauteur. */
-const barHeightsSummary = (available: Exercise[]): string[] => {
+export const barHeightsSummary = (available: Exercise[]): string[] => {
   const onBar = available.filter((e) => e.equipment.includes("bar") && e.anchor)
   if (!onBar.length) return []
   return [
@@ -124,6 +124,11 @@ export interface PriorSession {
   content: unknown
 }
 
+/** Membres d'un superset : `exercises` (nouveau format), sinon a, b, c. */
+const supersetDoses = (block: Record<string, unknown>): Array<Record<string, unknown>> =>
+  (Array.isArray(block.exercises) ? block.exercises as unknown[] : [block.a, block.b, block.c])
+    .filter((dose): dose is Record<string, unknown> => !!(dose as Record<string, unknown> | undefined)?.slug)
+
 const blocksOf = (content: unknown): Array<Record<string, unknown>> => {
   const blocks = (content as { blocks?: unknown })?.blocks
   return Array.isArray(blocks) ? blocks as Array<Record<string, unknown>> : []
@@ -131,9 +136,7 @@ const blocksOf = (content: unknown): Array<Record<string, unknown>> => {
 
 /** Résumé d'un superset ou d'un triset : 3×(a 10, b 12 (15 kg), c 30 s). */
 const summarizeSuperset = (block: Record<string, unknown>): string => {
-  const members = ["a", "b", "c"]
-    .map((key) => block[key] as Record<string, unknown> | undefined)
-    .filter((dose): dose is Record<string, unknown> => !!dose?.slug)
+  const members = supersetDoses(block)
   return `${block.rounds}×(${members.map(formatDose).join(", ")})`
 }
 
@@ -143,7 +146,7 @@ const summarizeSuperset = (block: Record<string, unknown>): string => {
  */
 export function summarizeMain(content: unknown): string {
   const blocks = blocksOf(content)
-  const trisets = blocks.filter((b) => b.type === "superset" && (b.focus || b.c))
+  const trisets = blocks.filter((b) => b.type === "superset" && (b.focus || b.c || b.exercises))
   if (trisets.length) {
     return trisets.map((b, i) => `triset ${i + 1}${b.focus ? ` ${b.focus}` : ""} ${summarizeSuperset(b)}`).join(" ; ")
   }
@@ -159,10 +162,7 @@ export function sessionSlugs(content: unknown): string[] {
     if (Array.isArray(b.items)) {
       for (const item of b.items as Array<Record<string, unknown>>) slugs.push(String(item.slug))
     }
-    for (const key of ["a", "b", "c"]) {
-      const dose = b[key] as Record<string, unknown> | undefined
-      if (dose?.slug) slugs.push(String(dose.slug))
-    }
+    if (b.type === "superset") for (const dose of supersetDoses(b)) slugs.push(String(dose.slug))
   }
   return slugs
 }

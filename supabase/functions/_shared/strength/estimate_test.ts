@@ -122,3 +122,38 @@ Deno.test("estimateSessionMinutes : séance upper en trois trisets, calculée à
   // 103 + 522 + 534 + 666 + 135 = 1960 s, + 4 × 60 s entre blocs = 2200 s, soit 36,7 min
   assertEquals(estimateSessionMinutes(upper), 37)
 })
+
+Deno.test("estimateSessionMinutes : nouveau format, supersets en liste d'exercices", () => {
+  const composee: SessionContent = {
+    title: "Jambes et tronc",
+    estimated_min: 0,
+    intensity: "legere",
+    blocks: [
+      // 8×3×2 = 48 s
+      { type: "warmup", items: [{ slug: "cercles_hanche", reps: 8 }] },
+      // 4 exercices : 36 + 36 + 45 + 30 + 3×10 = 177 s par tour, 5 tours, 4 repos de 60 s : 1125 s
+      {
+        type: "superset", focus: "legs", rounds: 5, rest_sec: 60, exercises: [
+          { slug: "pompes", reps: 12 },
+          { slug: "dead_bug", reps: 12 },
+          { slug: "planche", duration_sec: 45 },
+          { slug: "squat_saute", reps: 15 },
+        ],
+      },
+      // 1 tour, aucun repos : 36 + 45 + 10 = 91 s
+      {
+        type: "superset", focus: "trunk", rounds: 1, rest_sec: 60, exercises: [
+          { slug: "pompes", reps: 12 },
+          { slug: "planche", duration_sec: 45 },
+        ],
+      },
+      // 45 s
+      { type: "cooldown", items: [{ slug: "posture_enfant", duration_sec: 45 }] },
+    ],
+  }
+  // 48 + 1125 + 91 + 45 = 1309 s, + 3 × 60 s entre blocs = 1489 s, soit 24,8 min
+  assertEquals(estimateSessionMinutes(composee), 25)
+  // Les membres a, b, c sont ignorés quand exercises existe.
+  const block = { ...composee.blocks[2], a: { slug: "mollet_excentrique", reps: 10 } }
+  assertEquals(estimateSessionMinutes({ blocks: [block as SessionContent["blocks"][number]] }), 2)
+})

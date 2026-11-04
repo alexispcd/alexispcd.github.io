@@ -5,18 +5,19 @@ import { EXERCISE_INDEX } from '../../../supabase/functions/_shared/strength/cat
 import { TRISET_FOCUS_LABELS } from '../../../supabase/functions/_shared/strength/rules.ts'
 
 /** Rôles des membres d'un superset, dans l'ordre de jeu. */
-const ROLES = ['A', 'B', 'C']
+const ROLES = ['A', 'B', 'C', 'D']
 
 /**
- * Membres d'un superset dans l'ordre de jeu, avec leur rôle : A, B, puis C pour un
- * triset. Les anciennes séances n'ont que A et B.
+ * Membres d'un superset dans l'ordre de jeu, avec leur rôle A, B, C, D : liste
+ * `exercises` du nouveau format, sinon a, b, puis c pour un triset. Les anciennes
+ * séances n'ont que A et B.
  */
 export const supersetMembers = (block) =>
-  [block.a, block.b, block.c]
+  (Array.isArray(block.exercises) ? block.exercises : [block.a, block.b, block.c])
     .map((dose, i) => (dose ? { dose, role: ROLES[i] } : null))
     .filter(Boolean)
 
-const isTriset = (block) => Boolean(block.focus || block.c)
+const isTriset = (block) => Boolean(block.focus || block.c || Array.isArray(block.exercises))
 
 /** Rang d'un superset parmi les supersets de la séance (1, 2, 3) et leur nombre. */
 const supersetRank = (index, blocks) => ({

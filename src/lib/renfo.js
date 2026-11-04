@@ -113,14 +113,18 @@ export const getSession = async (sessionId) =>
     .eq('id', sessionId)
     .single())
 
-/** Valide une séance : bandes jouées et ressenti (feedback au format toFeedbackPayload, ou null). */
-export const completeSession = async (sessionId, { bandsUsed, feedback }) =>
-  unwrap(await supabase
+/**
+ * Valide une séance : bandes jouées et ressenti (feedback au format toFeedbackPayload,
+ * ou null). Les bandes jouées deviennent ensuite la base de leurs exercices.
+ */
+export const completeSession = async (sessionId, { bandsUsed, feedback }) => {
+  const hasBands = Boolean(bandsUsed && Object.keys(bandsUsed).length)
+  const session = unwrap(await supabase
     .from('strength_sessions')
     .update({
       status: 'done',
       completed_at: new Date().toISOString(),
-      bands_used: bandsUsed && Object.keys(bandsUsed).length ? bandsUsed : null,
+      bands_used: hasBands ? bandsUsed : null,
       rpe: feedback?.rpe ?? null,
       pain_areas: feedback?.pain_areas ?? null,
       feedback_note: feedback?.feedback_note ?? null,
@@ -128,6 +132,24 @@ export const completeSession = async (sessionId, { bandsUsed, feedback }) =>
     .eq('id', sessionId)
     .select(SESSION_COLUMNS)
     .single())
+  // Jusqu'au lot R4, où Ajuster passera dans le player.
+  if (hasBands) await saveBandBases(bandsUsed)
+  return session
+}
+
+// Élastique de chaque exercice joué dans sa base, sans toucher à reps ni duration_sec.
+// Un échec part en console : la séance est déjà validée.
+const saveBandBases = async (bandsUsed) => {
+  try {
+    const user_id = await userId()
+    const updated_at = new Date().toISOString()
+    const rows = Object.entries(bandsUsed).map(([slug, kg]) => ({ user_id, slug, band_kg: Number(kg), updated_at }))
+    const { error } = await supabase.from('strength_exercise_bases').upsert(rows, { onConflict: 'user_id,slug' })
+    if (error) throw error
+  } catch (e) {
+    console.error('[renfo] bases des élastiques non écrites', e)
+  }
+}
 
 /** Remet une séance à faire. Les bandes jouées sont conservées. */
 export const resetSession = async (sessionId) =>
@@ -149,3 +171,28 @@ export const startCycle = () => callFunction('renfo-cycle', {})
 
 /** Séance libre synchrone. Renvoie { session }. */
 export const createFreeSession = (kind) => callFunction('renfo-session', { kind })
+
+// ── Séances composées (lot R1) ───────────────────────────────────────────────
+// Aucun écran ne les appelle encore. Chaque action renvoie { session }.
+
+/** Bases des exercices du compte (dernier réglage) : { [slug]: { reps, duration_sec, band_kg } }. */
+export const getExerciseBases = async () => {
+  const rows = unwrap(await supabase.from('strength_exercise_bases').select('slug, reps, duration_sec, band_kg'))
+  return Object.fromEntries(rows.map(({ slug, reps, duration_sec, band_kg }) =>
+    [slug, { reps, duration_sec, band_kg: band_kg == null ? null : Number(band_kg) }]))
+}
+
+/** Crée une séance depuis une composition { intensity, supersets: [{ focus, exercise_count, rounds }] }. */
+export const createSession = (composition) => callFunction('renfo-session', { action: 'create', composition })
+
+/** Recompose une séance à faire. */
+export const updateSession = (sessionId, composition) =>
+  callFunction('renfo-session', { action: 'update', session_id: sessionId, composition })
+
+/** Ajuste un exercice : reglage = { slug, reps } ou { slug, duration_sec }, avec band_kg facultatif. */
+export const adjustExercise = (sessionId, reglage) =>
+  callFunction('renfo-session', { action: 'adjust', session_id: sessionId, ...reglage })
+
+/** Remplace un exercice du bloc blockIndex. */
+export const replaceExercise = (sessionId, blockIndex, slug, newSlug) =>
+  callFunction('renfo-session', { action: 'replace', session_id: sessionId, block_index: blockIndex, slug, new_slug: newSlug })

@@ -54,7 +54,7 @@ export const TRISET_FOCUS_LABELS: Record<TrisetFocus, string> = {
   pull: "Tirage",
   push: "Poussée",
   quads: "Quadriceps",
-  posterior: "Chaîne postérieure",
+  posterior: "Ischios et fessiers",
   foot_calf: "Pied et mollet",
   shoulders_arms: "Épaules et bras",
   core_stability: "Gainage",
@@ -192,9 +192,12 @@ export interface SupersetBlock {
   rounds: number
   /** Repos après le dernier membre seulement (B, ou C pour un triset). */
   rest_sec: number
-  a: Dose
-  b: Dose
+  /** Anciens formats : membres A, B, C. */
+  a?: Dose
+  b?: Dose
   c?: Dose
+  /** Nouveau format (lot R1) : 2 à 4 exercices dans l'ordre de jeu. */
+  exercises?: Dose[]
   /** Thème du triset (absent des anciens supersets). */
   focus?: TrisetFocus
 }
@@ -214,6 +217,8 @@ export interface SessionContent {
   title: string
   /** Posé par le code (estimateSessionMinutes), jamais par le modèle. */
   estimated_min: number
+  /** Nouveau format (lot R1) : intensité choisie à la composition. */
+  intensity?: Intensity
   blocks: SessionBlock[]
 }
 
@@ -235,3 +240,68 @@ export function lockedSlugs(_kind: SessionKind, content: unknown): string[] {
   }
   return slugs.filter((s): s is string => s !== null)
 }
+
+// ── Séances composées (lot R1) ───────────────────────────────────────────────
+// Ajouts du nouveau modèle, sans cycle. Tout ce qui précède sert encore à
+// renfo-cycle et à l'ancien chemin de renfo-session jusqu'au lot R6.
+
+export type Group = "jambes" | "haut" | "tronc"
+
+export const GROUP_LABELS: Record<Group, string> = {
+  jambes: "Jambes",
+  haut: "Haut du corps",
+  tronc: "Tronc",
+}
+
+/** Ordre de départage des groupes à égalité. */
+export const GROUP_ORDER: Group[] = ["jambes", "tronc", "haut"]
+
+/** Thèmes actuels de chaque groupe, dans l'ordre de départage. */
+export const THEMES_BY_GROUP: Record<Group, TrisetFocus[]> = {
+  jambes: ["legs", "quads", "posterior", "foot_calf"],
+  haut: ["pull", "push", "shoulders_arms"],
+  tronc: ["trunk", "core_stability", "balance_foot", "runner_hips"],
+}
+
+/** Thèmes proposés à la composition. */
+export const CURRENT_THEMES: TrisetFocus[] = GROUP_ORDER.flatMap((g) => THEMES_BY_GROUP[g])
+
+export const isCurrentTheme = (value: unknown): value is TrisetFocus =>
+  typeof value === "string" && (CURRENT_THEMES as string[]).includes(value)
+
+const OLD_THEME_GROUPS: Partial<Record<TrisetFocus, Group>> = {
+  lower_legs: "jambes",
+  posterior_calves: "jambes",
+  upper: "haut",
+  core_runner: "tronc",
+}
+
+/** Groupe d'un thème, anciens thèmes compris, ou null. */
+export function groupOfFocus(focus: unknown): Group | null {
+  if (typeof focus !== "string") return null
+  for (const group of GROUP_ORDER) {
+    if ((THEMES_BY_GROUP[group] as string[]).includes(focus)) return group
+  }
+  return OLD_THEME_GROUPS[focus as TrisetFocus] ?? null
+}
+
+export const SUPERSETS_MIN = 1
+export const SUPERSETS_MAX = 4
+export const SUPERSET_EXERCISES_MIN = 2
+export const SUPERSET_EXERCISES_MAX = 4
+export const ROUNDS_MIN = 1
+export const ROUNDS_MAX = 5
+/** Repos après le dernier exercice d'un superset, posé par le code. */
+export const SUPERSET_REST_SEC = 60
+
+export type Intensity = "legere" | "normale" | "soutenue"
+
+/** Nombre de supersets par intensité, chacun de 3 exercices et 3 tours par défaut. */
+export const INTENSITY_SUPERSETS: Record<Intensity, number> = {
+  legere: 2,
+  normale: 3,
+  soutenue: 4,
+}
+
+export const isIntensity = (value: unknown): value is Intensity =>
+  typeof value === "string" && Object.hasOwn(INTENSITY_SUPERSETS, value)

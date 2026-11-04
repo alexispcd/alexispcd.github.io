@@ -15,9 +15,14 @@ export function workSeconds(dose: Dose): number {
   return exercise?.unilateral ? base * 2 : base
 }
 
-/** Membres d'un superset dans l'ordre de jeu : A, B, puis C pour un triset. */
-const supersetMembers = (block: { a: Dose; b: Dose; c?: Dose }): Dose[] =>
-  block.c ? [block.a, block.b, block.c] : [block.a, block.b]
+/**
+ * Membres d'un superset dans l'ordre de jeu : `exercises` (nouveau format), sinon
+ * A, B, puis C pour un triset.
+ */
+export const supersetMembers = (block: { a?: Dose; b?: Dose; c?: Dose; exercises?: Dose[] }): Dose[] =>
+  Array.isArray(block.exercises)
+    ? block.exercises
+    : [block.a, block.b, block.c].filter((d): d is Dose => !!d)
 
 const listSeconds = (items: Dose[]): number =>
   items.reduce((sum, item) => sum + workSeconds(item), 0) + Math.max(items.length - 1, 0) * TRANSITION_SEC

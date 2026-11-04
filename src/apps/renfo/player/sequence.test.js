@@ -295,7 +295,59 @@ test('séance jambes en trisets : libellés des focus propres au type', () => {
   const { steps, totalSeconds } = buildSequence(content)
   const labels = [...new Set(works(steps).map((s) => s.blockLabel))]
   assert.deepEqual(labels, [
-    'Échauffement', 'Triset 1 · Quadriceps', 'Triset 2 · Chaîne postérieure', 'Triset 3 · Pied et mollet', 'Retour au calme',
+    'Échauffement', 'Triset 1 · Quadriceps', 'Triset 2 · Ischios et fessiers', 'Triset 3 · Pied et mollet', 'Retour au calme',
   ])
   assert.equal(Math.round(totalSeconds / 60), estimateSessionMinutes(content))
+})
+
+// Nouveau format (lot R1) : supersets en liste d'exercices, de 2 à 4, 1 à 5 tours.
+const COMPOSEE = {
+  title: 'Jambes et tronc',
+  estimated_min: 0,
+  intensity: 'normale',
+  blocks: [
+    { type: 'warmup', items: [{ slug: 'cercles_hanche', reps: 8 }] },
+    { type: 'superset', focus: 'quads', rounds: 5, rest_sec: 60, exercises: [
+      { slug: 'squat_elastique', reps: 15, band_kg: 20 },
+      { slug: 'squat_saute', reps: 10 },
+      { slug: 'sdt_roumain_elastique', reps: 12, band_kg: 20 },
+      { slug: 'dead_bug', reps: 10 },
+    ] },
+    { type: 'superset', focus: 'trunk', rounds: 1, rest_sec: 60, exercises: [
+      { slug: 'planche', duration_sec: 45 },
+      { slug: 'pompes', reps: 12 },
+    ] },
+    { type: 'cooldown', items: [{ slug: 'posture_enfant', duration_sec: 45 }] },
+  ],
+}
+
+test('superset de 4 exercices sur 5 tours : A, B, C, D, repos après D sauf au dernier tour', () => {
+  const { steps } = buildSequence(COMPOSEE)
+  const [blockRest, ...ts] = steps.filter((s) => s.blockIndex === 1)
+  assert.equal(blockRest.restType, 'block')
+  const pattern = ts.map((s) => (s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
+  const t = `rest:transition:${TRANSITION_SEC}`
+  const round = (n) => [`A${n}`, t, `B${n}`, t, `C${n}`, t, `D${n}`]
+  assert.deepEqual(pattern, [
+    ...round(1), 'rest:round:60', ...round(2), 'rest:round:60', ...round(3), 'rest:round:60',
+    ...round(4), 'rest:round:60', ...round(5),
+  ])
+  const d = steps.find((s) => s.role === 'D')
+  assert.equal(d.slug, 'dead_bug')
+  assert.deepEqual(d.roles, ['A', 'B', 'C', 'D'])
+  assert.equal(d.roundCount, 5)
+})
+
+test('superset d\'un seul tour : aucun repos après le dernier tour', () => {
+  const { steps } = buildSequence(COMPOSEE)
+  const ts = steps.filter((s) => s.blockIndex === 2)
+  assert.deepEqual(ts.map((s) => s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}`), [
+    'rest:block', 'A1', 'rest:transition', 'B1',
+  ])
+  assert.ok(!steps.some((s) => s.restType === 'round' && s.blockIndex === 2))
+})
+
+test('nouveau format : total cohérent avec estimateSessionMinutes', () => {
+  const { totalSeconds } = buildSequence(COMPOSEE)
+  assert.equal(Math.round(totalSeconds / 60), estimateSessionMinutes(COMPOSEE))
 })
