@@ -237,6 +237,18 @@ export const isCorosCopyUpcoming = (session, today = todayISO()) =>
 export const onWatchWarning = (n) =>
   `${n} séance${n > 1 ? 's' : ''} déjà envoyée${n > 1 ? 's' : ''} ${n > 1 ? 'resteront' : 'restera'} sur ta montre, à supprimer dans l'app Coros.`
 
+const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+const MOIS_COURTS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc']
+
+/** yyyy-MM-dd → "jeu 29 oct" (sans point, comme le Design System). */
+export const formatShortDay = (iso) => {
+  if (!iso) return ''
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  if (Number.isNaN(date.getTime())) return ''
+  return `${JOURS_COURTS[date.getUTCDay()]} ${date.getUTCDate()} ${MOIS_COURTS[date.getUTCMonth()]}`
+}
+
 /** yyyy-MM-dd → "jeudi 8 octobre". */
 export const formatLongDay = (iso) => {
   if (!iso) return ''

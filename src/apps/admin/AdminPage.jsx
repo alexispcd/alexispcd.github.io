@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Box, Typography, Button, CircularProgress, Alert } from '@mui/material'
+import { Box, Typography, Button, Alert } from '@mui/material'
 import PersonAdd from '@mui/icons-material/PersonAdd'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { useAppCtx } from '../../lib/context'
 import { texteErreur } from '../../lib/reseau'
 import { useMessage } from '../../ui/useMessage'
+import BarreAttente from '../../ui/BarreAttente'
+import { useAction } from '../../ui/useAction'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import {
   listUsers, createUser, setUserModules, disableUser, enableUser, deleteUser,
 } from '../../lib/admin'
@@ -28,6 +32,11 @@ const AdminPage = () => {
   // Échec de création affiché dans le dialogue : un Message passerait sous son voile.
   const [addError, setAddError] = useState(null)
   const { afficher } = useMessage()
+  const attente = useFinAttente(state.status === 'loading')
+  const suppression = useAction({
+    attente: 'Suppression du compte', duree: DUREES.administration,
+    succes: 'Compte supprimé', echec: 'Le compte n\'a pas pu être supprimé. Réessaie.',
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -124,18 +133,29 @@ const AdminPage = () => {
     disable ? 'Le compte n\'a pas pu être désactivé. Réessaie.' : 'Le compte n\'a pas pu être réactivé. Réessaie.')
   }
 
+  // La fiche se ferme tout de suite ; l'attente se montre en carte en tête de page.
   const handleDelete = () => {
     const { id } = selected
-    return run(async () => {
+    setSelectedId(null)
+    return suppression.lancer(async () => {
       await deleteUser(id)
-      setSelectedId(null)
       setState(s => ({ ...s, users: s.users.filter(u => u.id !== id) }))
-    }, 'Compte supprimé', 'Le compte n\'a pas pu être supprimé. Réessaie.')
+    })
+  }
+
+  if (attente.visible) {
+    return (
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
+      </Box>
+    )
   }
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto' }}>
       <Box sx={{ maxWidth: 720, mx: 'auto', px: 2, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }}>
+        <BarreAttente place="carte" {...suppression.barre} sx={{ '& .MuiCollapse-wrapperInner': { pb: 2 } }} />
+
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, px: 0.5 }}>
           <Typography variant="overline" sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem' }}>
@@ -146,18 +166,12 @@ const AdminPage = () => {
             variant="contained"
             startIcon={<PersonAdd fontSize="small" />}
             onClick={openAdd}
-            disabled={state.status !== 'ready'}
+            disabled={state.status !== 'ready' || suppression.enCours}
             sx={{ textTransform: 'none' }}
           >
             Ajouter
           </Button>
         </Box>
-
-        {state.status === 'loading' && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
-            <CircularProgress size={28} />
-          </Box>
-        )}
 
         {state.status === 'error' && (
           <Alert severity="error" sx={{ borderRadius: '12px' }}>

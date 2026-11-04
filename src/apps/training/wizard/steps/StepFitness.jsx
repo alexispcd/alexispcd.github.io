@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import {
-  Box, Typography, TextField, Button, CircularProgress, Alert,
+  Box, Typography, TextField, Button, Alert,
 } from '@mui/material'
+import BarreAttente from '../../../../ui/BarreAttente'
+import { useFinAttente } from '../../../../ui/useFinAttente'
+import { DUREES } from '../../../../lib/durees'
 import CloudDownload from '@mui/icons-material/CloudDownloadOutlined'
 import { SectionLabel, GlassCard } from '../WizardParts'
 import { getCorosFitness } from '../../../../lib/training'
@@ -22,6 +25,7 @@ const PREDICTION_LABELS = [
 
 const StepFitness = ({ draft, patch }) => {
   const [loading, setLoading] = useState(false)
+  const attenteImport = useFinAttente(loading)
   const [importError, setImportError] = useState(null)
 
   const importCoros = async () => {
@@ -86,15 +90,18 @@ const StepFitness = ({ draft, patch }) => {
       {/* Import Coros */}
       {draft.source === 'coros' && (
         <Box sx={{ mt: 2 }}>
-          <Button
-            variant={draft.corosLoaded ? 'outlined' : 'contained'}
-            fullWidth
-            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <CloudDownload />}
-            onClick={importCoros}
-            disabled={loading}
-          >
-            {draft.corosLoaded ? 'Réimporter mon bilan Coros' : 'Importer mon bilan Coros'}
-          </Button>
+          {attenteImport.visible
+            ? <BarreAttente place="barre" phrase="Import de ta forme" duree={DUREES.actionCourte} {...attenteImport} />
+            : (
+              <Button
+                variant={draft.corosLoaded ? 'outlined' : 'contained'}
+                fullWidth
+                startIcon={<CloudDownload />}
+                onClick={importCoros}
+              >
+                {draft.corosLoaded ? 'Réimporter mon bilan Coros' : 'Importer mon bilan Coros'}
+              </Button>
+            )}
           {importError && <Alert severity="error" sx={{ mt: 1.5 }}>{importError}</Alert>}
 
           {draft.corosLoaded && preds && (

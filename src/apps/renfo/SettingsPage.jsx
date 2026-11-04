@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Alert, Box, Button, CircularProgress, IconButton, Switch, ToggleButton,
+  Alert, Box, Button, IconButton, Switch, ToggleButton,
   ToggleButtonGroup, Typography,
 } from '@mui/material'
 import Add from '@mui/icons-material/Add'
@@ -10,13 +10,17 @@ import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx } from '../../styles/glass'
 import { texteErreur } from '../../lib/reseau'
 import { useMessage } from '../../ui/useMessage'
+import FeuilleFlottante from '../../ui/FeuilleFlottante'
+import BarreAttente from '../../ui/BarreAttente'
+import { useAction } from '../../ui/useAction'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import {
   addBand, deleteBand, getActiveCycle, getBands, getProfile, saveProfile, updateBand,
 } from '../../lib/renfo'
 import { formatKg } from './bandColor'
 import BandChip from './BandChip'
 import SectionLabel from './SectionLabel'
-import ConfirmDialog from './ConfirmDialog'
 import BandDialog from './settings/BandDialog'
 
 // Coins concentriques : radius carte = inset (16 = p 2) + radius des éléments (12) = 28.
@@ -43,9 +47,16 @@ const SettingsPage = () => {
   const [draft, setDraft] = useState(DEFAULT_PROFILE)
   const [saving, setSaving] = useState(false)
   const [bandDialog, setBandDialog] = useState(null) // { band } ; band null pour un ajout
+  // Élastique visé : reste posé pendant la fermeture de la feuille.
   const [toDelete, setToDelete] = useState(null)
-  const [deleting, setDeleting] = useState(false)
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false)
   const { afficher } = useMessage()
+  const attente = useFinAttente(state.status === 'loading')
+  const attenteEnregistrement = useFinAttente(saving)
+  const suppression = useAction({
+    attente: "Suppression de l'élastique", duree: DUREES.actionCourte,
+    echec: "L'élastique n'a pas pu être supprimé. Réessaie.",
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -63,10 +74,10 @@ const SettingsPage = () => {
     return () => { cancelled = true }
   }, [])
 
-  if (state.status === 'loading') {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -109,23 +120,20 @@ const SettingsPage = () => {
     setBandDialog(null)
   }
 
-  const doDelete = async () => {
-    setDeleting(true)
-    try {
-      await deleteBand(toDelete.id)
-      setState((s) => ({ ...s, bands: s.bands.filter((b) => b.id !== toDelete.id) }))
-      setToDelete(null)
-    } catch (e) {
-      afficher(texteErreur(e, "L'élastique n'a pas pu être supprimé. Réessaie."))
-    } finally {
-      setDeleting(false)
-    }
+  const doDelete = () => {
+    const id = toDelete?.id
+    if (!id) return
+    suppression.lancer(async () => {
+      await deleteBand(id)
+      setState((s) => ({ ...s, bands: s.bands.filter((b) => b.id !== id) }))
+    })
   }
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
 
+        <BarreAttente place="carte" {...suppression.barre} sx={{ '& .MuiCollapse-wrapperInner': { pt: 2 } }} />
 
         <SectionLabel>Fréquence</SectionLabel>
         <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 2 }}>
@@ -162,15 +170,27 @@ const SettingsPage = () => {
           ))}
         </Box>
 
-        <Button
-          variant="contained"
-          fullWidth
-          sx={{ mt: 2, height: 46, borderRadius: '23px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }}
-          disabled={!dirty || saving}
-          onClick={doSaveProfile}
-        >
-          {saving ? <CircularProgress size={18} color="inherit" /> : profile ? 'Enregistrer' : 'Valider ces réglages'}
-        </Button>
+        {attenteEnregistrement.visible
+          ? (
+            <BarreAttente
+              place="barre"
+              phrase="Enregistrement de tes réglages"
+              duree={DUREES.enregistrement}
+              {...attenteEnregistrement}
+              sx={{ mt: 2, height: 46 }}
+            />
+          )
+          : (
+            <Button
+              variant="contained"
+              fullWidth
+              sx={{ mt: 2, height: 46, borderRadius: '23px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }}
+              disabled={!dirty}
+              onClick={doSaveProfile}
+            >
+              {profile ? 'Enregistrer' : 'Valider ces réglages'}
+            </Button>
+          )}
 
         <SectionLabel>Élastiques</SectionLabel>
         <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, px: 2, py: 1 }}>
@@ -188,7 +208,12 @@ const SettingsPage = () => {
               <IconButton size="small" aria-label="Modifier" onClick={() => setBandDialog({ band })}>
                 <EditOutlined fontSize="small" />
               </IconButton>
-              <IconButton size="small" aria-label="Supprimer" onClick={() => setToDelete(band)}>
+              <IconButton
+                size="small"
+                aria-label="Supprimer"
+                disabled={suppression.enCours}
+                onClick={() => { setToDelete(band); setSuppressionOuverte(true) }}
+              >
                 <DeleteOutlined fontSize="small" />
               </IconButton>
             </Box>
@@ -212,14 +237,12 @@ const SettingsPage = () => {
         onSave={saveBand}
       />
 
-      <ConfirmDialog
-        open={Boolean(toDelete)}
-        title="Supprimer cet élastique ?"
-        text={toDelete ? `L'élastique de ${formatKg(toDelete.kg)} kg ne sera plus proposé dans les prochaines séances.` : ''}
-        confirmLabel="Supprimer"
-        busy={deleting}
-        onCancel={() => setToDelete(null)}
-        onConfirm={doDelete}
+      <FeuilleFlottante
+        ouverte={suppressionOuverte}
+        onFermer={() => setSuppressionOuverte(false)}
+        titre={toDelete ? `L'élastique de ${formatKg(toDelete.kg)} kg ne sera plus proposé dans tes prochaines séances.` : ''}
+        lignes={[{ libelle: "Supprimer l'élastique", onClick: doDelete }]}
+        fermerLibelle="Annuler"
       />
     </Box>
   )

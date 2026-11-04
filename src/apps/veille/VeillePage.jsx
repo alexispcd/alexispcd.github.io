@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
-import { Box, Chip, CircularProgress, Typography } from '@mui/material'
+import { Box, Chip, Typography } from '@mui/material'
 import Sync from '@mui/icons-material/Sync'
 import GridView from '@mui/icons-material/GridView'
 import ViewList from '@mui/icons-material/ViewList'
@@ -11,6 +11,9 @@ import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { useAppCtx } from '../../lib/context'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 
 const THEMES = [
   'Tous',
@@ -44,6 +47,11 @@ const VeillePage = () => {
   const [hasMore, setHasMore] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [displayMode, setDisplayMode] = useState('list')
+  // La liste s'affiche quand la barre a fini : les effets de scroll attendent `listeEnAttente`.
+  const attente = useFinAttente(loading)
+  const listeEnAttente = attente.visible
+  const attenteSuite = useFinAttente(loadingMore)
+  const attenteSync = useFinAttente(syncing)
 
   const scrollRef = useRef(null)
   const sentinelRef = useRef(null)
@@ -188,9 +196,7 @@ const VeillePage = () => {
     setHeaderActions([
       {
         label: 'Synchroniser',
-        icon: syncing
-          ? <CircularProgress size={16} color="inherit" />
-          : <Sync fontSize="small" />,
+        icon: <Sync fontSize="small" />,
         onClick: sync,
         disabled: syncing || loading,
       },
@@ -226,7 +232,7 @@ const VeillePage = () => {
   // Restauration du scroll : charge autant de pages que nécessaire pour couvrir
   // la position sauvegardée, puis applique le scrollTop (une seule fois).
   useLayoutEffect(() => {
-    if (loading || didRestoreScroll.current) return
+    if (listeEnAttente || didRestoreScroll.current) return
     const el = scrollRef.current
     if (!el) return
     const target = pendingRestore.current
@@ -241,7 +247,7 @@ const VeillePage = () => {
     }
     // Pas encore assez de contenu chargé : charge la page suivante puis on réévalue
     loadNextPage()
-  }, [loading, articles, hasMore, loadNextPage])
+  }, [listeEnAttente, articles, hasMore, loadNextPage])
 
   // Scroll infini : charge la page suivante quand le sentinel approche du bas
   useEffect(() => {
@@ -254,7 +260,7 @@ const VeillePage = () => {
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [loading, hasMore, loadNextPage])
+  }, [listeEnAttente, hasMore, loadNextPage])
 
   // Changement de filtre thème par l'utilisateur
   const handleFilterChange = (theme) => {
@@ -290,6 +296,13 @@ const VeillePage = () => {
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', pt: `${HEADER_HEIGHT}px` }}>
 
+      {/* Synchronisation en cours, en tête de page */}
+      {attenteSync.visible && (
+        <Box sx={{ px: 2, pt: 1.5, flexShrink: 0 }}>
+          <BarreAttente place="section" duree={DUREES.chargementPage} {...attenteSync} />
+        </Box>
+      )}
+
       {/* Filtres thème */}
       <Box sx={{
         display: 'flex', gap: 1, overflowX: 'auto',
@@ -316,10 +329,8 @@ const VeillePage = () => {
         onScroll={handleScroll}
         sx={{ flex: 1, overflowY: 'auto', overscrollBehavior: 'none', px: 2, display: 'flex', flexDirection: 'column', pb: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 8 }}>
-            <CircularProgress size={28} />
-          </Box>
+        {listeEnAttente ? (
+          <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} sx={{ flex: 1 }} />
         ) : articles.length === 0 ? (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 6, textAlign: 'center' }}>
             {unreadOnly ? 'Aucun article non lu' : 'Aucun article pour ce thème'}
@@ -344,7 +355,9 @@ const VeillePage = () => {
             {/* Sentinel scroll infini + indicateur de chargement */}
             {hasMore && (
               <Box ref={sentinelRef} sx={{ display: 'flex', justifyContent: 'center', py: 2, minHeight: 32 }}>
-                {loadingMore && <CircularProgress size={20} />}
+                {attenteSuite.visible && (
+                  <BarreAttente place="section" duree={DUREES.chargementPage} {...attenteSuite} sx={{ width: '100%' }} />
+                )}
               </Box>
             )}
           </>

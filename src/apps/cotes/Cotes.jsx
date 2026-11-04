@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react'
 import { MapContainer, TileLayer, useMapEvents, Circle, Polyline, Marker } from 'react-leaflet'
-import { Box, Typography, CircularProgress } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -8,6 +8,9 @@ import { useSearch } from './useSearch'
 import { slopeColor } from './utils'
 import ResultCard from './ResultCard'
 import BottomBar from './BottomBar'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 
 const centerIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;background:#3d6b51;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 4px rgba(61,107,81,.2)"></div>`,
@@ -31,6 +34,7 @@ const Cotes = () => {
   const [activeIdx, setActiveIdx] = useState(0)
   const [mapMoved, setMapMoved] = useState(false)
   const { phase, setPhase, status, results, params, setParam, hasCustomParams, search, cancel, reset } = useSearch()
+  const attente = useFinAttente(phase === 'searching')
 
   // Désactive le scroll/overscroll de la page (iOS bounce notamment)
   useEffect(() => {
@@ -164,7 +168,7 @@ const Cotes = () => {
       )}
 
       {/* ── LOADER overlay ── */}
-      {phase === 'searching' && (
+      {attente.visible && (
         <Box sx={{
           position: 'absolute', inset: 0, zIndex: 1002,
           display: 'flex', flexDirection: 'column',
@@ -173,7 +177,7 @@ const Cotes = () => {
           pointerEvents: 'none',
           gap: 2,
         }}>
-          <CircularProgress sx={{ color: 'primary.main' }} size={44} />
+          <BarreAttente place="section" duree={DUREES.rechercheCotes} {...attente} sx={{ width: '160px' }} />
           <Typography
             variant="body2"
             sx={{

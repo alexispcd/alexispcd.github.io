@@ -2,7 +2,7 @@
 // l'iPhone pendant la refonte. Exemples fictifs : rien n'est chargé ni enregistré, sauf
 // les trois essais de la section Réseau (lecture seule, ou écriture qui ne vise aucune ligne).
 // Page temporaire, retirée avec sa ligne du menu du compte à la fin de la refonte (F1).
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { SPACE_BAS, border, radius, space } from '../../styles/tokens'
@@ -30,7 +30,6 @@ import BarreAttente from '../../ui/BarreAttente'
 import { useFinAttente } from '../../ui/useFinAttente'
 import { useMessage, useBarreBasMessage } from '../../ui/useMessage'
 import { useAction } from '../../ui/useAction'
-import { APPARITIONS, HAUTEURS, abonnerReglages, changerReglages, lireReglages } from '../../lib/barreEtat'
 import { PAS_DE_CONNEXION, estErreurReseau } from '../../lib/reseau'
 import { DUREES } from '../../lib/durees'
 import { getCorosStatus } from '../../lib/training'
@@ -87,26 +86,12 @@ const LONGUE_FEUILLE = Array.from({ length: 18 }, (_, i) => `Exercice ${i + 1}`)
 
 const DemoFeuille = () => {
   const { afficher } = useMessage()
-  const bande = useSyncExternalStore(abonnerReglages, lireReglages, lireReglages)
   const [ouverte, setOuverte] = useState(null)
   const fermer = () => setOuverte(null)
   const ligne = (libelle) => ({ libelle, onClick: () => afficher(`« ${libelle} » touché`) })
 
   return (
     <Section titre="Feuille flottante">
-      <ControleSegmente
-        label="Hauteur de la bande"
-        valeur={bande.hauteur}
-        onChange={(hauteur) => changerReglages({ hauteur })}
-        options={HAUTEURS.map((h) => ({ valeur: h, libelle: `${h}` }))}
-      />
-      <ControleSegmente
-        label="Apparition de la bande"
-        valeur={bande.apparition}
-        onChange={(apparition) => changerReglages({ apparition })}
-        options={APPARITIONS}
-      />
-      <Note>{`Bande de ${bande.hauteur} px, ${bande.apparition === 'fondu' ? 'en fondu' : "d'un coup"}. À comparer en thème clair, sur l'app installée.`}</Note>
       <Rangee>
         <Bouton petit variante="chip" onClick={() => setOuverte('actions')}>Actions</Bouton>
         <Bouton petit variante="chip" onClick={() => setOuverte('confirmation')}>Confirmation</Bouton>

@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
+import { Alert, Box, Button, Typography } from '@mui/material'
 import PlayArrow from '@mui/icons-material/PlayArrow'
 import Schedule from '@mui/icons-material/Schedule'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { cardSx } from '../../../styles/glass'
 import { texteErreur } from '../../../lib/reseau'
 import { useMessage } from '../../../ui/useMessage'
+import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useAction } from '../../../ui/useAction'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { completeSession, deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
 import { painAreaLabel } from '../../../lib/feedback'
 import { KIND_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
 import { bandOf, blockLabel, doseLabel, mainDoseLabel, supersetLabel, supersetMembers } from '../content'
-import ConfirmDialog from '../ConfirmDialog'
 import EquipmentBox from './EquipmentBox'
 import ExerciseRow from './ExerciseRow'
 import ExerciseSheet from './ExerciseSheet'
@@ -37,9 +41,15 @@ const SessionPage = () => {
   const [sheetSlug, setSheetSlug] = useState(null)
   const [validate, setValidate] = useState(null) // { bandsUsed } quand le dialog de ressenti est ouvert
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false)
   const [busy, setBusy] = useState(false)
   const { afficher } = useMessage()
+  const attente = useFinAttente(state.status === 'loading')
+  const attenteRemise = useFinAttente(busy)
+  const suppression = useAction({
+    attente: 'Suppression de la séance', duree: DUREES.actionCourte,
+    echec: "La séance n'a pas pu être supprimée. Réessaie.",
+  })
 
   // Changement de séance : état de chargement remis au rendu.
   if (state.sessionId !== sessionId) setState({ status: 'loading', sessionId })
@@ -56,10 +66,10 @@ const SessionPage = () => {
     return () => { cancelled = true }
   }, [sessionId])
 
-  if (state.status === 'loading') {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -108,15 +118,8 @@ const SessionPage = () => {
   }
 
   const doDelete = async () => {
-    setBusy(true)
-    try {
-      await deleteFreeSession(session.id)
-      navigate('/renfo')
-    } catch (e) {
-      afficher(texteErreur(e, "La séance n'a pas pu être supprimée. Réessaie."))
-      setBusy(false)
-      setConfirmDelete(false)
-    }
+    const { ok } = await suppression.lancer(() => deleteFreeSession(session.id))
+    if (ok) navigate('/renfo')
   }
 
   const context = free
@@ -139,6 +142,8 @@ const SessionPage = () => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
+
+        <BarreAttente place="carte" {...suppression.barre} sx={{ '& .MuiCollapse-wrapperInner': { pt: 2 } }} />
 
         {/* En-tête */}
         <Box sx={{ mt: 2, px: 0.5 }}>
@@ -209,17 +214,19 @@ const SessionPage = () => {
                 Valider sans le player
               </Button>
               {free && (
-                <Button color="error" sx={btn} onClick={() => setConfirmDelete(true)} disabled={busy}>
+                <Button color="error" sx={btn} onClick={() => setSuppressionOuverte(true)} disabled={busy || suppression.enCours}>
                   Supprimer
                 </Button>
               )}
             </>
           )}
-          {done && (
-            <Button variant="outlined" sx={btn} onClick={doReset} disabled={busy}>
-              {busy ? <CircularProgress size={18} color="inherit" /> : 'Remettre à faire'}
-            </Button>
-          )}
+          {done && (attenteRemise.visible
+            ? <BarreAttente place="barre" phrase="Remise à faire de la séance" duree={DUREES.actionCourte} {...attenteRemise} />
+            : (
+              <Button variant="outlined" sx={btn} onClick={doReset}>
+                Remettre à faire
+              </Button>
+            ))}
         </Box>
       </Box>
 
@@ -231,14 +238,12 @@ const SessionPage = () => {
         onSubmit={submitValidation}
       />
 
-      <ConfirmDialog
-        open={confirmDelete}
-        title="Supprimer cette séance libre ?"
-        text="Elle disparaîtra de ta semaine."
-        confirmLabel="Supprimer"
-        busy={busy}
-        onCancel={() => setConfirmDelete(false)}
-        onConfirm={doDelete}
+      <FeuilleFlottante
+        ouverte={suppressionOuverte}
+        onFermer={() => setSuppressionOuverte(false)}
+        titre={`${session.title} sera supprimée. Tu pourras en créer une autre depuis l'accueil.`}
+        lignes={[{ libelle: 'Supprimer la séance', onClick: doDelete }]}
+        fermerLibelle="Annuler"
       />
 
       {player && (

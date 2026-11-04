@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { Box, Typography, TextField, Button, CircularProgress } from '@mui/material'
+import { Box, Typography, TextField, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 import supabase from '../lib/supabase'
 import { texteErreur } from '../lib/reseau'
 import FullScreenLoader from './FullScreenLoader'
+import BarreAttente from '../ui/BarreAttente'
+import { useFinAttente } from '../ui/useFinAttente'
+import { DUREES } from '../lib/durees'
 
 // Inscriptions fermées : Supabase refuse l'OTP d'un email sans compte (code otp_disabled).
 const isUnknownAccount = (error) =>
@@ -15,7 +18,11 @@ const AuthGate = ({ children }) => {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState('email') // email | code
-  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const loading = sending || verifying
+  const attenteEnvoi = useFinAttente(sending)
+  const attenteConnexion = useFinAttente(verifying)
   const [errorMsg, setErrorMsg] = useState('')
   // Verrou : la vérification automatique ne part qu'une fois par code complet,
   // même si l'autocomplétion iOS déclenche plusieurs onChange de suite.
@@ -31,14 +38,14 @@ const AuthGate = ({ children }) => {
 
   const handleSendCode = async () => {
     if (!email.trim()) return
-    setLoading(true)
+    setSending(true)
     setErrorMsg('')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       // Comptes créés uniquement depuis le module Admin.
       options: { shouldCreateUser: false },
     })
-    setLoading(false)
+    setSending(false)
     if (error) {
       setErrorMsg(isUnknownAccount(error)
         ? 'Ce compte n\'existe pas. Demande une invitation.'
@@ -51,14 +58,14 @@ const AuthGate = ({ children }) => {
   const verifyCode = async (token) => {
     if (token.length !== 8 || verifyingRef.current) return
     verifyingRef.current = true
-    setLoading(true)
+    setVerifying(true)
     setErrorMsg('')
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim(),
       token,
       type: 'email',
     })
-    setLoading(false)
+    setVerifying(false)
     verifyingRef.current = false
     if (error) {
       setErrorMsg('Code invalide ou expiré')
@@ -81,6 +88,9 @@ const AuthGate = ({ children }) => {
   if (session === undefined) return <FullScreenLoader />
 
   if (session) return children
+
+  // L'étape du code s'affiche quand la barre de l'envoi a fini.
+  const etape = attenteEnvoi.visible ? 'email' : step
 
   return (
     <Box sx={{
@@ -108,11 +118,11 @@ const AuthGate = ({ children }) => {
             Le Cairn
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {step === 'email' ? 'Connexion par code email' : `Code envoyé à ${email}`}
+            {etape === 'email' ? 'Connexion par code email' : `Code envoyé à ${email}`}
           </Typography>
         </Box>
 
-        {step === 'email' ? (
+        {etape === 'email' ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               label="Adresse email"
@@ -126,15 +136,19 @@ const AuthGate = ({ children }) => {
               autoComplete="email"
             />
             {errorMsg && <Typography variant="caption" color="error">{errorMsg}</Typography>}
-            <Button
-              variant="contained"
-              onClick={handleSendCode}
-              disabled={loading || !email.trim()}
-              fullWidth
-              sx={{ textTransform: 'none' }}
-            >
-              {loading ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Envoyer le code'}
-            </Button>
+            {attenteEnvoi.visible
+              ? <BarreAttente place="barre" phrase="Envoi du code" duree={DUREES.envoiCode} {...attenteEnvoi} />
+              : (
+                <Button
+                  variant="contained"
+                  onClick={handleSendCode}
+                  disabled={!email.trim()}
+                  fullWidth
+                  sx={{ textTransform: 'none' }}
+                >
+                  Envoyer le code
+                </Button>
+              )}
           </Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -152,15 +166,19 @@ const AuthGate = ({ children }) => {
               slotProps={{ htmlInput: { inputMode: 'numeric', pattern: '[0-9]*' } }}
             />
             {errorMsg && <Typography variant="caption" color="error">{errorMsg}</Typography>}
-            <Button
-              variant="contained"
-              onClick={handleVerifyCode}
-              disabled={loading || code.length !== 8}
-              fullWidth
-              sx={{ textTransform: 'none' }}
-            >
-              {loading ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Se connecter'}
-            </Button>
+            {attenteConnexion.visible
+              ? <BarreAttente place="barre" phrase="Connexion" duree={DUREES.connexion} {...attenteConnexion} />
+              : (
+                <Button
+                  variant="contained"
+                  onClick={handleVerifyCode}
+                  disabled={code.length !== 8}
+                  fullWidth
+                  sx={{ textTransform: 'none' }}
+                >
+                  Se connecter
+                </Button>
+              )}
             <Button
               variant="text"
               size="small"

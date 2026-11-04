@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
-  Box, Typography, Button, CircularProgress, Alert, Link,
+  Box, Typography, Button, Alert, Link,
   Dialog, DialogContent, DialogActions, TextField,
 } from '@mui/material'
 import DirectionsRun from '@mui/icons-material/DirectionsRun'
@@ -14,6 +14,9 @@ import { setTransitionDirection } from '../../../lib/viewTransition'
 import { texteErreur } from '../../../lib/reseau'
 import RpeForm from '../../../components/RpeForm'
 import { emptyFeedback, toFeedbackPayload } from '../../../lib/feedback'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 
 // Cohérent avec le garde-fou serveur (3 activités max par complétion).
 const MAX_ACTIVITIES = 3
@@ -118,7 +121,11 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
     }
   }
 
-  const busy = phase === 'matching' || phase === 'completing'
+  // La phase suivante s'affiche quand la barre a fini.
+  const attenteRecherche = useFinAttente(Boolean(open) && phase === 'matching')
+  const attenteValidation = useFinAttente(Boolean(open) && phase === 'completing')
+  const vue = attenteRecherche.visible ? 'matching' : attenteValidation.visible ? 'completing' : phase
+  const busy = vue === 'matching' || vue === 'completing'
 
   // Récapitulatif quand au moins deux activités sont sélectionnées.
   const selectedCandidates = candidates.filter((c) => selectedIds.includes(c.labelId))
@@ -140,25 +147,23 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
       slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
     >
       <DialogContent sx={{ pt: 3 }}>
-        {phase === 'matching' && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 3 }}>
-            <CircularProgress size={30} />
-            <Typography variant="body2" color="text.secondary">Recherche de tes activités Coros…</Typography>
+        {vue === 'matching' && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, py: 3 }}>
+            <Typography variant="secondaire" sx={{ color: 'muted' }}>Recherche de tes activités</Typography>
+            <BarreAttente place="section" duree={DUREES.rechercheActivites} {...attenteRecherche} />
           </Box>
         )}
 
-        {phase === 'completing' && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 3, textAlign: 'center' }}>
-            <CircularProgress size={30} />
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 300 }}>
-              {withCoros
-                ? 'Import des laps et analyse en cours… cela peut prendre quelques secondes.'
-                : 'Validation en cours…'}
+        {vue === 'completing' && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, py: 3 }}>
+            <Typography variant="secondaire" sx={{ color: 'muted' }}>
+              {withCoros ? 'Validation et analyse de ta séance' : 'Validation de ta séance'}
             </Typography>
+            <BarreAttente place="section" duree={DUREES.validation} {...attenteValidation} />
           </Box>
         )}
 
-        {phase === 'choose' && (
+        {vue === 'choose' && (
           <>
             <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Lier une activité Coros</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -227,7 +232,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
           </>
         )}
 
-        {phase === 'feedback' && (
+        {vue === 'feedback' && (
           <>
             <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Ton ressenti</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -255,7 +260,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
         )}
       </DialogContent>
 
-      {phase === 'choose' && (
+      {vue === 'choose' && (
         <DialogActions sx={{ px: 3, pb: 2.5, flexWrap: 'wrap', gap: 1 }}>
           <Button onClick={onClose} color="inherit">Annuler</Button>
           <Box sx={{ flex: 1 }} />
@@ -268,7 +273,7 @@ const CompleteDialog = ({ open, sessionId, scheduledDate, onClose, onDone }) => 
         </DialogActions>
       )}
 
-      {phase === 'feedback' && (
+      {vue === 'feedback' && (
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
           <Button onClick={() => runComplete(null)} color="inherit">Passer</Button>
           <Box sx={{ flex: 1 }} />

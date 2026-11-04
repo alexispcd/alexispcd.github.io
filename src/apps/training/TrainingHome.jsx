@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
-import { texteErreur } from '../../lib/reseau'
 import {
-  Box, Typography, Button, IconButton, CircularProgress, Alert,
+  Box, Typography, Button, IconButton, Alert,
   Menu, MenuItem, ListItemIcon, ListItemText,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
 import Terrain from '@mui/icons-material/Terrain'
 import EmojiEvents from '@mui/icons-material/EmojiEvents'
@@ -14,7 +12,12 @@ import MoreVert from '@mui/icons-material/MoreVert'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { glassSx, cardSx, GLASS_BACKDROP } from '../../styles/glass'
+import { glassSx, cardSx } from '../../styles/glass'
+import FeuilleFlottante from '../../ui/FeuilleFlottante'
+import BarreAttente from '../../ui/BarreAttente'
+import { useAction } from '../../ui/useAction'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import { getActivePlan, getPlans, deletePlan, countUpcomingOnWatch } from '../../lib/training'
 import { useAppCtx } from '../../lib/context'
 import {
@@ -39,8 +42,14 @@ const TrainingHome = () => {
 
   const [menuAnchor, setMenuAnchor] = useState(null)
   const [menuPlan, setMenuPlan] = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(null)
-  const [deleting, setDeleting] = useState(false)
+  // Plan visé par la suppression : reste posé pendant la fermeture de la feuille.
+  const [suppressionCible, setSuppressionCible] = useState(null)
+  const [suppressionOuverte, setSuppressionOuverte] = useState(false)
+  const suppression = useAction({
+    attente: 'Suppression du plan', duree: DUREES.actionCourte,
+    echec: 'Le plan n\'a pas pu être supprimé. Réessaie.',
+  })
+  const attente = useFinAttente(activePlan === undefined)
   // Séances envoyées sur la montre que la suppression du plan y laissera.
   const [deleteOnWatch, setDeleteOnWatch] = useState({ planId: null, count: 0 })
 
@@ -69,7 +78,7 @@ const TrainingHome = () => {
     return () => setHeaderActions([])
   }, [navigate, setHeaderActions])
 
-  const deleteId = confirmDelete?.id ?? null
+  const deleteId = suppressionCible?.id ?? null
   useEffect(() => {
     if (!deleteId) return
     let cancelled = false
@@ -88,29 +97,23 @@ const TrainingHome = () => {
   const closeMenu = () => { setMenuAnchor(null); setMenuPlan(null) }
 
   const askDelete = () => {
-    setConfirmDelete(menuPlan)
+    setSuppressionCible(menuPlan)
+    setSuppressionOuverte(true)
     closeMenu()
   }
 
   const doDelete = async () => {
-    if (!confirmDelete) return
-    setDeleting(true)
-    try {
-      await deletePlan(confirmDelete.id)
-      setPlans((prev) => prev.filter((p) => p.id !== confirmDelete.id))
-      setConfirmDelete(null)
-    } catch (err) {
-      setError(texteErreur(err, 'Le plan n\'a pas pu être supprimé. Réessaie.'))
-    } finally {
-      setDeleting(false)
-    }
+    const id = suppressionCible?.id
+    if (!id) return
+    const { ok } = await suppression.lancer(() => deletePlan(id))
+    if (ok) setPlans((prev) => prev.filter((p) => p.id !== id))
   }
 
   // ── Chargement ────────────────────────────────────────────────────────────
-  if (activePlan === undefined) {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -123,6 +126,12 @@ const TrainingHome = () => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
+
+        <BarreAttente
+          place="carte"
+          {...suppression.barre}
+          sx={{ '& .MuiCollapse-wrapperInner': { pt: 2 } }}
+        />
 
         {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
@@ -226,27 +235,14 @@ const TrainingHome = () => {
       </Menu>
 
       {/* Confirmation suppression */}
-      <Dialog
-        open={Boolean(confirmDelete)}
-        onClose={() => !deleting && setConfirmDelete(null)}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Supprimer ce plan ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            « {confirmDelete?.race_name} » et toutes ses séances seront définitivement supprimés.
-            {onWatchCount > 0 && ` ${onWatchWarning(onWatchCount)}`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmDelete(null)} disabled={deleting} color="inherit">
-            Annuler
-          </Button>
-          <Button onClick={doDelete} disabled={deleting} color="error" variant="contained">
-            {deleting ? <CircularProgress size={18} color="inherit" /> : 'Supprimer'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FeuilleFlottante
+        ouverte={suppressionOuverte}
+        onFermer={() => setSuppressionOuverte(false)}
+        titre={`${suppressionCible?.race_name ?? ''} et toutes ses séances seront supprimés, séances faites comprises.`
+          + (onWatchCount > 0 ? ` ${onWatchWarning(onWatchCount)}` : '')}
+        lignes={[{ libelle: 'Supprimer le plan', onClick: doDelete }]}
+        fermerLibelle="Annuler"
+      />
     </Box>
   )
 }

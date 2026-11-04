@@ -2,7 +2,10 @@ import { useRef, useState } from 'react'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
 import { useBarreBasMessage } from '../../../ui/useMessage'
-import { Box, Typography, Button, IconButton, CircularProgress, Alert, Link } from '@mui/material'
+import { Box, Typography, Button, IconButton, Alert, Link } from '@mui/material'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import ArrowBack from '@mui/icons-material/ArrowBackRounded'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { glassSx } from '../../../styles/glass'
@@ -90,6 +93,7 @@ const PlanWizard = () => {
   const [step, setStep] = useState(0)
   const [draft, setDraft] = useState(emptyDraft)
   const [generating, setGenerating] = useState(false)
+  const attenteGeneration = useFinAttente(generating)
   // Barre basse fixe : le Message se pose au-dessus d'elle.
   const barreRef = useRef(null)
   useBarreBasMessage(barreRef)
@@ -183,17 +187,27 @@ const PlanWizard = () => {
               <ArrowBack sx={{ fontSize: 20 }} />
             </IconButton>
           )}
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={isLast ? handleGenerate : goNext}
-            disabled={!canNext || generating}
-            sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
-          >
-            {generating
-              ? <CircularProgress size={18} color="inherit" />
-              : isLast ? 'Générer mon plan' : 'Continuer'}
-          </Button>
+          {attenteGeneration.visible
+            ? (
+              <BarreAttente
+                place="barre"
+                phrase="Génération de ton plan"
+                duree={DUREES.actionCourte}
+                {...attenteGeneration}
+                sx={{ flex: 1, minWidth: 0, height: 48 }}
+              />
+            )
+            : (
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={isLast ? handleGenerate : goNext}
+                disabled={!canNext}
+                sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, fontSize: '0.95rem', boxShadow: 'none' }}
+              >
+                {isLast ? 'Générer mon plan' : 'Continuer'}
+              </Button>
+            )}
         </Box>
       </Box>
     </Box>

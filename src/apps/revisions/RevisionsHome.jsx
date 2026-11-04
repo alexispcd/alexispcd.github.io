@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
-import { Box, Button, Card, CircularProgress, Divider, Typography } from '@mui/material'
+import { Box, Button, Card, Divider, Typography } from '@mui/material'
 import TaskAlt from '@mui/icons-material/TaskAlt'
 import StyleOutlined from '@mui/icons-material/StyleOutlined'
 import WarningAmber from '@mui/icons-material/WarningAmber'
@@ -11,6 +11,9 @@ import { EMPTY_FILTERS, addDays, buildSession, matchesFilters, todayKey } from '
 import SessionBar, { BAR_HEIGHT } from './SessionBar'
 import StatsPanel from './StatsPanel'
 import useProgress from './useProgress'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 
 const PAGE_SX = { height: '100%', overflowY: 'auto' }
 const INNER_SX = { maxWidth: 720, mx: 'auto', px: 2.5, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }
@@ -67,6 +70,7 @@ const RevisionsHome = () => {
   const navigate = useAppNavigate()
   const { rows, loading, error, reload } = useProgress()
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  const attente = useFinAttente(loading)
 
   // Apercu de la session du jour : memes regles que la session reelle, donc le
   // chiffre annonce applique deja le plafond de cartes nouvelles.
@@ -120,12 +124,10 @@ const RevisionsHome = () => {
     )
   }
 
-  if (loading) {
+  if (attente.visible) {
     return (
-      <Box sx={PAGE_SX}>
-        <Box sx={{ ...INNER_SX, display: 'flex', justifyContent: 'center', pt: `${HEADER_HEIGHT + 80}px` }}>
-          <CircularProgress size={24} />
-        </Box>
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }

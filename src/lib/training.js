@@ -237,8 +237,12 @@ export const unskipSession = async (sessionId) => {
   return { corosError: null }
 }
 
-/** Réinitialise une séance complétée à l'état "planned". */
-export const resetSession = async (sessionId) => {
+/**
+ * Réinitialise une séance complétée à l'état "planned" : activités liées, laps,
+ * analyse et ressenti (rpe, pain_areas, feedback_note) effacés. garderRessenti
+ * laisse le ressenti en place (« Délier Coros », jusqu'à son retrait en T2).
+ */
+export const resetSession = async (sessionId, { garderRessenti = false } = {}) => {
   const { data, error } = await supabase
     .from('training_sessions')
     .update({
@@ -249,6 +253,7 @@ export const resetSession = async (sessionId) => {
       actual_laps: null,
       km_laps: null,
       analysis: null,
+      ...(garderRessenti ? {} : { rpe: null, pain_areas: null, feedback_note: null }),
     })
     .eq('id', sessionId)
     .select()

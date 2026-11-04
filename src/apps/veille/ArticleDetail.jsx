@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { Box, IconButton, Typography, Button, Divider, CircularProgress, Chip } from '@mui/material'
+import { Box, IconButton, Typography, Button, Divider, Chip } from '@mui/material'
 import Star from '@mui/icons-material/Star'
 import StarBorder from '@mui/icons-material/StarBorder'
 import OpenInNew from '@mui/icons-material/OpenInNew'
@@ -9,6 +9,9 @@ import { useTheme } from '@mui/material/styles'
 import FicheView from './FicheView'
 import supabase from '../../lib/supabase'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 
 const formatDate = (iso) => {
   const d = new Date(iso)
@@ -23,6 +26,8 @@ const ArticleDetail = () => {
   const [article, setArticle] = useState(state?.article ?? null)
   const [loading, setLoading] = useState(!state?.article)
   const [summarizing, setSummarizing] = useState(false)
+  const attente = useFinAttente(loading)
+  const attenteResume = useFinAttente(summarizing)
   const [summarizeError, setSummarizeError] = useState(null)
 
   // Fallback fetch if no route state (direct link / refresh)
@@ -79,10 +84,10 @@ const ArticleDetail = () => {
     }
   }
 
-  if (loading) {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -191,19 +196,27 @@ const ArticleDetail = () => {
                 {summarizeError}
               </Typography>
             )}
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleSummarize}
-              disabled={summarizing}
-              startIcon={summarizing
-                ? <CircularProgress size={14} sx={{ color: 'inherit' }} />
-                : <AutoAwesome sx={{ fontSize: '16px !important' }} />
-              }
-              sx={{ textTransform: 'none', borderRadius: 2 }}
-            >
-              {summarizing ? 'Analyse en cours…' : 'Résumer avec Mistral'}
-            </Button>
+            {attenteResume.visible
+              ? (
+                <BarreAttente
+                  place="barre"
+                  phrase="Résumé de l'article"
+                  duree={DUREES.resumeArticle}
+                  {...attenteResume}
+                  sx={{ width: '100%' }}
+                />
+              )
+              : (
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleSummarize}
+                  startIcon={<AutoAwesome sx={{ fontSize: '16px !important' }} />}
+                  sx={{ textTransform: 'none', borderRadius: 2 }}
+                >
+                  Résumer avec Mistral
+                </Button>
+              )}
           </Box>
         )}
       </Box>

@@ -1,12 +1,9 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useState, useEffect, useEffectEvent, useCallback, useRef, useMemo } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
 import { useMessage } from '../../../ui/useMessage'
-import {
-  Box, Typography, Chip, Button, CircularProgress, Alert,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-} from '@mui/material'
+import { Box, Typography, Chip, Button, Alert } from '@mui/material'
 import EmojiEvents from '@mui/icons-material/EmojiEvents'
 import Autorenew from '@mui/icons-material/Autorenew'
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
@@ -16,10 +13,15 @@ import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { useAppCtx } from '../../../lib/context'
-import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
+import { cardSx } from '../../../styles/glass'
+import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useAction } from '../../../ui/useAction'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import {
   getPlan, getWeekSessions, subscribeToPlan,
-  skipSession, unskipSession, adaptSessions,
+  skipSession, adaptSessions,
   regeneratePlan, archivePlan, deletePlan, generatePlan, countUpcomingOnWatch,
 } from '../../../lib/training'
 import {
@@ -30,11 +32,23 @@ import {
 } from '../constants'
 import SessionRow from './SessionRow'
 import CorosPushDialog from '../session/CorosPushDialog'
+import SkipSheet from '../session/SkipSheet'
 import { DURATION, transition } from '../../../styles/motion'
+
+const SAUT_ECHEC = 'La séance n\'a pas pu être sautée. Réessaie.'
+const ADAPTATION_ECHEC = 'L\'adaptation n\'a pas abouti. Réessaie.'
+
+// Carte d'attente en tête de page : l'écart du haut s'ouvre et se replie avec elle.
+const CARTE_ATTENTE_SX = { mx: 2, '& .MuiCollapse-wrapperInner': { pt: 1.5 } }
+
+const nombreAdaptees = (n) =>
+  (n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
 
 const PlanDashboard = () => {
   const { planId } = useParams()
   const navigate = useAppNavigate()
+  const navigateSansTransition = useNavigate()
+  const location = useLocation()
   const { setHeaderActions } = useAppCtx()
   const { afficher } = useMessage()
 
@@ -55,14 +69,34 @@ const PlanDashboard = () => {
   const [sessions, setSessions] = useState(null)
   const [sessionsLoading, setSessionsLoading] = useState(false)
 
-  const [skipDialog, setSkipDialog] = useState(null)
-  const [adapting, setAdapting] = useState(false)
-  const [confirmRegen, setConfirmRegen] = useState(false)
+  // Feuille « Sauter » : la séance visée reste posée pendant la fermeture de la feuille.
+  const [sautCible, setSautCible] = useState(null)
+  const [sautOuvert, setSautOuvert] = useState(false)
+  const [regenOuverte, setRegenOuverte] = useState(false)
   const [regenOnWatch, setRegenOnWatch] = useState(0) // séances envoyées qui vont disparaître
   const [pushDialog, setPushDialog] = useState(null)
-  const [confirmArchive, setConfirmArchive] = useState(false)
-  const [retrying, setRetrying] = useState(false)
+  const [archiveOuverte, setArchiveOuverte] = useState(false)
   const [genTimedOut, setGenTimedOut] = useState(false)
+  const [adaptTitre, setAdaptTitre] = useState('')
+
+  const attente = useFinAttente(loading)
+  const attenteSeances = useFinAttente(sessions === null)
+
+  const saut = useAction({ attente: 'Saut de la séance', duree: DUREES.actionCourte, echec: SAUT_ECHEC })
+  const adaptation = useAction({
+    attente: 'Adaptation de tes séances',
+    duree: DUREES.adaptation,
+    succes: nombreAdaptees,
+    echec: (e) => (e?.etape === 'saut' ? SAUT_ECHEC : ADAPTATION_ECHEC),
+  })
+  const archivage = useAction({
+    attente: 'Archivage du plan', duree: DUREES.actionCourte,
+    echec: 'Le plan n\'a pas pu être archivé. Réessaie.',
+  })
+  const relance = useAction({
+    attente: 'Génération de ton plan', duree: DUREES.actionCourte,
+    echec: 'La génération n\'a pas pu redémarrer. Réessaie.',
+  })
 
   const selectedWeekRef = useRef(null)
   const scrolledRef = useRef(false)
@@ -187,8 +221,8 @@ const PlanDashboard = () => {
     if (!plan || plan.generation_status !== 'ready') { setHeaderActions([]); return }
     const actions = []
     if (!readOnly) {
-      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => setConfirmRegen(true) })
-      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setConfirmArchive(true) })
+      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => { setRegenOnWatch(0); setRegenOuverte(true) } })
+      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setArchiveOuverte(true) })
     }
     actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
     actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings', { direction: 'forward' }) })
@@ -199,59 +233,71 @@ const PlanDashboard = () => {
   // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
   // Même borne que regenerate-plan : semaines à partir de la courante incluse.
   useEffect(() => {
-    if (!confirmRegen || !plan?.weeks?.length) return
+    if (!regenOuverte || !plan?.weeks?.length) return
     let cancelled = false
     countUpcomingOnWatch(planId, currentWeekNumber(plan.weeks))
       .then((n) => { if (!cancelled) setRegenOnWatch(n) })
       .catch((e) => console.error('[PlanDashboard]', e.message))
     return () => { cancelled = true }
-  }, [confirmRegen, planId, plan])
+  }, [regenOuverte, planId, plan])
 
   // ── Handlers séance ───────────────────────────────────────────────────────────
-  const handleSkip = async (session) => {
-    setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: 'skipped' } : s))
-    try {
-      await skipSession(session.id)
-    } catch (e) {
-      setSessions((prev) => prev.map((s) => s.id === session.id ? { ...s, status: session.status } : s))
-      echec(e, 'La séance n\'a pas pu être sautée. Réessaie.')
-      return
-    }
-    setSkipDialog(session)
+  // Rien n'est écrit avant le choix dans la feuille « Sauter ».
+  const handleSkip = (session) => {
+    setSautCible(session)
+    setSautOuvert(true)
   }
 
-  const handleCancelSkip = async () => {
-    const s = skipDialog
-    setSkipDialog(null)
-    // Affichée tout de suite comme reprise ; remise à sautée si l'appel échoue.
-    setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: s.status } : x))
-    try {
-      const { corosError } = await unskipSession(s.id)
-      if (corosError) {
-        console.error('[PlanDashboard] restauration sur la montre :', corosError)
-        afficher('Séance restaurée, mais pas sur ta montre.')
+  const marquerSautee = (id) =>
+    setSessions((prev) => prev?.map((s) => (s.id === id ? { ...s, status: 'skipped' } : s)) ?? prev)
+
+  // Rechargement à jour même depuis une adaptation lancée avant le chargement du plan.
+  const reloadSessionsRef = useRef(reloadSessions)
+  useEffect(() => { reloadSessionsRef.current = reloadSessions })
+
+  // Adaptation après un saut ; sauterAvant : le saut n'est pas encore écrit (dashboard).
+  // La séance reste sautée si l'adaptation échoue.
+  const adapter = ({ sessionId, titre }, sauterAvant = false) => {
+    setAdaptTitre(titre)
+    return adaptation.lancer(async () => {
+      if (sauterAvant) {
+        try {
+          await skipSession(sessionId)
+        } catch (e) {
+          if (e && typeof e === 'object') e.etape = 'saut'
+          throw e
+        }
+        marquerSautee(sessionId)
       }
-    } catch (e) {
-      setSessions((prev) => prev.map((x) => x.id === s.id ? { ...x, status: 'skipped' } : x))
-      echec(e, 'La séance n\'a pas pu être reprise. Réessaie.')
-    }
+      const { sessions: adapted } = await adaptSessions(sessionId)
+      try {
+        await reloadSessionsRef.current()
+      } catch (e) {
+        console.error('[PlanDashboard] rechargement après adaptation :', e)
+      }
+      return adapted?.length ?? 0
+    })
   }
 
-  const handleAdapt = async () => {
-    const s = skipDialog
-    setAdapting(true)
-    try {
-      const { sessions: adapted } = await adaptSessions(s.id)
-      await reloadSessions()
-      const n = adapted?.length ?? 0
-      afficher(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
-    } catch (e) {
-      echec(e, 'L\'adaptation n\'a pas abouti. Réessaie.')
-    } finally {
-      setAdapting(false)
-      setSkipDialog(null)
-    }
+  const sauterSansAdapter = async (session) => {
+    const { ok } = await saut.lancer(() => skipSession(session.id))
+    if (ok) marquerSautee(session.id)
   }
+
+  // Arrivée depuis la page séance après « Sauter et adapter » : l'adaptation part une
+  // seule fois (garde contre le double effet de StrictMode), puis le state est retiré
+  // pour qu'un retour ne la relance pas. Lancée en chaîne de promesses (lint).
+  const adaptationLancee = useRef(false)
+  const demandeAdaptation = location.state?.adapter
+  const lancerAdaptationDemandee = useEffectEvent((demande) => {
+    navigateSansTransition(location.pathname, { replace: true, state: null })
+    Promise.resolve().then(() => adapter(demande))
+  })
+  useEffect(() => {
+    if (!demandeAdaptation || adaptationLancee.current) return
+    adaptationLancee.current = true
+    lancerAdaptationDemandee(demandeAdaptation)
+  }, [demandeAdaptation])
 
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
@@ -268,12 +314,7 @@ const PlanDashboard = () => {
   }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
-  const closeRegen = () => {
-    setConfirmRegen(false)
-    setRegenOnWatch(0)
-  }
   const doRegen = async () => {
-    closeRegen()
     setRegenBusy(true)
     try {
       await regeneratePlan(planId)
@@ -286,13 +327,12 @@ const PlanDashboard = () => {
 
 
   const doArchive = async () => {
-    setConfirmArchive(false)
-    try { await archivePlan(planId); navigate('/training') } catch (e) { echec(e, 'Le plan n\'a pas pu être archivé. Réessaie.') }
+    const { ok } = await archivage.lancer(() => archivePlan(planId))
+    if (ok) navigate('/training')
   }
 
   const doRetry = async () => {
-    setRetrying(true)
-    try {
+    const { ok, valeur } = await relance.lancer(async () => {
       const payload = {
         race: {
           name: plan.race_name,
@@ -307,11 +347,9 @@ const PlanDashboard = () => {
       }
       await deletePlan(planId)
       const { plan_id } = await generatePlan(payload)
-      navigate(`/training/plan/${plan_id}`, { replace: true })
-    } catch (e) {
-      setRetrying(false)
-      echec(e, 'La génération n\'a pas pu redémarrer. Réessaie.')
-    }
+      return plan_id
+    })
+    if (ok) navigate(`/training/plan/${valeur}`, { replace: true })
   }
 
   const doDeleteErrored = async () => {
@@ -319,10 +357,10 @@ const PlanDashboard = () => {
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────────
-  if (loading) {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -344,15 +382,22 @@ const PlanDashboard = () => {
         alignItems: 'center', justifyContent: 'center',
         pt: `${HEADER_HEIGHT}px`, px: 3, gap: 3, textAlign: 'center',
       }}>
-        <CircularProgress size={40} thickness={3} />
-        <Box>
-          <Typography variant="body1" fontWeight={600} gutterBottom>
-            {isRegen ? 'Régénération du plan en cours…' : 'Génération de ton plan en cours…'}
+        {/* Attente sans fin tant que ça génère ; la vraie barre par semaines viendra en T3. */}
+        <BarreAttente
+          place="page"
+          phrase={isRegen ? 'Régénération de ton plan' : 'Génération de ton plan'}
+          duree={DUREES.generationPlan}
+          visible
+          sx={{ height: 'auto' }}
+        />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Typography variant="corps-fort">
+            {isRegen ? 'Régénération de ton plan' : 'Génération de ton plan'}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 320 }}>
+          <Typography variant="secondaire" sx={{ color: 'muted', maxWidth: 320 }}>
             {isRegen
-              ? 'Les séances restantes sont recalibrées selon ta situation actuelle. Tu peux fermer et revenir, ça continue en arrière-plan.'
-              : 'Ton plan est construit à partir de tes données Coros. Tu peux fermer et revenir, ça continue en arrière-plan.'}
+              ? 'Tu peux fermer l\'app, la régénération continue.'
+              : 'Tu peux fermer l\'app, la génération continue.'}
           </Typography>
         </Box>
       </Box>
@@ -373,13 +418,17 @@ const PlanDashboard = () => {
               ? 'La génération dépasse le délai attendu (plus de 6 minutes). Réessaie ou supprime ce plan.'
               : (plan.generation_error ?? 'Une erreur est survenue lors de la génération du plan.')}
           </Alert>
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
-            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={retrying}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Button fullWidth color="inherit" startIcon={<DeleteOutlined />} onClick={doDeleteErrored} disabled={relance.barre.visible}>
               Supprimer
             </Button>
-            <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry} disabled={retrying}>
-              {retrying ? <CircularProgress size={18} color="inherit" /> : 'Réessayer'}
-            </Button>
+            {relance.barre.visible
+              ? <BarreAttente place="barre" {...relance.barre} sx={{ flex: 1, minWidth: 0 }} />
+              : (
+                <Button fullWidth variant="contained" startIcon={<Autorenew />} onClick={doRetry}>
+                  Réessayer
+                </Button>
+              )}
           </Box>
         </Box>
       </Box>
@@ -416,6 +465,12 @@ const PlanDashboard = () => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+
+        {/* Cartes d'attente */}
+        <BarreAttente place="carte" {...adaptation.barre} sx={CARTE_ATTENTE_SX}
+          detail={`${adaptTitre} est sautée. Les séances des 10 prochains jours sont recalculées.`} />
+        <BarreAttente place="carte" {...saut.barre} sx={CARTE_ATTENTE_SX} />
+        <BarreAttente place="carte" {...archivage.barre} sx={CARTE_ATTENTE_SX} />
 
         {/* En-tête plan */}
         <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
@@ -526,12 +581,12 @@ const PlanDashboard = () => {
               {formatWeekRange(effWeekObj, nextWeekObj)}
             </Typography>
           )}
-          {sessions === null && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 5 }}>
-              <CircularProgress size={22} />
+          {attenteSeances.visible && (
+            <Box sx={{ py: 5 }}>
+              <BarreAttente place="section" duree={DUREES.chargementPage} {...attenteSeances} />
             </Box>
           )}
-          {sessions !== null && (
+          {!attenteSeances.visible && sessions !== null && (
             <Box sx={{
               opacity: sessionsLoading ? 0.45 : 1,
               pointerEvents: sessionsLoading ? 'none' : 'auto',
@@ -563,37 +618,21 @@ const PlanDashboard = () => {
         )}
       </Box>
 
-      {/* Dialog adaptation */}
-      <Dialog
-        open={Boolean(skipDialog)}
-        onClose={() => { if (!adapting) handleCancelSkip() }}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {adapting
-              ? 'Adaptation en cours… tu peux patienter ici.'
-              : `« ${cleanText(skipDialog?.title)} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
-            {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SkipSheet
+        session={sautCible}
+        ouverte={sautOuvert}
+        onFermer={() => setSautOuvert(false)}
+        onAdapter={() => adapter({ sessionId: sautCible.id, titre: cleanText(sautCible.title) }, true)}
+        onSansAdapter={() => sauterSansAdapter(sautCible)}
+      />
 
-      {/* Dialog régénération */}
-      <ConfirmDialog
-        open={confirmRegen}
-        onClose={closeRegen}
-        onConfirm={doRegen}
-        title="Régénérer les semaines restantes ?"
-        text={'Les séances à venir (semaine courante incluse) seront reconstruites selon ton historique récent. Les séances passées sont conservées.'
+      <FeuilleFlottante
+        ouverte={regenOuverte}
+        onFermer={() => setRegenOuverte(false)}
+        titre={'Les semaines à venir seront reconstruites selon ton historique récent, semaine en cours comprise. Les séances passées sont gardées.'
           + (regenOnWatch > 0 ? ` ${onWatchWarning(regenOnWatch)}` : '')}
-        confirmLabel="Régénérer"
+        lignes={[{ libelle: 'Régénérer les semaines restantes', onClick: doRegen }]}
+        fermerLibelle="Annuler"
       />
 
       {/* Popup d'envoi vers la montre (swipe) */}
@@ -604,14 +643,12 @@ const PlanDashboard = () => {
         onDone={onPushed}
       />
 
-      {/* Dialog archivage */}
-      <ConfirmDialog
-        open={confirmArchive}
-        onClose={() => setConfirmArchive(false)}
-        onConfirm={doArchive}
-        title="Archiver ce plan ?"
-        text="Le plan passera en lecture seule et ne sera plus modifiable. Tu pourras toujours le consulter dans tes anciens plans."
-        confirmLabel="Archiver"
+      <FeuilleFlottante
+        ouverte={archiveOuverte}
+        onFermer={() => setArchiveOuverte(false)}
+        titre={`${plan.race_name} passera en lecture seule et rejoindra tes anciens plans. Tu pourras créer un nouveau plan.`}
+        lignes={[{ libelle: 'Archiver le plan', onClick: doArchive }]}
+        fermerLibelle="Annuler"
       />
     </Box>
   )
@@ -678,23 +715,6 @@ const SectionLabel = ({ children }) => (
   >
     {children}
   </Typography>
-)
-
-const ConfirmDialog = ({ open, onClose, onConfirm, title, text, confirmLabel }) => (
-  <Dialog
-    open={open}
-    onClose={onClose}
-    slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-  >
-    <DialogTitle sx={{ fontWeight: 700 }}>{title}</DialogTitle>
-    <DialogContent>
-      <DialogContentText>{text}</DialogContentText>
-    </DialogContent>
-    <DialogActions sx={{ px: 3, pb: 2 }}>
-      <Button onClick={onClose} color="inherit">Annuler</Button>
-      <Button onClick={onConfirm} variant="contained">{confirmLabel}</Button>
-    </DialogActions>
-  </Dialog>
 )
 
 export default PlanDashboard

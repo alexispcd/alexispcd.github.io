@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
 import {
-  Typography, Button, CircularProgress, Alert, Link,
+  Box, Typography, Button, Alert, Link,
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, TextField,
 } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import { pushToCoros, getCorosStatus } from '../../../lib/training'
 import { setTransitionDirection } from '../../../lib/viewTransition'
 import { texteErreur } from '../../../lib/reseau'
@@ -59,6 +62,9 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
     return () => { cancelled = true }
   }, [open])
 
+  const attenteEtat = useFinAttente(Boolean(open) && connected === null)
+  const attenteEnvoi = useFinAttente(pushing)
+
   const maxDate = addDaysISO(today, COROS_PUSH_WINDOW_DAYS)
   const alreadyOnWatch = Boolean(session?.coros_workout_id)
   const dateValid = Boolean(date) && date >= today && date <= maxDate
@@ -90,6 +96,11 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
         <DialogContentText sx={{ mb: 2 }}>
           {session ? `« ${cleanText(session.title)} » sera ajoutée à ton calendrier Coros, puis synchronisée sur la montre.` : ''}
         </DialogContentText>
+        {attenteEtat.visible && (
+          <Box sx={{ mb: 2 }}>
+            <BarreAttente place="section" duree={DUREES.sources} {...attenteEtat} />
+          </Box>
+        )}
         {alreadyOnWatch && (
           <Alert severity="warning" sx={{ mb: 2 }}>
             L'ancienne copie restera sur ta montre : supprime-la dans l'app Coros.
@@ -118,16 +129,29 @@ const CorosPushDialog = ({ open, session, onClose, onDone }) => {
           Entre aujourd'hui et dans 90 jours.
         </Typography>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={pushing} color="inherit">Annuler</Button>
-        <Button
-          onClick={confirm}
-          disabled={pushing || !dateValid || connected !== true}
-          variant="contained"
-        >
-          {pushing || connected === null ? <CircularProgress size={18} color="inherit" /> : 'Envoyer'}
-        </Button>
-      </DialogActions>
+      {attenteEnvoi.visible
+        ? (
+          <Box sx={{ px: 3, pb: 2 }}>
+            <BarreAttente
+              place="barre"
+              phrase="Envoi sur ta montre"
+              duree={DUREES.envoiMontre}
+              {...attenteEnvoi}
+            />
+          </Box>
+        )
+        : (
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={onClose} color="inherit">Annuler</Button>
+            <Button
+              onClick={confirm}
+              disabled={!dateValid || connected !== true}
+              variant="contained"
+            >
+              Envoyer
+            </Button>
+          </DialogActions>
+        )}
     </Dialog>
   )
 }

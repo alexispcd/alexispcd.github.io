@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
+  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
   InputAdornment, TextField, Typography,
 } from '@mui/material'
 import Check from '@mui/icons-material/Check'
@@ -8,6 +8,9 @@ import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
 import { BAND_PALETTE, formatKg, isHexColor, textOnColor } from '../bandColor'
 import BandChip from '../BandChip'
 import { texteErreur } from '../../../lib/reseau'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 
 const parseKg = (raw) => {
   const n = Number(String(raw).replace(',', '.').trim())
@@ -23,6 +26,7 @@ const BandDialog = ({ open, band, bands, onClose, onSave }) => {
   const [color, setColor] = useState(BAND_PALETTE[0].hex)
   const [hexInput, setHexInput] = useState(BAND_PALETTE[0].hex)
   const [saving, setSaving] = useState(false)
+  const attente = useFinAttente(saving)
   const [error, setError] = useState(null)
   const [openedFor, setOpenedFor] = useState(null)
 
@@ -135,12 +139,25 @@ const BandDialog = ({ open, band, bands, onClose, onSave }) => {
 
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={saving} color="inherit">Annuler</Button>
-        <Button onClick={save} disabled={!valid || saving} variant="contained">
-          {saving ? <CircularProgress size={18} color="inherit" /> : 'Enregistrer'}
-        </Button>
-      </DialogActions>
+      {attente.visible
+        ? (
+          <Box sx={{ px: 3, pb: 2 }}>
+            <BarreAttente
+              place="barre"
+              phrase="Enregistrement de tes réglages"
+              duree={DUREES.enregistrement}
+              {...attente}
+            />
+          </Box>
+        )
+        : (
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={onClose} color="inherit">Annuler</Button>
+            <Button onClick={save} disabled={!valid} variant="contained">
+              Enregistrer
+            </Button>
+          </DialogActions>
+        )}
     </Dialog>
   )
 }

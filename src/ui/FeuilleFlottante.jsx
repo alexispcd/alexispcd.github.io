@@ -30,8 +30,11 @@ const ligne = {
  * Feuille d'actions ou de choix posée en bas de l'écran, sur la page voilée.
  * - ouverte, onFermer : toucher le voile ou le second bloc appelle onFermer.
  * - titre : en muted, 13 px, centré ; pour une confirmation, la phrase qui explique.
- * - lignes : [{ libelle, onClick, disabled }] ; toucher une ligne appelle onFermer
- *   puis onClick tout de suite, sans attendre la fin de l'animation.
+ * - lignes : [{ libelle, onClick, disabled, sansFermer }] ; toucher une ligne appelle
+ *   onFermer puis onClick tout de suite, sans attendre la fin de l'animation. Avec
+ *   sansFermer, seulement onClick : c'est lui qui ferme la feuille (player Renfo).
+ * Une action réseau lancée par une ligne passe par useAction : la feuille se ferme
+ * et la BarreAttente place="carte" se montre en tête de la page.
  * - fermerLibelle : « Fermer » par défaut, « Annuler » ou « Rester » pour une confirmation.
  * - children : contenu libre en haut du premier bloc (usages fiche et réglage).
  * Le premier bloc défile s'il dépasse l'écran, le second reste visible. Aucune
@@ -48,7 +51,7 @@ const FeuilleFlottante = ({
   const reduire = useReduireAnimations()
   const durees = reduire ? 0 : { enter: DURATION.open, exit: DURATION.close }
 
-  // Banc d'essai de la barre d'état (src/lib/barreEtat.js, lot S3a) : tout est ici.
+  // Bande de la barre d'état (src/lib/barreEtat.js) : posée à l'ouverture, retirée à la fermeture.
   useEffect(() => {
     if (!ouverte) return undefined
     ouvrirFeuille()
@@ -56,7 +59,7 @@ const FeuilleFlottante = ({
   }, [ouverte])
 
   const toucher = (l) => {
-    onFermer?.()
+    if (!l.sansFermer) onFermer?.()
     l.onClick?.()
   }
 
@@ -80,7 +83,7 @@ const FeuilleFlottante = ({
             right: space[12],
             bottom: SPACE_BAS,
             // S'arrête à 60 px du haut de la page, sous la bande de la barre d'état
-            // (src/lib/barreEtat.js, 44 px au plus).
+            // (src/lib/barreEtat.js, 8 px).
             maxHeight: `calc(100% - ${SPACE_BAS} - env(safe-area-inset-top, 0px) - ${size.cible} - ${space[16]})`,
             display: 'flex',
             flexDirection: 'column',

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
-import { Box, Button, Card, CircularProgress, Divider, LinearProgress, Typography } from '@mui/material'
+import { Box, Button, Card, Divider, LinearProgress, Typography } from '@mui/material'
 import Autorenew from '@mui/icons-material/Autorenew'
 import WarningAmber from '@mui/icons-material/WarningAmber'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
@@ -10,6 +10,9 @@ import { cards } from './data'
 import { buildSession, grade } from './leitner'
 import FlashCard from './FlashCard'
 import useProgress from './useProgress'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 
 const PAGE_SX = { height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }
 const INNER_SX = {
@@ -42,6 +45,8 @@ const ReviewSession = () => {
     () => (snapshot && filters ? buildSession(cards, snapshot, { filters }).queue : null),
     [snapshot, filters],
   )
+
+  const attente = useFinAttente(loading || (queue === null && !error))
 
   const list = phase === 'second' ? reinforce : (queue ?? [])
   const current = list[index] ?? null
@@ -93,12 +98,10 @@ const ReviewSession = () => {
   // Rechargement de page : aucun state de navigation, donc aucun filtre.
   if (!filters) return <Navigate to="/revisions" replace />
 
-  if (loading || (queue === null && !error)) {
+  if (attente.visible) {
     return (
-      <Box sx={PAGE_SX}>
-        <Box sx={{ ...INNER_SX, alignItems: 'center', justifyContent: 'center' }}>
-          <CircularProgress size={24} />
-        </Box>
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }

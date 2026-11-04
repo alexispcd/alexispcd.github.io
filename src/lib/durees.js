@@ -15,4 +15,9 @@ export const DUREES = {
   adaptation: 4000, // adaptation des séances après « Sauter et adapter »
   enregistrement: 600, // enregistrement de réglages
   envoiCode: 1200, // envoi du code de connexion
+  generationPlan: 120000, // génération ou régénération d'un plan (sans fin tant que ça génère)
+  actionCourte: 1200, // action courte : écriture directe, appel rapide
+  connexion: 1000, // vérification du code de connexion
+  rechercheCotes: 4000, // recherche de côtes (Overpass puis altitudes)
+  resumeArticle: 4000, // fiche d'un article de la Veille (summarize-article)
 }

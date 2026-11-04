@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import {
-  Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Typography,
+  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography,
 } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import { generationErrorMessage } from '../errors'
 import { FREE_KINDS, KIND_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
 
@@ -15,6 +18,7 @@ const FreeSessionDialog = ({ open, onClose, onCreate }) => {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
   const [wasOpen, setWasOpen] = useState(false)
+  const attente = useFinAttente(pending)
 
   if (open !== wasOpen) {
     setWasOpen(open)
@@ -45,13 +49,15 @@ const FreeSessionDialog = ({ open, onClose, onCreate }) => {
     >
       <DialogTitle sx={{ fontWeight: 700 }}>Séance libre</DialogTitle>
       <DialogContent>
-        {pending ? (
-          <Box sx={{ py: 3, textAlign: 'center' }}>
-            <CircularProgress size={32} />
-            <Typography variant="body2" fontWeight={600} sx={{ mt: 2 }}>Préparation de ta séance</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Cela peut prendre jusqu'à 30 secondes, reste sur cet écran.
-            </Typography>
+        {attente.visible ? (
+          <Box sx={{ py: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Box>
+              <Typography variant="corps-fort" sx={{ display: 'block' }}>Préparation de ta séance</Typography>
+              <Typography variant="secondaire" sx={{ color: 'muted' }}>
+                Jusqu'à 30 secondes, reste sur cet écran.
+              </Typography>
+            </Box>
+            <BarreAttente place="section" duree={DUREES.preparationRenfo} {...attente} />
           </Box>
         ) : (
           <>
@@ -81,8 +87,8 @@ const FreeSessionDialog = ({ open, onClose, onCreate }) => {
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={pending} color="inherit">Annuler</Button>
-        <Button onClick={create} disabled={pending} variant="contained">Créer la séance</Button>
+        <Button onClick={onClose} disabled={attente.visible} color="inherit">Annuler</Button>
+        <Button onClick={create} disabled={attente.visible} variant="contained">Créer la séance</Button>
       </DialogActions>
     </Dialog>
   )

@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  FormControlLabel, Checkbox, Box, Typography, CircularProgress,
+  FormControlLabel, Checkbox, Box, Typography,
 } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../styles/glass'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import { assignableModules } from '../registry'
 
 const DEFAULT_MODULES = ['training', 'cotes']
@@ -13,6 +16,7 @@ const AddUserDialog = ({ open, busy, erreur, onClose, onCreate }) => {
   const [email, setEmail] = useState('')
   const [modules, setModules] = useState(DEFAULT_MODULES)
   const valid = EMAIL_RE.test(email.trim())
+  const attente = useFinAttente(Boolean(busy))
 
   const reset = () => {
     setEmail('')
@@ -78,12 +82,25 @@ const AddUserDialog = ({ open, busy, erreur, onClose, onCreate }) => {
           )}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} color="inherit" disabled={busy}>Annuler</Button>
-        <Button onClick={submit} variant="contained" disabled={!valid || busy} sx={{ textTransform: 'none' }}>
-          {busy ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Créer le compte'}
-        </Button>
-      </DialogActions>
+      {attente.visible
+        ? (
+          <Box sx={{ px: 3, pb: 2.5 }}>
+            <BarreAttente
+              place="barre"
+              phrase="Création du compte"
+              duree={DUREES.administration}
+              {...attente}
+            />
+          </Box>
+        )
+        : (
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={onClose} color="inherit">Annuler</Button>
+            <Button onClick={submit} variant="contained" disabled={!valid} sx={{ textTransform: 'none' }}>
+              Créer le compte
+            </Button>
+          </DialogActions>
+        )}
     </Dialog>
   )
 }

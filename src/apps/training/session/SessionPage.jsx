@@ -3,11 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
 import { useMessage, useBarreBasMessage } from '../../../ui/useMessage'
-import {
-  Box, Typography, Button, CircularProgress, Alert,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-  Menu, MenuItem,
-} from '@mui/material'
+import { Box, Typography, Button, Alert, Menu, MenuItem } from '@mui/material'
 import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
 import Bolt from '@mui/icons-material/BoltOutlined'
 import DirectionsRun from '@mui/icons-material/DirectionsRunOutlined'
@@ -21,9 +17,14 @@ import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
 import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
 import Watch from '@mui/icons-material/WatchOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { glassSx, cardSx, GLASS_BACKDROP } from '../../../styles/glass'
+import { glassSx, cardSx } from '../../../styles/glass'
+import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import BarreAttente from '../../../ui/BarreAttente'
+import { useAction } from '../../../ui/useAction'
+import { useFinAttente } from '../../../ui/useFinAttente'
+import { DUREES } from '../../../lib/durees'
 import {
-  getSession, skipSession, unskipSession, adaptSessions,
+  getSession, skipSession, unskipSession,
   completeSession, resetSession, updateOnCoros,
 } from '../../../lib/training'
 import {
@@ -37,6 +38,7 @@ import {
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
 import CorosPushDialog from './CorosPushDialog'
+import SkipSheet from './SkipSheet'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
 // Le statut ne porte pas de couleur : chips neutres, la sautée en muted.
@@ -55,6 +57,9 @@ const STEP_ICON = {
   cooldown: Bedtime,
 }
 
+// Carte d'attente en tête de page : l'écart du haut s'ouvre et se replie avec elle.
+const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pt: 1.5 } }
+
 // Icônes de verdict (labels + couleurs partagés via constants).
 const VERDICT_ICON = {
   reussie: CheckCircle,
@@ -69,20 +74,49 @@ const SessionPage = () => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
-  const [busy, setBusy] = useState(false) // action en cours (reset, délier…)
-  const locked = busy
   const { afficher } = useMessage()
+  const attente = useFinAttente(loading)
 
   const [completeOpen, setCompleteOpen] = useState(false)
-  const [skipOpen, setSkipOpen] = useState(false)
-  const [adapting, setAdapting] = useState(false)
-  const [confirmReset, setConfirmReset] = useState(false)
+  const [sautOuvert, setSautOuvert] = useState(false)
+  const [reinitOuverte, setReinitOuverte] = useState(false)
   const [pushOpen, setPushOpen] = useState(false)
   const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
 
   const echec = (e, phrase) => afficher(texteErreur(e, phrase))
   const RECHARGEMENT = 'Les données n\'ont pas pu être rechargées. Réessaie.'
-  const backToDashboard = () => navigate(`/training/plan/${planId}`)
+
+  // Actions réseau : chacune a sa carte d'attente en tête de page.
+  const saut = useAction({
+    attente: 'Saut de la séance', duree: DUREES.actionCourte,
+    echec: 'La séance n\'a pas pu être sautée. Réessaie.',
+  })
+  const reinit = useAction({
+    attente: 'Réinitialisation de la séance', duree: DUREES.actionCourte,
+    echec: 'La séance n\'a pas pu être réinitialisée. Réessaie.',
+  })
+  const delier = useAction({
+    attente: 'Réinitialisation de la séance', duree: DUREES.validation,
+    echec: 'La séance n\'a pas pu être déliée. Réessaie.',
+  })
+  // Phrase figée au lancement : le statut change à la réponse, pendant le repli de la carte.
+  const [restaurerPhrase, setRestaurerPhrase] = useState('')
+  const restaurer = useAction({
+    attente: restaurerPhrase, duree: DUREES.envoiMontre,
+    echec: 'La séance n\'a pas pu être restaurée. Réessaie.',
+  })
+  const montre = useAction({
+    attente: 'Mise à jour de ta montre', duree: DUREES.envoiMontre,
+    succes: (res) => {
+      if (res.status === 'updated') return 'Montre mise à jour'
+      if (res.status === 'past') return 'La séance sur la montre est déjà passée.'
+      console.error('[training séance] mise à jour de la montre :', res.error)
+      return 'La mise à jour de ta montre n\'a pas abouti. Réessaie.'
+    },
+    echec: 'La mise à jour de ta montre n\'a pas abouti. Réessaie.',
+  })
+  const actions = [saut, reinit, delier, restaurer, montre]
+  const locked = actions.some((a) => a.enCours)
 
   // Barre d'actions fixe : le Message se pose au-dessus d'elle.
   const barreRef = useRef(null)
@@ -115,62 +149,42 @@ const SessionPage = () => {
   }, [sessionId])
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  const doSkip = async () => {
-    try {
-      await skipSession(sessionId)
-      setSkipOpen(true)
-    } catch (e) { echec(e, 'La séance n\'a pas pu être sautée. Réessaie.') }
-  }
-
-  const handleAdapt = async () => {
-    setAdapting(true)
-    try {
-      const { sessions: adapted } = await adaptSessions(sessionId)
-      const n = adapted?.length ?? 0
-      afficher(n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
-    } catch (e) {
-      echec(e, 'L\'adaptation n\'a pas abouti. Réessaie.')
-    } finally {
-      setAdapting(false)
-      setSkipOpen(false)
-      backToDashboard()
+  // Rien n'est écrit avant le choix dans la feuille. « Sauter et adapter » : le
+  // dashboard lance l'adaptation (location.state.adapter) et montre sa carte.
+  const sauter = async (adapter) => {
+    const { ok } = await saut.lancer(() => skipSession(sessionId))
+    if (!ok) return
+    if (adapter) {
+      navigate(`/training/plan/${planId}`, {
+        state: { adapter: { sessionId, titre: cleanText(session.title) } },
+      })
+      return
     }
+    setSession((s) => ({ ...s, status: 'skipped' }))
   }
 
-  const handleCancelSkip = async () => {
-    setSkipOpen(false)
-    try { await unskipSession(sessionId) } catch (e) { echec(e, 'La séance n\'a pas pu être reprise. Réessaie.') }
-    backToDashboard()
-  }
+  const doReset = () => reinit.lancer(async () => {
+    await resetSession(sessionId)
+    await reload()
+  })
 
-  const doReset = async () => {
-    setConfirmReset(false)
-    setBusy(true)
-    try {
-      await resetSession(sessionId)
-      await reload()
-    } catch (e) { echec(e, 'La séance n\'a pas pu être réinitialisée. Réessaie.') } finally { setBusy(false) }
-  }
+  // « Délier Coros » garde le ressenti, jusqu'à son retrait en T2.
+  const doDelink = () => delier.lancer(async () => {
+    await resetSession(sessionId, { garderRessenti: true })
+    await completeSession(sessionId)
+    await reload()
+  })
 
-  const doDelink = async () => {
-    setBusy(true)
-    try {
-      await resetSession(sessionId)
-      await completeSession(sessionId)
-      await reload()
-    } catch (e) { echec(e, 'La séance n\'a pas pu être déliée. Réessaie.') } finally { setBusy(false) }
-  }
-
-  const doRestore = async () => {
-    setBusy(true)
-    try {
+  const doRestore = () => {
+    setRestaurerPhrase(session.status === 'skipped' ? 'Reprise de la séance' : 'Restauration de la séance')
+    restaurer.lancer(async () => {
       const { corosError } = await unskipSession(sessionId)
       await reload()
       if (corosError) {
         console.error('[training séance] restauration sur la montre :', corosError)
         afficher('Séance restaurée, mais pas sur ta montre.')
       }
-    } catch (e) { echec(e, 'La séance n\'a pas pu être restaurée. Réessaie.') } finally { setBusy(false) }
+    })
   }
 
   const onPushed = (res) => {
@@ -182,26 +196,20 @@ const SessionPage = () => {
   }
 
   // Remplace le contenu de la copie Coros par la version actuelle de la séance.
-  const doUpdateCoros = async () => {
+  const doUpdateCoros = () => {
     setWatchAnchor(null)
-    setBusy(true)
-    try {
+    montre.lancer(async () => {
       const res = await updateOnCoros(sessionId)
-      if (res.status === 'updated') afficher('Montre mise à jour')
-      else if (res.status === 'past') afficher('La séance sur la montre est déjà passée.')
-      else {
-        console.error('[training séance] mise à jour de la montre :', res.error)
-        afficher('La mise à jour de ta montre n\'a pas abouti. Réessaie.')
-      }
-      await reload()
-    } catch (e) { echec(e, 'La mise à jour de ta montre n\'a pas abouti. Réessaie.') } finally { setBusy(false) }
+      await reload().catch((e) => echec(e, RECHARGEMENT))
+      return res
+    })
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────
-  if (loading) {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -242,6 +250,11 @@ const SessionPage = () => {
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px` }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? '90px' : 6 }}>
+
+        {/* ── Cartes d'attente ────────────────────────────────────── */}
+        {actions.map((a, i) => (
+          <BarreAttente key={i} place="carte" {...a.barre} sx={CARTE_ATTENTE_SX} />
+        ))}
 
         {/* ── En-tête ─────────────────────────────────────────────── */}
         <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
@@ -401,7 +414,7 @@ const SessionPage = () => {
               <>
                 <Button
                   variant="outlined"
-                  onClick={doSkip}
+                  onClick={() => setSautOuvert(true)}
                   disabled={locked}
                   sx={{
                     flexShrink: 0, px: 2.5, height: 48, borderRadius: '24px',
@@ -418,9 +431,7 @@ const SessionPage = () => {
                   disabled={locked}
                   sx={{ height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600, boxShadow: 'none' }}
                 >
-                  {busy
-                    ? <CircularProgress size={18} color="inherit" />
-                    : 'Valider & lier Coros'}
+                  Valider & lier Coros
                 </Button>
               </>
             )}
@@ -429,14 +440,14 @@ const SessionPage = () => {
                 <Button
                   fullWidth
                   variant="outlined"
-                  onClick={() => setConfirmReset(true)}
+                  onClick={() => setReinitOuverte(true)}
                   disabled={locked}
                   sx={{
                     height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
                     boxShadow: 'none', borderColor: 'divider', color: 'text.secondary',
                   }}
                 >
-                  {busy ? <CircularProgress size={18} color="inherit" /> : 'Réinitialiser'}
+                  Réinitialiser
                 </Button>
                 {session.coros_activity_id && (
                   <Button
@@ -474,43 +485,21 @@ const SessionPage = () => {
         onDone={onPushed}
       />
 
-      <Dialog
-        open={skipOpen}
-        onClose={() => { if (!adapting) handleCancelSkip() }}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Adapter les séances suivantes ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {adapting
-              ? 'Adaptation en cours… tu peux patienter ici.'
-              : `« ${cleanText(session.title)} » est marquée comme sautée. Veux-tu recalibrer les prochaines séances en conséquence ?`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelSkip} disabled={adapting} color="inherit">Annuler</Button>
-          <Button onClick={handleAdapt} disabled={adapting} variant="contained">
-            {adapting ? <CircularProgress size={18} color="inherit" /> : 'Adapter'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SkipSheet
+        session={session}
+        ouverte={sautOuvert}
+        onFermer={() => setSautOuvert(false)}
+        onAdapter={() => sauter(true)}
+        onSansAdapter={() => sauter(false)}
+      />
 
-      <Dialog
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Réinitialiser la séance ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            La séance repassera « à venir ». Les laps importés et l'analyse seront effacés.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmReset(false)} color="inherit">Annuler</Button>
-          <Button onClick={doReset} variant="contained">Réinitialiser</Button>
-        </DialogActions>
-      </Dialog>
+      <FeuilleFlottante
+        ouverte={reinitOuverte}
+        onFermer={() => setReinitOuverte(false)}
+        titre={`${cleanText(session.title)} repassera à faire. Les activités liées, l'analyse et ton ressenti seront effacés.`}
+        lignes={[{ libelle: 'Réinitialiser la séance', onClick: doReset }]}
+        fermerLibelle="Annuler"
+      />
 
     </Box>
   )

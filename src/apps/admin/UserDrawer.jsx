@@ -1,13 +1,26 @@
 import { useState } from 'react'
-import {
-  Drawer, Box, Typography, Switch, Button, Divider, Dialog, DialogTitle,
-  DialogContent, DialogActions, CircularProgress,
-} from '@mui/material'
+import { Drawer, Box, Typography, Switch, Button, Divider } from '@mui/material'
 import { glassSx, GLASS_BACKDROP } from '../../styles/glass'
+import FeuilleFlottante from '../../ui/FeuilleFlottante'
+import BarreAttente from '../../ui/BarreAttente'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import { assignableModules } from '../registry'
 
+// « Côtes et Training », « Côtes, Renfo et Training ».
+const listeFr = (noms) => (noms.length < 2 ? noms.join('') : `${noms.slice(0, -1).join(', ')} et ${noms.at(-1)}`)
+
+const titreSuppression = (account) => {
+  const noms = assignableModules().filter((m) => account.modules.includes(m.id)).map((m) => m.name)
+  const acces = noms.length ? `Il perd l'accès à ${listeFr(noms)}.` : 'Il n\'a aucun module.'
+  return `Supprimer ${account.email} ? ${acces} Ses données sont effacées. Cette action est définitive.`
+}
+
 const UserDrawer = ({ account, busy, onClose, onSetModules, onToggleDisabled, onDelete }) => {
+  // Titre figé à l'ouverture : la fiche peut se fermer pendant que la feuille se replie.
+  const [suppressionTitre, setSuppressionTitre] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const attente = useFinAttente(Boolean(busy))
   const isAdminAccount = account?.role === 'admin'
 
   const toggleModule = (moduleId, checked) => {
@@ -43,11 +56,13 @@ const UserDrawer = ({ account, busy, onClose, onSetModules, onToggleDisabled, on
       >
         {account && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Typography variant="body1" fontWeight={600} noWrap sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Typography variant="body1" fontWeight={600} noWrap sx={{ minWidth: 0 }}>
                 {account.email}
               </Typography>
-              {busy && <CircularProgress size={18} />}
+              {attente.visible && (
+                <BarreAttente place="section" duree={DUREES.administration} {...attente} />
+              )}
             </Box>
 
             <Box>
@@ -91,7 +106,7 @@ const UserDrawer = ({ account, busy, onClose, onSetModules, onToggleDisabled, on
                   variant="outlined"
                   color="error"
                   disabled={busy}
-                  onClick={() => setConfirmDelete(true)}
+                  onClick={() => { setSuppressionTitre(titreSuppression(account)); setConfirmDelete(true) }}
                   sx={{ flex: 1, textTransform: 'none' }}
                 >
                   Supprimer
@@ -102,31 +117,13 @@ const UserDrawer = ({ account, busy, onClose, onSetModules, onToggleDisabled, on
         )}
       </Drawer>
 
-      <Dialog
-        open={confirmDelete}
-        onClose={() => !busy && setConfirmDelete(false)}
-        fullWidth
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ pb: 1 }}>Supprimer ce compte ?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Le compte {account?.email} et toutes ses données (plans, séances, connexion Coros, préférences)
-            seront définitivement effacés.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setConfirmDelete(false)} color="inherit" disabled={busy}>Annuler</Button>
-          <Button
-            onClick={async () => { if (await onDelete()) closeAll() }}
-            color="error"
-            variant="contained"
-            disabled={busy}
-          >
-            Supprimer
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FeuilleFlottante
+        ouverte={confirmDelete}
+        onFermer={() => setConfirmDelete(false)}
+        titre={suppressionTitre}
+        lignes={[{ libelle: 'Supprimer le compte', onClick: onDelete }]}
+        fermerLibelle="Annuler"
+      />
     </>
   )
 }

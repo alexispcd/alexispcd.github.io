@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  Box, Typography, Button, Chip, CircularProgress, Alert,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
-} from '@mui/material'
+import { Box, Typography, Button, Chip, Alert } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { cardSx, glassSx, GLASS_BACKDROP } from '../../styles/glass'
+import { cardSx } from '../../styles/glass'
+import FeuilleFlottante from '../../ui/FeuilleFlottante'
+import BarreAttente from '../../ui/BarreAttente'
+import { useAction } from '../../ui/useAction'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import { getCorosStatus, startCorosOauth, disconnectCoros } from '../../lib/training'
 import { texteErreur } from '../../lib/reseau'
 
@@ -50,10 +52,14 @@ const SettingsPage = () => {
   const [notice, setNotice] = useState(() => noticeFromParam(searchParams.get('coros')))
   const [starting, setStarting] = useState(false)
 
-  // Deconnexion : confirmation, appel en cours, erreur affichee dans la modale.
-  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
-  const [disconnecting, setDisconnecting] = useState(false)
-  const [disconnectError, setDisconnectError] = useState(null)
+  const attenteConnexion = useFinAttente(starting)
+
+  // Deconnexion : confirmation en feuille, attente en carte, echec en Message.
+  const [deconnexionOuverte, setDeconnexionOuverte] = useState(false)
+  const deconnexion = useAction({
+    attente: 'Déconnexion de Coros', duree: DUREES.sources,
+    echec: 'La déconnexion de Coros n\'a pas abouti. Réessaie.',
+  })
 
   const refresh = useCallback(() => {
     getCorosStatus()
@@ -94,31 +100,22 @@ const SettingsPage = () => {
     }
   }
 
-  const openDisconnect = () => {
-    setDisconnectError(null)
-    setConfirmDisconnect(true)
-  }
-
   const handleDisconnect = async () => {
-    setDisconnecting(true)
-    setDisconnectError(null)
-    try {
-      const res = await disconnectCoros()
-      setConnected(Boolean(res?.connected))
-      setConfirmDisconnect(false)
-      setNotice({ severity: 'success', text: 'Compte Coros déconnecté.' })
-    } catch (e) {
-      setDisconnectError(texteErreur(e, 'La déconnexion de Coros n\'a pas abouti. Réessaie.'))
-    } finally {
-      setDisconnecting(false)
-    }
+    setNotice(null)
+    const { ok, valeur } = await deconnexion.lancer(() => disconnectCoros())
+    if (!ok) return
+    setConnected(Boolean(valeur?.connected))
+    setNotice({ severity: 'success', text: 'Compte Coros déconnecté.' })
   }
 
   const loading = connected === null
+  const attenteEtat = useFinAttente(loading)
 
   return (
     <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
       <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
+
+        <BarreAttente place="carte" {...deconnexion.barre} sx={{ '& .MuiCollapse-wrapperInner': { pt: 2 } }} />
 
         {notice && (
           <Alert severity={notice.severity} sx={{ mt: 2 }} onClose={() => setNotice(null)}>
@@ -131,8 +128,8 @@ const SettingsPage = () => {
         <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: CARD_INSET }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Typography variant="body1" fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>Coros</Typography>
-            {loading
-              ? <CircularProgress size={18} />
+            {attenteEtat.visible
+              ? <BarreAttente place="section" duree={DUREES.sources} {...attenteEtat} sx={{ width: '80px' }} />
               : (
                 <Chip
                   size="small"
@@ -152,25 +149,35 @@ const SettingsPage = () => {
             Import des activités et des laps
           </Typography>
 
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{ mt: 2 }}
-            disabled={loading || starting}
-            onClick={handleConnect}
-          >
-            {starting
-              ? <CircularProgress size={18} color="inherit" />
-              : connected ? 'Reconnecter Coros' : 'Connecter Coros'}
-          </Button>
+          {attenteConnexion.visible
+            ? (
+              <BarreAttente
+                place="barre"
+                phrase="Connexion à Coros"
+                duree={DUREES.sources}
+                {...attenteConnexion}
+                sx={{ mt: 2 }}
+              />
+            )
+            : (
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ mt: 2 }}
+                disabled={loading}
+                onClick={handleConnect}
+              >
+                {connected ? 'Reconnecter Coros' : 'Connecter Coros'}
+              </Button>
+            )}
 
           {connected && (
             <Button
               variant="text"
               fullWidth
               sx={{ mt: 1, color: DISCONNECTED_COLOR }}
-              disabled={starting}
-              onClick={openDisconnect}
+              disabled={starting || deconnexion.enCours}
+              onClick={() => setDeconnexionOuverte(true)}
             >
               Déconnecter
             </Button>
@@ -180,31 +187,13 @@ const SettingsPage = () => {
       </Box>
 
       {/* Confirmation de deconnexion */}
-      <Dialog
-        open={confirmDisconnect}
-        onClose={() => !disconnecting && setConfirmDisconnect(false)}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Déconnecter Coros</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Les activités ne seront plus importées. Tu pourras te reconnecter à tout moment.
-          </DialogContentText>
-          {disconnectError && <Alert severity="error" sx={{ mt: 2 }}>{disconnectError}</Alert>}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setConfirmDisconnect(false)} disabled={disconnecting} color="inherit">
-            Annuler
-          </Button>
-          <Button
-            onClick={handleDisconnect}
-            disabled={disconnecting}
-            variant="contained"
-          >
-            {disconnecting ? <CircularProgress size={18} color="inherit" /> : 'Déconnecter'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FeuilleFlottante
+        ouverte={deconnexionOuverte}
+        onFermer={() => setDeconnexionOuverte(false)}
+        titre="Sans Coros, plus de validation avec tes activités ni d'envoi sur ta montre. Les séances déjà envoyées y restent et ton compte Coros n'est pas modifié."
+        lignes={[{ libelle: 'Déconnecter Coros', onClick: handleDisconnect }]}
+        fermerLibelle="Annuler"
+      />
     </Box>
   )
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material'
+import { Alert, Box, Button, Typography } from '@mui/material'
 import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import Add from '@mui/icons-material/Add'
@@ -7,6 +7,10 @@ import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { cardSx } from '../../styles/glass'
 import { useAppCtx } from '../../lib/context'
 import { useMessage } from '../../ui/useMessage'
+import BarreAttente from '../../ui/BarreAttente'
+import BarreProgression from '../../ui/BarreProgression'
+import { useFinAttente } from '../../ui/useFinAttente'
+import { DUREES } from '../../lib/durees'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import {
   createFreeSession, getActiveCycle, getBands, getCycleSessions, getCycleStatus, getFreeSessions,
@@ -48,6 +52,8 @@ const RenfoHome = () => {
   const [starting, setStarting] = useState(false)
   const [freeOpen, setFreeOpen] = useState(false)
   const { afficher } = useMessage()
+  const attente = useFinAttente(state.status === 'loading')
+  const attenteLancement = useFinAttente(starting)
 
   const reload = useCallback(() => loadHome().then(
     (res) => setState({ status: 'ready', ...res }),
@@ -119,10 +125,10 @@ const RenfoHome = () => {
 
   const openSession = (s) => navigate(`/renfo/session/${s.id}`, { direction: 'forward' })
 
-  if (state.status === 'loading') {
+  if (attente.visible) {
     return (
-      <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pt: `${HEADER_HEIGHT}px` }}>
-        <CircularProgress size={28} />
+      <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
+        <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
@@ -140,6 +146,22 @@ const RenfoHome = () => {
   const today = todayISO()
   const thisWeek = mondayOf(today)
   const primaryBtn = { height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }
+  // Bouton de lancement du cycle, ou son attente à la même place et à la même hauteur.
+  const boutonLancement = (libelle, mt) => (attenteLancement.visible
+    ? (
+      <BarreAttente
+        place="barre"
+        phrase="Préparation du cycle"
+        duree={DUREES.actionCourte}
+        {...attenteLancement}
+        sx={{ mt, height: 48 }}
+      />
+    )
+    : (
+      <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt }} onClick={launch}>
+        {libelle}
+      </Button>
+    ))
 
   // ── Pas de profil ──
   if (!profile) {
@@ -181,16 +203,13 @@ const RenfoHome = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
               4 semaines progressives, construites avec ton matériel.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2.5 }} disabled={starting} onClick={launch}>
-              {starting ? <CircularProgress size={18} color="inherit" /> : 'Lancer mon premier cycle'}
-            </Button>
+            {boutonLancement('Lancer mon premier cycle', 2.5)}
           </Box>
         )}
 
         {/* ── Génération en cours ── */}
         {generating && (
-          <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 2.5, mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-            <CircularProgress size={26} />
+          <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 2.5, mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             <Box>
               <Typography variant="body1" fontWeight={700}>
                 Préparation du cycle, semaine {Math.min(generatedWeeks + 1, 4)} sur 4
@@ -199,6 +218,7 @@ const RenfoHome = () => {
                 Tu peux quitter l'écran, la préparation continue.
               </Typography>
             </Box>
+            <BarreProgression valeur={generatedWeeks} max={4} label="Préparation du cycle" />
           </Box>
         )}
 
@@ -210,9 +230,7 @@ const RenfoHome = () => {
               {generatedWeeks > 0 ? `${generatedWeeks} semaine${generatedWeeks > 1 ? 's' : ''} sur 4 prête${generatedWeeks > 1 ? 's' : ''}. ` : ''}
               Relance-la, elle reprendra là où elle s'est arrêtée.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting} onClick={launch}>
-              {starting ? <CircularProgress size={18} color="inherit" /> : 'Reprendre la génération'}
-            </Button>
+            {boutonLancement('Reprendre la génération', 2)}
           </Box>
         )}
 
@@ -223,9 +241,7 @@ const RenfoHome = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Le suivant fera tourner les exercices principaux.
             </Typography>
-            <Button variant="contained" fullWidth sx={{ ...primaryBtn, mt: 2 }} disabled={starting} onClick={launch}>
-              {starting ? <CircularProgress size={18} color="inherit" /> : 'Lancer le cycle suivant'}
-            </Button>
+            {boutonLancement('Lancer le cycle suivant', 2)}
           </Box>
         )}
 

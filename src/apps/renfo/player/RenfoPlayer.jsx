@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import {
   Box, Typography, Button, IconButton, LinearProgress, useMediaQuery,
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
 } from '@mui/material'
 import Close from '@mui/icons-material/Close'
 import VolumeUp from '@mui/icons-material/VolumeUpOutlined'
@@ -14,7 +13,7 @@ import Check from '@mui/icons-material/Check'
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import { useBlocker } from 'react-router-dom'
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
-import { glassSx, GLASS_BACKDROP } from '../../../styles/glass'
+import FeuilleFlottante from '../../../ui/FeuilleFlottante'
 import { useAppCtx } from '../../../lib/context'
 import { formatClock } from '../dates'
 import { ANCHOR_LABELS, blockHeading, listDoses } from '../content'
@@ -33,10 +32,11 @@ import UpNextCard from './UpNextCard'
 
 const SOUND_KEY = 'renfo:player_sound'
 
-// La coque du player est un overlay plein écran. Tout élément flottant se rendant
-// dans son propre portail (Dialog MUI, zIndex 1300) doit repasser au-dessus.
-const PLAYER_Z = 2000
-const DIALOG_Z = PLAYER_Z + 100
+// La coque du player est un overlay plein écran, au-dessus du header (1200) mais
+// sous le Message (1250) et les feuilles (Modal MUI, 1300). PlanSheet et BandPicker
+// sont des Drawer (1200 par défaut) : ils reçoivent DIALOG_Z pour repasser devant.
+const PLAYER_Z = 1240
+const DIALOG_Z = 1300
 
 // Avance du bip sur la fin réelle du step : le son doit tomber avant la bascule.
 const BEEP_LEAD_SEC = 1
@@ -626,21 +626,15 @@ const RenfoPlayer = ({ content, kindLabel, weekLabel, bands, initialBandsUsed, b
         onPick={pickBand}
       />
 
-      <Dialog
-        open={confirmOpen}
-        onClose={stay}
-        sx={{ zIndex: DIALOG_Z }}
-        slotProps={{ backdrop: GLASS_BACKDROP, paper: { sx: { ...glassSx, borderRadius: '28px', m: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Quitter la séance ?</DialogTitle>
-        <DialogContent>
-          <DialogContentText>La progression sera perdue.</DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={stay} color="inherit">Continuer</Button>
-          <Button onClick={quit} variant="contained">Quitter</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Ouverte aussi par le geste retour bloqué. sansFermer : onFermer (stay) remettrait
+          le blocker à zéro avant que quit appelle blocker.proceed. */}
+      <FeuilleFlottante
+        ouverte={confirmOpen}
+        onFermer={stay}
+        titre="La progression sera perdue."
+        lignes={[{ libelle: 'Quitter la séance', onClick: quit, sansFermer: true }]}
+        fermerLibelle="Continuer"
+      />
     </Box>,
     document.body,
   )
