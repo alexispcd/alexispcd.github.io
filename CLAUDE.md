@@ -292,7 +292,7 @@ Structure de données prête (`race_elevation_m`, distance libre, type Trail dan
 
 Module autonome de renforcement musculaire, planning propre, indépendant du plan course de Training (migration `20261009103052_renfo_module.sql`, front dans `src/apps/renfo/`).
 
-Refonte en cours vers des séances à la carte, sans cycle (lot R1, migration `20261104120000_renfo_exercise_bases.sql`) : le serveur du nouveau modèle est en place (`compose.ts`, `seance.ts`, actions de `renfo-session`, bases d'exercices), aucun écran ne l'appelle encore. Cycles, `renfo-cycle`, l'ancien chemin `{ kind }` de `renfo-session`, `generate.ts`, `validate.ts` et les règles de cycle de `rules.ts` vivent jusqu'au lot R6.
+Refonte en cours vers des séances à la carte, sans cycle (lot R1, migration `20261104181019_renfo_exercise_bases.sql`) : le serveur du nouveau modèle est en place (`compose.ts`, `seance.ts`, actions de `renfo-session`, bases d'exercices), aucun écran ne l'appelle encore. Cycles, `renfo-cycle`, l'ancien chemin `{ kind }` de `renfo-session`, `generate.ts`, `validate.ts` et les règles de cycle de `rules.ts` vivent jusqu'au lot R6.
 
 ### Tables
 - **strength_profiles** : une ligne par compte (`user_id` PK), `frequency` 1 à 3 (défaut 2), `equipment` text[] limité à `chair` et `bar`. Droits authenticated complets.
