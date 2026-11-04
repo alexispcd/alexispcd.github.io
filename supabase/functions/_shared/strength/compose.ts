@@ -7,7 +7,7 @@
 // base) ; tout le reste est posé ici : dose, élastique, tours, repos, titre, durée.
 
 import { type Anchor, EXERCISE_INDEX, type Exercise } from "./catalog.ts"
-import { estimateSessionMinutes, supersetMembers } from "./estimate.ts"
+import { BETWEEN_BLOCKS_SEC, estimateSessionMinutes, supersetMembers, TRANSITION_SEC, workSeconds } from "./estimate.ts"
 import {
   COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, type Dose, effectiveTrisetRules, type Group, GROUP_LABELS,
   GROUP_ORDER, groupOfFocus, type Intensity, INTENSITY_SUPERSETS, isCurrentTheme, isIntensity,
@@ -206,6 +206,95 @@ function tenirDansLeCatalogue(supersets: CompositionSuperset[], available: Exerc
     else out.pop()
   }
   return out
+}
+
+// ── Écran de composition (lot R2) ────────────────────────────────────────────
+
+/** Ordre des groupes dans la feuille du groupe d'un superset. */
+const ORDRE_FEUILLE: Group[] = ["jambes", "haut", "tronc"]
+
+/** Groupes qui ont au moins un thème disponible, dans l'ordre Jambes, Haut du corps, Tronc. */
+export function groupesDisponibles(available: Exercise[]): Group[] {
+  return ORDRE_FEUILLE.filter((g) => THEMES_BY_GROUP[g].some((t) => themeDisponible(t, available)))
+}
+
+/**
+ * Thème d'un superset placé dans `group` : le thème disponible du groupe travaillé il y
+ * a le plus longtemps parmi ceux que `supersets` (les autres supersets) n'utilise pas ;
+ * s'ils sont tous pris, le plus ancien. null si le groupe n'a aucun thème disponible.
+ */
+export function themePourGroupe(
+  group: Group,
+  supersets: Array<{ focus: TrisetFocus }>,
+  sessions: DoneSession[],
+  available: Exercise[],
+): TrisetFocus | null {
+  const themes = themesTries(group, derniereFois(sessions), available)
+  if (!themes.length) return null
+  const pris = new Set(supersets.map((s) => s.focus))
+  return themes.find((t) => !pris.has(t)) ?? themes[0]
+}
+
+/** Nombre d'exercices au plus pour un thème : SUPERSET_EXERCISES_MAX, ramené aux exercices du thème. */
+export const maxExercices = (focus: TrisetFocus, available: Exercise[]): number =>
+  Math.min(SUPERSET_EXERCISES_MAX, exercicesDuTheme(focus, available).length)
+
+/** Intensité d'une composition sans intensité choisie : legere pour 1 ou 2 supersets, normale pour 3, soutenue pour 4. */
+export function intensiteDeduite(n: number): Intensity {
+  if (n >= 4) return "soutenue"
+  if (n === 3) return "normale"
+  return "legere"
+}
+
+const moyenneTravail = (exercises: Exercise[], bases: Bases, bandsKg: number[]): number =>
+  exercises.length
+    ? exercises.reduce((sum, e) => sum + workSeconds(doseDe(e, { base: bases[e.slug], bandsKg })), 0) / exercises.length
+    : 0
+
+/** Exercices par échauffement et par retour au calme dans l'estimation. */
+const ITEMS_ESTIMES = 2
+
+/**
+ * Durée estimée d'une composition, en minutes arrondies, ou null sans superset.
+ * Chaque exercice compte pour la moyenne de son thème (dose de la base, sinon la
+ * référence) ; échauffement et retour au calme pour 2 exercices de leur catégorie.
+ */
+export function estimerComposition(
+  composition: { supersets: CompositionSuperset[] },
+  available: Exercise[],
+  { bases, bandsKg }: { bases: Bases; bandsKg: number[] },
+): number | null {
+  const supersets = composition.supersets ?? []
+  if (!supersets.length) return null
+  const liste = (category: string) =>
+    ITEMS_ESTIMES * moyenneTravail(available.filter((e) => e.category === category), bases, bandsKg) +
+    (ITEMS_ESTIMES - 1) * TRANSITION_SEC
+  const travail = supersets.reduce((sum, s) => {
+    const moyenne = moyenneTravail(exercicesDuTheme(s.focus, available), bases, bandsKg)
+    const n = s.exercise_count
+    return sum + s.rounds * (n * moyenne + (n - 1) * TRANSITION_SEC) + (s.rounds - 1) * SUPERSET_REST_SEC
+  }, 0)
+  const total = travail + liste("warmup") + liste("cooldown") + (supersets.length + 1) * BETWEEN_BLOCKS_SEC
+  return Math.round(total / 60)
+}
+
+/**
+ * Raison d'une suggestion : les groupes de la composition dans l'ordre, et la date la
+ * plus récente (completed_at) parmi eux, pour que « rien depuis » reste vrai pour
+ * chacun ; null si aucun n'a jamais été travaillé.
+ */
+export function raisonSuggestion(
+  composition: { supersets: Array<{ focus: TrisetFocus }> },
+  sessions: DoneSession[],
+): { groupes: Group[]; depuis: string | null } {
+  const groupes = groupesDe(composition.supersets.map((s) => s.focus))
+  const dernieres = derniereFois(sessions)
+  let depuis: string | null = null
+  for (const g of groupes) {
+    const d = dernieres.groupes[g]
+    if (d && timeOf(d) > timeOf(depuis)) depuis = d
+  }
+  return { groupes, depuis }
 }
 
 /** Composition d'une séance au nouveau format, pour la rouvrir en composition. */

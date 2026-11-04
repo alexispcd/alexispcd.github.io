@@ -3,11 +3,12 @@ import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1"
 import { availableExercises, EXERCISE_INDEX } from "./catalog.ts"
 import {
   ajuster, assembler, bandeDuMilieu, type Choix, compositionDe, type Composition, derniereFois, doseDe,
-  type DoneSession, estNouveauFormat, exercicesDuTheme, exercicesRecents, groupesTries, planMiseAJour,
-  preremplir, remplacants, remplacer, repartition, titreSeance, validateComposition, validerChoix,
+  type DoneSession, estimerComposition, estNouveauFormat, exercicesDuTheme, exercicesRecents, groupesDisponibles,
+  groupesTries, intensiteDeduite, maxExercices, planMiseAJour, preremplir, raisonSuggestion, remplacants, remplacer,
+  repartition, themePourGroupe, titreSeance, validateComposition, validerChoix,
 } from "./compose.ts"
-import { estimateSessionMinutes } from "./estimate.ts"
-import { groupOfFocus, type SessionContent, SUPERSET_REST_SEC } from "./rules.ts"
+import { BETWEEN_BLOCKS_SEC, estimateSessionMinutes, TRANSITION_SEC, workSeconds } from "./estimate.ts"
+import { groupOfFocus, type SessionContent, SUPERSET_EXERCISES_MAX, SUPERSET_REST_SEC } from "./rules.ts"
 
 const BANDS = [5, 10, 15, 20, 30]
 const FULL = availableExercises(["bar", "chair"], BANDS)
@@ -430,4 +431,74 @@ Deno.test("assembler : supersets gardés et échauffement gardé, sans choix du 
   })
   assertEquals(content.blocks, SEANCE.blocks)
   assertStringIncludes(content.title, "Corps complet")
+})
+
+// ── Écran de composition (lot R2) ────────────────────────────────────────────
+
+Deno.test("groupesDisponibles : ordre de la feuille, groupe sans thème retiré", () => {
+  assertEquals(groupesDisponibles(FULL), ["jambes", "haut", "tronc"])
+  // Sans matériel, le haut garde Poussée (pompes) : les trois restent.
+  assertEquals(groupesDisponibles(NOTHING), ["jambes", "haut", "tronc"])
+  const tronc = NOTHING.filter((e) => e.category === "core")
+  assertEquals(groupesDisponibles(tronc), ["tronc"])
+  // L'équilibre ouvre aussi Pied et mollet, côté jambes.
+  assertEquals(groupesDisponibles(NOTHING.filter((e) => e.category === "balance")), ["jambes", "tronc"])
+  assertEquals(groupesDisponibles([]), [])
+})
+
+Deno.test("themePourGroupe : thème le plus ancien non utilisé, sinon le plus ancien", () => {
+  const sessions = [done("2026-10-10", "legs"), done("2026-10-12", "quads"), done("2026-10-14", "posterior"), done("2026-10-16", "foot_calf")]
+  assertEquals(themePourGroupe("jambes", [], sessions, FULL), "legs")
+  assertEquals(themePourGroupe("jambes", [{ focus: "legs" }], sessions, FULL), "quads")
+  // Tous pris : le plus ancien.
+  const tous = ["legs", "quads", "posterior", "foot_calf"].map((focus) => ({ focus: focus as "legs" }))
+  assertEquals(themePourGroupe("jambes", tous, sessions, FULL), "legs")
+  // Jamais travaillé d'abord.
+  assertEquals(themePourGroupe("haut", [], [done("2026-10-20", "pull")], FULL), "push")
+  assertEquals(themePourGroupe("haut", [], [], []), null)
+})
+
+Deno.test("maxExercices : borne du superset ou exercices du thème", () => {
+  assertEquals(maxExercices("quads", FULL), SUPERSET_EXERCISES_MAX)
+  // Sans matériel, Poussée n'a que pompes et pompes piquées.
+  assertEquals(maxExercices("push", NOTHING), 2)
+})
+
+Deno.test("intensiteDeduite : 1 et 2 légère, 3 normale, 4 soutenue", () => {
+  assertEquals([1, 2, 3, 4].map(intensiteDeduite), ["legere", "legere", "normale", "soutenue"])
+})
+
+Deno.test("estimerComposition : formule par thème, échauffement, retour au calme et pauses", () => {
+  assertEquals(estimerComposition({ supersets: [] }, FULL, { bases: {}, bandsKg: BANDS }), null)
+  const avail = FULL
+  const moyenne = (list: typeof avail) =>
+    list.reduce((sum, e) => sum + workSeconds(doseDe(e, { bandsKg: BANDS })), 0) / list.length
+  const quads = moyenne(exercicesDuTheme("quads", avail))
+  const trunk = moyenne(exercicesDuTheme("trunk", avail))
+  const liste = (cat: string) => 2 * moyenne(avail.filter((e) => e.category === cat)) + TRANSITION_SEC
+  const attendu = (3 * (3 * quads + 2 * TRANSITION_SEC) + 2 * SUPERSET_REST_SEC) +
+    (2 * (2 * trunk + TRANSITION_SEC) + SUPERSET_REST_SEC) +
+    liste("warmup") + liste("cooldown") + 3 * BETWEEN_BLOCKS_SEC
+  const composition = {
+    supersets: [{ focus: "quads" as const, exercise_count: 3, rounds: 3 }, { focus: "trunk" as const, exercise_count: 2, rounds: 2 }],
+  }
+  assertEquals(estimerComposition(composition, avail, { bases: {}, bandsKg: BANDS }), Math.round(attendu / 60))
+})
+
+Deno.test("estimerComposition : la base remplace la référence", () => {
+  const composition = { supersets: [{ focus: "quads" as const, exercise_count: 3, rounds: 3 }] }
+  const sans = estimerComposition(composition, FULL, { bases: {}, bandsKg: BANDS })!
+  const bases = Object.fromEntries(exercicesDuTheme("quads", FULL).map((e) => [e.slug, { reps: 30 }]))
+  const avec = estimerComposition(composition, FULL, { bases, bandsKg: BANDS })!
+  assert(avec > sans, `${avec} > ${sans}`)
+})
+
+Deno.test("raisonSuggestion : groupes dans l'ordre, date la plus récente parmi eux", () => {
+  const sessions = [done("2026-10-20", "quads", "trunk"), done("2026-10-24", "pull"), done("2026-10-18", "legs")]
+  const c = { supersets: [{ focus: "legs" as const }, { focus: "foot_calf" as const }, { focus: "core_stability" as const }] }
+  assertEquals(raisonSuggestion(c, sessions), { groupes: ["jambes", "tronc"], depuis: "2026-10-20T18:00:00+00:00" })
+  // Un groupe jamais travaillé : la date des autres reste.
+  assertEquals(raisonSuggestion({ supersets: [{ focus: "pull" as const }, { focus: "trunk" as const }] }, [done("2026-10-20", "trunk")]),
+    { groupes: ["haut", "tronc"], depuis: "2026-10-20T18:00:00+00:00" })
+  assertEquals(raisonSuggestion(c, []), { groupes: ["jambes", "tronc"], depuis: null })
 })

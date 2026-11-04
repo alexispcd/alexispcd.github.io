@@ -183,6 +183,21 @@ async function loadRecentDone(ctx: Ctx): Promise<DoneSession[]> {
   return (data ?? []) as DoneSession[]
 }
 
+/** Séance à faire hors cycle la plus récente, ligne complète, ou null. */
+async function loadPending(ctx: Ctx): Promise<Row | null> {
+  const { data, error } = await ctx.admin
+    .from("strength_sessions")
+    .select("*")
+    .eq("user_id", ctx.userId)
+    .eq("status", "planned")
+    .is("cycle_id", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`strength_sessions à faire: ${error.message}`)
+  return (data as Row | null) ?? null
+}
+
 /** Ajoute les bases manquantes sans écraser les existantes. Un échec est journalisé, sans plus. */
 async function addMissingBases(ctx: Ctx, doses: Dose[]): Promise<void> {
   const rows = [...new Map(doses.map((d) => [d.slug, d])).values()].map((d) => ({
@@ -260,6 +275,12 @@ async function createAction(ctx: Ctx, body: Record<string, unknown>): Promise<Re
   const errors = validateComposition(body.composition, available)
   if (errors.length) return json(400, { error: "Composition invalide", code: "composition_invalide", details: errors })
   const composition = normalize(body.composition)
+
+  // Une seule séance à faire à la fois, hors cycle : on renvoie celle qui attend.
+  const enAttente = await loadPending(ctx)
+  if (enAttente) {
+    return json(409, { error: "Une séance est déjà à faire", code: "seance_en_attente", session: enAttente })
+  }
 
   const [recentes, bases] = await Promise.all([loadRecentDone(ctx), loadBases(ctx)])
   const result = await choisirExercices({

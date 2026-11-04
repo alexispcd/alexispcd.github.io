@@ -2,7 +2,7 @@ import supabase from './supabase'
 import { callFunction } from './functions'
 
 // Accès aux données du module Renfo. Lectures et écritures directes filtrées par
-// la RLS ; la génération passe par les Edge Functions renfo-cycle et renfo-session.
+// la RLS ; la composition passe par l'Edge Function renfo-session.
 
 const userId = async () => {
   const { data: { session } } = await supabase.auth.getSession()
@@ -77,33 +77,25 @@ const SESSION_COLUMNS = 'id, cycle_id, week_index, week_start, position, kind, t
 export const getActiveCycle = async () =>
   unwrap(await supabase.from('strength_cycles').select(CYCLE_COLUMNS).eq('status', 'active').maybeSingle())
 
-/** État de génération d'un cycle (interrogation régulière pendant la génération). */
-export const getCycleStatus = async (cycleId) =>
+/** Séances faites, de cycle comprises, de la plus récente à la plus ancienne (60 au plus). */
+export const getDoneSessions = async () =>
   unwrap(await supabase
-    .from('strength_cycles')
-    .select('generation_status, generated_weeks')
-    .eq('id', cycleId)
-    .single())
+    .from('strength_sessions')
+    .select('id, title, content, completed_at')
+    .eq('status', 'done')
+    .order('completed_at', { ascending: false })
+    .limit(60))
 
-/** Séances d'un cycle, par semaine puis par position. */
-export const getCycleSessions = async (cycleId) =>
+/** Séance à faire hors cycle la plus récente, ou null. */
+export const getPendingSession = async () =>
   unwrap(await supabase
     .from('strength_sessions')
     .select(SESSION_COLUMNS)
-    .eq('cycle_id', cycleId)
-    .order('week_index')
-    .order('position'))
-
-/** Séances libres dont la semaine commence entre `fromWeek` et `toWeek` inclus. */
-export const getFreeSessions = async (fromWeek, toWeek) =>
-  unwrap(await supabase
-    .from('strength_sessions')
-    .select(SESSION_COLUMNS)
+    .eq('status', 'planned')
     .is('cycle_id', null)
-    .gte('week_start', fromWeek)
-    .lte('week_start', toWeek)
-    .order('week_start')
-    .order('created_at'))
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle())
 
 /** Une séance, avec son cycle (numéro) s'il y en a un. */
 export const getSession = async (sessionId) =>
@@ -164,16 +156,9 @@ export const resetSession = async (sessionId) =>
 export const deleteFreeSession = async (sessionId) =>
   unwrap(await supabase.from('strength_sessions').delete().eq('id', sessionId).is('cycle_id', null))
 
-// ── Génération ───────────────────────────────────────────────────────────────
-
-/** Lance un cycle, ou reprend celui en erreur. 202 { cycle_id }. */
-export const startCycle = () => callFunction('renfo-cycle', {})
-
-/** Séance libre synchrone. Renvoie { session }. */
-export const createFreeSession = (kind) => callFunction('renfo-session', { kind })
-
-// ── Séances composées (lot R1) ───────────────────────────────────────────────
-// Aucun écran ne les appelle encore. Chaque action renvoie { session }.
+// ── Séances composées ────────────────────────────────────────────────────────
+// Chaque action renvoie { session }. createSession : l'accueil et la composition
+// (lot R2) ; updateSession, adjustExercise, replaceExercise : aucun écran encore.
 
 /** Bases des exercices du compte (dernier réglage) : { [slug]: { reps, duration_sec, band_kg } }. */
 export const getExerciseBases = async () => {
@@ -182,7 +167,10 @@ export const getExerciseBases = async () => {
     [slug, { reps, duration_sec, band_kg: band_kg == null ? null : Number(band_kg) }]))
 }
 
-/** Crée une séance depuis une composition { intensity, supersets: [{ focus, exercise_count, rounds }] }. */
+/**
+ * Crée une séance depuis une composition { intensity, supersets: [{ focus, exercise_count, rounds }] }.
+ * 409 seance_en_attente (err.body.session) si une séance hors cycle est déjà à faire.
+ */
 export const createSession = (composition) => callFunction('renfo-session', { action: 'create', composition })
 
 /** Recompose une séance à faire. */
