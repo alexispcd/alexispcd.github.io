@@ -3,8 +3,7 @@ import DirectionsRun from '@mui/icons-material/DirectionsRun'
 const training = {
   id: 'training',
   name: 'Training',
-  description: 'Plans et suivi Coros',
-  category: 'Sport',
+  description: 'Plans et suivi de course',
   adminOnly: false,
   icon: DirectionsRun,
   path: '/training',

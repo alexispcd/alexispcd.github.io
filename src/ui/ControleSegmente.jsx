@@ -1,6 +1,6 @@
 import { Box, ButtonBase } from '@mui/material'
 import { radius, size, space, textStyles } from '../styles/tokens'
-import { DURATION, transition } from '../styles/motion'
+import { DURATION, avecRetour, transition } from '../styles/motion'
 import { focusContour, sansMouvement } from './appui'
 
 /**
@@ -41,7 +41,7 @@ const ControleSegmente = ({ options, valeur, onChange, label, sx }) => (
             borderRadius: radius.inner,
             bgcolor: choisie ? 'ink' : 'transparent',
             color: choisie ? 'on-ink' : 'ink',
-            transition: transition(['background-color', 'color'], DURATION.fade),
+            transition: avecRetour(transition(['background-color', 'color'], DURATION.fade)),
             ...sansMouvement(),
             ...focusContour,
           }}

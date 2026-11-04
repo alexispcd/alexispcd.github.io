@@ -6,9 +6,6 @@ import { useMessage } from '../../../ui/useMessage'
 import { Box, Typography, Chip, Button, Alert } from '@mui/material'
 import EmojiEvents from '@mui/icons-material/EmojiEvents'
 import Autorenew from '@mui/icons-material/Autorenew'
-import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined'
-import History from '@mui/icons-material/History'
-import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -221,12 +218,12 @@ const PlanDashboard = () => {
     if (!plan || plan.generation_status !== 'ready') { setHeaderActions([]); return }
     const actions = []
     if (!readOnly) {
-      actions.push({ label: 'Régénérer les semaines restantes', icon: <Autorenew fontSize="small" />, onClick: () => { setRegenOnWatch(0); setRegenOuverte(true) } })
-      actions.push({ label: 'Archiver ce plan', icon: <Inventory2Outlined fontSize="small" />, onClick: () => setArchiveOuverte(true) })
+      actions.push({ label: 'Régénérer les semaines restantes', onClick: () => { setRegenOnWatch(0); setRegenOuverte(true) } })
+      actions.push({ label: 'Archiver ce plan', onClick: () => setArchiveOuverte(true) })
     }
-    actions.push({ label: 'Mes anciens plans', icon: <History fontSize="small" />, onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
-    actions.push({ label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings', { direction: 'forward' }) })
-    setHeaderActions(actions)
+    actions.push({ label: 'Mes anciens plans', onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
+    actions.push({ label: 'Réglages', onClick: () => navigate('/training/settings', { direction: 'forward' }) })
+    setHeaderActions(actions, plan.race_name)
     return () => setHeaderActions([])
   }, [plan, readOnly, navigate, setHeaderActions])
 

@@ -1,11 +1,6 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { Box, Chip, Typography } from '@mui/material'
-import Sync from '@mui/icons-material/Sync'
-import GridView from '@mui/icons-material/GridView'
-import ViewList from '@mui/icons-material/ViewList'
-import Visibility from '@mui/icons-material/Visibility'
-import VisibilityOff from '@mui/icons-material/VisibilityOff'
 import ArticleCard from './ArticleCard'
 import { fetchRssFeeds, loadArticles } from '../../lib/rss'
 import supabase from '../../lib/supabase'
@@ -196,22 +191,15 @@ const VeillePage = () => {
     setHeaderActions([
       {
         label: 'Synchroniser',
-        icon: <Sync fontSize="small" />,
         onClick: sync,
         disabled: syncing || loading,
       },
       {
         label: unreadOnly ? 'Tous les articles' : 'Non lus uniquement',
-        icon: unreadOnly
-          ? <Visibility fontSize="small" />
-          : <VisibilityOff fontSize="small" />,
         onClick: toggleUnread,
       },
       {
         label: displayMode === 'mosaic' ? 'Vue liste' : 'Vue mosaïque',
-        icon: displayMode === 'mosaic'
-          ? <ViewList fontSize="small" />
-          : <GridView fontSize="small" />,
         onClick: toggleDisplayMode,
       },
     ])

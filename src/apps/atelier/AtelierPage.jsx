@@ -1,7 +1,7 @@
 // Atelier : chaque composant de src/ui dans tous ses états, pour les regarder sur
 // l'iPhone pendant la refonte. Exemples fictifs : rien n'est chargé ni enregistré, sauf
 // les trois essais de la section Réseau (lecture seule, ou écriture qui ne vise aucune ligne).
-// Page temporaire, retirée avec sa ligne du menu du compte à la fin de la refonte (F1).
+// Page temporaire, retirée avec sa ligne de la page Compte à la fin de la refonte (F1).
 import { useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
@@ -21,6 +21,7 @@ import ControleSegmente from '../../ui/ControleSegmente'
 import Compteur from '../../ui/Compteur'
 import Option from '../../ui/Option'
 import LigneSaisie from '../../ui/LigneSaisie'
+import LigneModule from '../../ui/LigneModule'
 import BarreProgression from '../../ui/BarreProgression'
 import BarreStructure from '../../ui/BarreStructure'
 import MarqueSeance from '../../ui/MarqueSeance'
@@ -76,6 +77,11 @@ const ACTIVITES = [
   { id: 'a3', date: 'sam 24 oct', chiffres: '17,02 km · 1:35:58 · 5:38 /km' },
 ]
 const MODULES = ['Training', 'Renfo', 'Côtes']
+const LIGNES_MODULE = [
+  ['Training', 'Plans et suivi de course'],
+  ['Renfo', 'Renforcement à la maison'],
+  ['Côtes', 'Dénivelé pour séances running'],
+]
 const BANDES = [BAND_PALETTE[0], BAND_PALETTE[2], BAND_PALETTE[6], BAND_PALETTE[10]]
 
 const attendre = (ms) => new Promise((resolve) => { setTimeout(resolve, ms) })
@@ -536,6 +542,15 @@ const AtelierPage = () => {
               <LigneSaisie key={m} type="cocher" libelle={m} coche={modules.includes(m)} onClick={() => toggle(modules, setModules, m)} />
             ))}
           </Carte>
+        </Section>
+
+        <Section titre="Ligne de module">
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
+            {LIGNES_MODULE.map(([nom, description]) => (
+              <LigneModule key={nom} nom={nom} description={description} onClick={() => {}} />
+            ))}
+          </Box>
+          <Note>Accueil : liste des modules du compte, filet au-dessus de chaque ligne, calque discret à l'appui.</Note>
         </Section>
 
         <Section titre="Barre de progression">

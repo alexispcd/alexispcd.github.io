@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Box, Button, Typography } from '@mui/material'
-import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import FitnessCenter from '@mui/icons-material/FitnessCenter'
 import Add from '@mui/icons-material/Add'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
@@ -79,7 +78,6 @@ const RenfoHome = () => {
     setHeaderActions([
       {
         label: 'Réglages',
-        icon: <SettingsOutlined fontSize="small" />,
         onClick: () => navigate('/renfo/settings', { direction: 'forward' }),
       },
     ])

@@ -1,71 +1,70 @@
-import { Box, Typography, Divider } from '@mui/material'
-import AppCard from '../../components/AppCard'
+import { Box, Typography } from '@mui/material'
 import InstallBanner from '../../components/InstallBanner'
-import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { homeCategories } from '../registry'
+import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { useAppCtx } from '../../lib/context'
+import { space } from '../../styles/tokens'
+import { homeModules } from '../registry'
+import Page from '../../ui/Page'
+import Carte from '../../ui/Carte'
+import Bouton from '../../ui/Bouton'
+import BoutonIcone from '../../ui/BoutonIcone'
+import LigneModule from '../../ui/LigneModule'
 
+// Accueil sans barre du haut : l'en-tête et le bouton compte défilent avec la page.
 const Home = () => {
-  const { access } = useAppCtx()
-  const categories = homeCategories(access)
+  const { access, user } = useAppCtx()
+  const navigate = useAppNavigate()
+  const liste = access ? homeModules(access) : []
+  const admin = access?.role === 'admin'
+  const initiale = user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto' }}>
-      <Box sx={{ maxWidth: 720, mx: 'auto', px: 4, pt: `${HEADER_HEIGHT + 16}px`, pb: 6 }}>
-
-        {/* Branding */}
-        <Box sx={{ mb: 6 }}>
-          <Typography variant="titre-app" sx={{ mb: 0.5 }}>
-            Le Cairn
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography
-              variant="overline"
-              sx={{ color: 'text.secondary', letterSpacing: '0.15em', fontSize: '0.65rem' }}
-            >
-              Mes outils perso
-            </Typography>
-            <Typography
-              variant="overline"
-              sx={{ color: 'text.disabled', letterSpacing: '0.1em', fontSize: '0.6rem' }}
-            >
-              v{__APP_VERSION__}
-            </Typography>
-          </Box>
+    <Page sansBarre gap={space[24]}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: space[12], pt: space[8] }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4], minWidth: 0 }}>
+          <Typography variant="titre-app">Le Cairn</Typography>
+          <Typography variant="secondaire" sx={{ color: 'muted' }}>Mes outils perso</Typography>
         </Box>
+        <BoutonIcone compte label="Mon compte" onClick={() => navigate('/compte', { direction: 'forward' })}>
+          {initiale}
+        </BoutonIcone>
+      </Box>
 
-        <InstallBanner />
+      <InstallBanner />
 
-        {categories.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            Aucun module pour l'instant. Demande l'accès à l'administrateur.
-          </Typography>
-        )}
-
-        {/* Catégories */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {categories.map(cat => (
-            <Box key={cat.label}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                <Typography
-                  variant="overline"
-                  sx={{ color: 'text.disabled', letterSpacing: '0.15em', fontSize: '0.6rem', whiteSpace: 'nowrap' }}
-                >
-                  {cat.label}
-                </Typography>
-                <Divider sx={{ flex: 1 }} />
-              </Box>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-                {cat.modules.map(module => (
-                  <AppCard key={module.id} module={module} />
-                ))}
-              </Box>
-            </Box>
+      {liste.length > 0 ? (
+        <Box component="section" sx={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
+          <Typography variant="titre-barre" sx={{ mb: space[4] }}>Modules</Typography>
+          {liste.map((m) => (
+            <LigneModule
+              key={m.id}
+              nom={m.name}
+              description={m.description}
+              onClick={() => navigate(m.path, { direction: 'forward' })}
+            />
           ))}
         </Box>
-
-      </Box>
-    </Box>
+      ) : (
+        <Carte sx={{ p: space[16], gap: space[8] }}>
+          <Typography variant="titre-section">Aucun module pour l'instant</Typography>
+          <Typography variant="secondaire" sx={{ color: 'muted' }}>
+            {admin
+              ? 'Tu peux t\'attribuer des modules depuis l\'Administration.'
+              : 'Un administrateur doit t\'attribuer un module pour que tes outils apparaissent ici.'}
+          </Typography>
+          {admin && (
+            <Bouton
+              petit
+              pleineLargeur
+              sx={{ mt: space[8] }}
+              onClick={() => navigate('/admin', { direction: 'forward', state: { retour: '/' } })}
+            >
+              Ouvrir l'Administration
+            </Bouton>
+          )}
+        </Carte>
+      )}
+    </Page>
   )
 }
 

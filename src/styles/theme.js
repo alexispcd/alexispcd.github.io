@@ -1,9 +1,17 @@
 import { createTheme } from '@mui/material/styles'
 import { colors, cssVars, radius, opacity, fontFamily, textStyles, veil } from './tokens'
-import { EASE, DURATION, transition } from './motion'
+import { EASE, DURATION, RESSORT, AGRANDISSEMENT, transition, avecRetour } from './motion'
 
 // Thème MUI du Design System (src/styles/tokens.json). `shape` et `spacing` restent
 // ceux d'avant : les anciens écrans en dépendent (borderRadius et marges numériques).
+// Réglage Animations (page Compte) : agrandissement à l'appui, seulement si
+// l'iPhone ne demande pas de réduire les animations. Jamais sur une ligne (appuiLigne,
+// MuiListItemButton, MuiMenuItem), ni sur le curseur d'un Switch, déjà placé par un
+// translateX.
+// :where garde la spécificité de la règle des lignes : sans lui, :not(.classe) la battrait.
+const AGRANDIT_ACTIF = 'html[data-pression="agrandit"] &:active:where(:not(.MuiSwitch-switchBase))'
+const LIGNE_SANS_AGRANDIR = { 'html[data-pression="agrandit"] &:active': { transform: 'none' } }
+
 const theme = (dark) => {
   const mode = dark ? 'dark' : 'light'
   const c = colors[mode]
@@ -68,7 +76,18 @@ const theme = (dark) => {
     components: {
       MuiCssBaseline: {
         styleOverrides: {
-          ':root': cssVars(mode),
+          ':root': {
+            ...cssVars(mode),
+            // Retour en place après l'agrandissement, ajouté à chaque transition d'un
+            // objet touchable (avecRetour de motion.js). Sobre par défaut.
+            '--retour-transition': transition('transform', DURATION.release),
+          },
+          // Ressort : courbe linear(), seulement là où elle est prise en charge.
+          '@supports (transition-timing-function: linear(0, 1))': {
+            'html[data-retour="ressort"]': {
+              '--retour-transition': `transform ${DURATION.ressort}ms ${RESSORT}`,
+            },
+          },
           'html, body': {
             overscrollBehavior: 'none',
             WebkitTapHighlightColor: 'transparent',
@@ -106,6 +125,13 @@ const theme = (dark) => {
         defaultProps: { disableRipple: true },
         styleOverrides: {
           root: {
+            transition: 'var(--retour-transition)',
+            '@media (prefers-reduced-motion: no-preference)': {
+              [AGRANDIT_ACTIF]: {
+                transform: `scale(${AGRANDISSEMENT})`,
+                transition: transition('transform', DURATION.press),
+              },
+            },
             '&::after': {
               content: '""',
               position: 'absolute',
@@ -121,7 +147,7 @@ const theme = (dark) => {
               transition: transition('opacity', DURATION.press),
             },
             '@media (prefers-reduced-motion: reduce)': {
-              '&::after, &:active::after': { transition: 'none' },
+              '&, &::after, &:active::after': { transition: 'none' },
             },
           },
         },
@@ -129,16 +155,36 @@ const theme = (dark) => {
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
-          root: { borderRadius: radius.inner, textTransform: 'none', boxShadow: 'none' },
+          root: {
+            borderRadius: radius.inner,
+            textTransform: 'none',
+            boxShadow: 'none',
+            // Transition de MUI, complétée du retour en place (elle écrase celle de ButtonBase).
+            transition: avecRetour(transition(['background-color', 'box-shadow', 'border-color', 'color'], DURATION.open)),
+          },
           contained: {
             '&.Mui-disabled': { backgroundColor: c.track, color: c.muted },
           },
         },
       },
+      MuiIconButton: {
+        styleOverrides: {
+          root: { transition: avecRetour(transition('background-color', DURATION.fade)) },
+        },
+      },
       MuiChip: {
         styleOverrides: {
-          root: { borderRadius: 12 },
+          root: {
+            borderRadius: 12,
+            transition: avecRetour(transition(['background-color', 'box-shadow'], DURATION.page)),
+          },
         },
+      },
+      MuiListItemButton: {
+        styleOverrides: { root: LIGNE_SANS_AGRANDIR },
+      },
+      MuiMenuItem: {
+        styleOverrides: { root: LIGNE_SANS_AGRANDIR },
       },
       MuiPaper: {
         styleOverrides: {

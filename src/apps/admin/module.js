@@ -4,12 +4,11 @@ const admin = {
   id: 'admin',
   name: 'Administration',
   description: 'Comptes et droits',
-  category: null,
   adminOnly: true,
   icon: AdminPanelSettings,
   path: '/admin',
   routes: [
-    { path: '/admin', load: () => import('./AdminPage'), handle: { title: 'Administration', backTo: '/' } },
+    { path: '/admin', load: () => import('./AdminPage'), handle: { title: 'Administration', backTo: '/compte' } },
   ],
 }
 

@@ -4,7 +4,6 @@ const veille = {
   id: 'veille',
   name: 'Veille',
   description: 'Ressources tech à suivre',
-  category: 'Dev',
   adminOnly: false,
   icon: RssFeed,
   path: '/veille',

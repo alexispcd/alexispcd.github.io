@@ -10,7 +10,6 @@ import EmojiEvents from '@mui/icons-material/EmojiEvents'
 import MilitaryTech from '@mui/icons-material/MilitaryTech'
 import MoreVert from '@mui/icons-material/MoreVert'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
-import SettingsOutlined from '@mui/icons-material/SettingsOutlined'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { glassSx, cardSx } from '../../styles/glass'
 import FeuilleFlottante from '../../ui/FeuilleFlottante'
@@ -73,8 +72,8 @@ const TrainingHome = () => {
   // ── Actions du header ─────────────────────────────────────────────────────
   useEffect(() => {
     setHeaderActions([
-      { label: 'Réglages', icon: <SettingsOutlined fontSize="small" />, onClick: () => navigate('/training/settings') },
-    ])
+      { label: 'Réglages', onClick: () => navigate('/training/settings') },
+    ], 'Training')
     return () => setHeaderActions([])
   }, [navigate, setHeaderActions])
 

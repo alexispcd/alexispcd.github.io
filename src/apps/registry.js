@@ -8,21 +8,28 @@ import veille from './veille/module'
 import admin from './admin/module'
 // Atelier : page temporaire de la refonte, retirée à la fin (lot F1).
 import atelier from './atelier/module'
+import compte from './compte/module'
 
 // Registre unique des modules : routes et home en dérivent. Aucun module n'est
 // désactivé dans le code : seuls les droits du compte (user_modules) décident de ce
 // qui est visible et accessible, admin compris.
-// Ajouter un module : créer src/apps/<id>/module.js puis l'ajouter ici.
-export const modules = [cotes, training, renfo, revisions, veille, admin, atelier]
+// Ajouter un module : créer src/apps/<id>/module.js puis l'ajouter ici. L'ordre du
+// tableau est celui de la liste Modules de l'Accueil.
+// Un module `commun` (page Compte) est ouvert à tous les comptes : il porte son propre
+// canAccess, n'est jamais attribuable et n'apparaît pas sur l'Accueil.
+export const modules = [training, renfo, cotes, revisions, veille, admin, atelier, compte]
 
-export const categoryOrder = ['Sport', 'Études', 'Dev']
-
-/** Accès d'un compte à un module : un module adminOnly est réservé au rôle admin. */
-export const canAccess = (module, access) =>
-  module.adminOnly ? access.role === 'admin' : hasModule(access, module.id)
+/**
+ * Accès d'un compte à un module : le canAccess du descripteur s'il en a un, sinon
+ * un module adminOnly est réservé au rôle admin et les autres passent par user_modules.
+ */
+export const canAccess = (module, access) => {
+  if (module.canAccess) return module.canAccess(access)
+  return module.adminOnly ? access.role === 'admin' : hasModule(access, module.id)
+}
 
 /** Modules qu'un admin peut attribuer à un compte, y compris le sien. */
-export const assignableModules = () => modules.filter(m => !m.adminOnly)
+export const assignableModules = () => modules.filter(m => !m.adminOnly && !m.commun)
 
 // Routes React Router de tous les modules. Le loader attend l'accès publié par App
 // et lève un 404 si le compte n'a pas le module : la route aboutit au « Page
@@ -40,12 +47,6 @@ export const moduleRoutes = () => modules.flatMap(m =>
   })),
 )
 
-// Modules visibles sur la home pour cet accès, groupés par catégorie dans l'ordre
-// de categoryOrder. Les modules adminOnly n'y apparaissent jamais, les catégories
-// vides sont omises.
-export const homeCategories = (access) => {
-  const visible = modules.filter(m => !m.adminOnly && canAccess(m, access))
-  return categoryOrder
-    .map(label => ({ label, modules: visible.filter(m => m.category === label) }))
-    .filter(cat => cat.modules.length > 0)
-}
+/** Modules de la liste de l'Accueil pour cet accès, à plat, dans l'ordre du registre. */
+export const homeModules = (access) =>
+  modules.filter(m => !m.adminOnly && !m.commun && canAccess(m, access))

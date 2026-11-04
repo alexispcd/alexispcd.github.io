@@ -4,7 +4,6 @@ const renfo = {
   id: 'renfo',
   name: 'Renfo',
   description: 'Renforcement à la maison',
-  category: 'Sport',
   adminOnly: false,
   icon: FitnessCenter,
   path: '/renfo',

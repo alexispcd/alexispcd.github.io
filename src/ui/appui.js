@@ -4,14 +4,15 @@
 import { border, opacity } from '../styles/tokens'
 
 /**
- * Appui d'une ligne (liste, LigneSaisie, lignes d'une feuille) : calque ink à 6 %
- * sur toute la largeur, sans changement de taille. Remplace le calque de la
- * ButtonBase ; les durées (100 ms, 200 ms) et la réduction des animations restent
- * celles du thème.
+ * Appui d'une ligne (liste, LigneSaisie, LigneModule, lignes d'une feuille) : calque
+ * ink à 6 % sur toute la largeur, sans changement de taille, même avec le réglage
+ * « Agrandit ». Remplace le calque de la ButtonBase ; les durées (100 ms, 200 ms) et
+ * la réduction des animations restent celles du thème.
  */
 export const appuiLigne = {
   '&::after': { backgroundColor: 'var(--ink)' },
   '&:active::after': { opacity: opacity.ligne },
+  'html[data-pression="agrandit"] &:active': { transform: 'none' },
 }
 
 /** Focus clavier visible : contour 2 px ink, décalé de 2 px. */

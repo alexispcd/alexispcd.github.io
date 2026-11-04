@@ -4,7 +4,6 @@ const revisions = {
   id: 'revisions',
   name: 'Révisions',
   description: 'Cartes de révision',
-  category: 'Études',
   adminOnly: false,
   icon: Style,
   path: '/revisions',

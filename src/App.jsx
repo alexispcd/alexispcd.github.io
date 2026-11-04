@@ -1,8 +1,8 @@
-import { createBrowserRouter, RouterProvider, Outlet, useMatches } from 'react-router-dom'
-import { useMemo, useState, useEffect } from 'react'
+import { createBrowserRouter, RouterProvider, Outlet, useLocation, useMatches } from 'react-router-dom'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import { ThemeProvider, CssBaseline, Box } from '@mui/material'
 import { isAuthRetryableFetchError } from '@supabase/supabase-js'
-import { useDarkMode } from './hooks/useDarkMode'
+import { useApparence } from './hooks/useApparence'
 import createTheme from './styles/theme'
 import Home from './apps/home/Home'
 import { moduleRoutes } from './apps/registry'
@@ -20,10 +20,11 @@ import { clearDataCache } from './lib/pwa'
 import { useAppNavigate } from './hooks/useAppNavigate'
 
 const AppLayout = () => {
-  const { dark, setDark, user, access, headerActions, overlay } = useAppCtx()
+  const { headerActions, headerTitre, overlay } = useAppCtx()
   const matches = useMatches()
   const lastMatch = matches.at(-1)
   const handle = lastMatch?.handle ?? {}
+  const location = useLocation()
   const navigate = useAppNavigate()
 
   // backTo peut être une string ou une fonction (params) => string (route dynamique).
@@ -31,10 +32,15 @@ const AppLayout = () => {
     ? handle.backTo(lastMatch?.params ?? {})
     : handle.backTo
 
-  const showBack = handle.showBack !== false && backTo !== undefined
-  const handleBack = backTo !== undefined
-    ? () => navigate(backTo)
-    : () => navigate(-1)
+  // Retour d'où l'on vient quand la page a été ouverte avec state.retour (Compte vers
+  // Administration, Accueil vers Administration), sinon backTo. Toujours animé vers
+  // l'arrière : la profondeur du chemin ne dit pas le sens (/admin vers /compte).
+  const cible = location.state?.retour ?? backTo
+  const handleBack = cible !== undefined
+    ? () => navigate(cible, { direction: 'back' })
+    : undefined
+  // Accueil : ni barre ni fond, l'en-tête de la page défile avec elle.
+  const barre = !overlay && !handle.sansBarre
 
   return (
     <Box sx={{ position: 'relative', height: '100dvh', overflow: 'hidden' }}>
@@ -52,7 +58,7 @@ const AppLayout = () => {
       {/* Masqué pendant qu'un overlay plein écran (player d'un module) occupe l'écran :
           le header flotte au-dessus de tout et son bouton retour se superpose aux
           contrôles de l'overlay. */}
-      {!overlay && (
+      {barre && (
         <>
           {/* Fond du header : plein, en bg comme le body, sur toute la hauteur du header,
               pour que le contenu qui défile ne passe pas sous les pastilles (et qu'aucune
@@ -66,18 +72,14 @@ const AppLayout = () => {
             bgcolor: 'background.default',
           }} />
           <AppHeader
-          toolName={handle.title ?? null}
-          actions={headerActions}
-          showBack={showBack}
-          onBack={handleBack}
-          dark={dark}
-          setDark={setDark}
-          user={user}
-          isAdmin={access?.role === 'admin'}
-          // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
-          // pt : le header porte l'inset haut et ne passe plus sous l'heure (py:1.5 = 12px conservés).
-          // viewTransitionName : capturé à part, il reste immobile pendant les transitions de page.
-          sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'calc(env(safe-area-inset-top, 0px) + 12px)', viewTransitionName: 'app-header' }}
+            titre={handle.title ?? null}
+            actions={headerActions}
+            titreActions={headerTitre}
+            onBack={handleBack}
+            // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
+            // pt : la barre porte l'inset haut et ne passe pas sous l'heure ; ses 60 px suivent.
+            // viewTransitionName : capturé à part, il reste immobile pendant les transitions de page.
+            sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'env(safe-area-inset-top, 0px)', viewTransitionName: 'app-header' }}
           />
         </>
       )}
@@ -93,7 +95,7 @@ const router = createBrowserRouter([
     // plein ecran tant que l'acces et le chunk de la page ne sont pas arrives.
     hydrateFallbackElement: <FullScreenLoader />,
     children: [
-      { path: '/', element: <Home />, handle: { showBack: false } },
+      { path: '/', element: <Home />, handle: { sansBarre: true } },
       ...moduleRoutes(),
     ],
   },
@@ -101,8 +103,14 @@ const router = createBrowserRouter([
 
 const App = () => {
   const [user, setUser] = useState(null)
-  const [dark, setDark] = useDarkMode(user)
-  const [headerActions, setHeaderActions] = useState([])
+  const apparence = useApparence(user)
+  const { dark } = apparence
+  // Actions de la barre du haut et titre facultatif de leur feuille, posés par la page.
+  const [header, setHeader] = useState({ actions: [], titre: null })
+  // Stable : les pages la mettent dans les dépendances de leur effet.
+  const setHeaderActions = useCallback((actions, titre) => {
+    setHeader({ actions: actions ?? [], titre: titre ?? null })
+  }, [])
   // Vrai quand un overlay plein écran est monté : le header applicatif s'efface.
   const [overlay, setOverlay] = useState(false)
   const theme = useMemo(() => createTheme(dark), [dark])
@@ -170,7 +178,11 @@ const App = () => {
       <CssBaseline />
       {/* Messages en bas de l'écran (useMessage), au-dessus d'AuthGate pour servir aussi à l'écran de connexion. */}
       <MessageProvider>
-        <AppCtx.Provider value={{ dark, setDark, user, access, refreshAccess, headerActions, setHeaderActions, overlay, setOverlay }}>
+        <AppCtx.Provider value={{
+          apparence, user, access, refreshAccess,
+          headerActions: header.actions, headerTitre: header.titre, setHeaderActions,
+          overlay, setOverlay,
+        }}>
           <AuthGate>
             <AccessGate>
               <RouterProvider router={router} />
