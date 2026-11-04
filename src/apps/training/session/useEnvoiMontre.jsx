@@ -1,15 +1,13 @@
 import { useState } from 'react'
-import { Box, Typography } from '@mui/material'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
-import Calendrier from '../../../ui/Calendrier'
+import FeuilleDate from '../../../ui/FeuilleDate'
 import { moisDe } from '../../../ui/calendrier'
 import { useAction } from '../../../ui/useAction'
 import { DUREES } from '../../../lib/durees'
 import { texteErreur } from '../../../lib/reseau'
 import { formatShortDayAnnee } from '../../../lib/dates'
 import { pushToCoros } from '../../../lib/training'
-import { space, textStyles } from '../../../styles/tokens'
 import {
   cleanText, todayISO, addDaysISO, COROS_PUSH_WINDOW_DAYS, ZONE_DAYS, joursCreneau, formatShortDay,
 } from '../constants'
@@ -103,40 +101,25 @@ export const useEnvoiMontre = ({ onEnvoye } = {}) => {
     const borneVisible = moisDe(max) === mois
 
     feuilleDate = (
-      <FeuilleFlottante
+      <FeuilleDate
         ouverte={feuille === 'date'}
         onFermer={fermer}
-        libelleAria={titre}
-        lignes={[{ libelle: `Envoyer le ${formatShortDay(date)}`, onClick: envoyer }]}
-        fermerLibelle="Annuler"
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4], pt: space[16], px: space[16], pb: space[4] }}>
-          <Typography component="h2" sx={{ ...textStyles['titre-barre'], fontWeight: 700 }}>{titre}</Typography>
-          {sousTitre && <Typography variant="secondaire" sx={{ color: 'muted' }}>{sousTitre}</Typography>}
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', px: space[12], pb: space[12] }}>
-          <Calendrier
-            mois={mois}
-            onMois={(m) => setEnvoi((e) => ({ ...e, mois: m }))}
-            valeur={date}
-            min={aujourdhui}
-            max={max}
-            creneau={creneau}
-            aujourdhui={aujourdhui}
-            onChoisir={(j) => setEnvoi((e) => ({ ...e, date: j }))}
-          />
-          {(creneauVisible || borneVisible) && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', pt: space[8], px: space[8] }}>
-              {creneauVisible && (
-                <Typography variant="legende" sx={{ color: 'muted' }}>En fond : les jours du créneau.</Typography>
-              )}
-              {borneVisible && (
-                <Typography variant="legende" sx={{ color: 'muted' }}>{`Jusqu'au ${formatShortDayAnnee(max)}.`}</Typography>
-              )}
-            </Box>
-          )}
-        </Box>
-      </FeuilleFlottante>
+        titre={titre}
+        sousTitre={sousTitre}
+        mois={mois}
+        onMois={(m) => setEnvoi((e) => ({ ...e, mois: m }))}
+        valeur={date}
+        min={aujourdhui}
+        max={max}
+        creneau={creneau}
+        aujourdhui={aujourdhui}
+        onChoisir={(j) => setEnvoi((e) => ({ ...e, date: j }))}
+        ligne={{ libelle: `Envoyer le ${formatShortDay(date)}`, onClick: envoyer }}
+        legendes={[
+          creneauVisible && 'En fond : les jours du créneau.',
+          borneVisible && `Jusqu'au ${formatShortDayAnnee(max)}.`,
+        ]}
+      />
     )
   }
 

@@ -89,11 +89,11 @@ export const getWeekSessions = async (weekId) => {
   })
 }
 
-/** Séance + steps ordonnés + numéro/bloc de la semaine parente. */
+/** Séance + steps ordonnés + numéro, bloc et début (week_start) de la semaine parente. */
 export const getSession = async (sessionId) => {
   const { data, error } = await supabase
     .from('training_sessions')
-    .select('*, session_steps(*), week:training_weeks(week_number, block)')
+    .select('*, session_steps(*), week:training_weeks(week_number, block, start_date)')
     .eq('id', sessionId)
     .single()
   if (error) throw error
@@ -107,6 +107,7 @@ export const getSession = async (sessionId) => {
     steps,
     week_number: week?.week_number ?? null,
     block: week?.block ?? null,
+    week_start: week?.start_date ?? null,
   }
 }
 

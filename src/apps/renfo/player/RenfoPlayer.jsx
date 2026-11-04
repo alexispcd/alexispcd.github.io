@@ -77,7 +77,7 @@ const secondarySx = {
 /**
  * Player Renfo plein écran. `beeps` est créé dans le geste utilisateur du bouton
  * « Démarrer » (contrainte iOS) ; le player le libère à sa fermeture.
- * `onValidate(bandsUsed)` ferme le player et ouvre le dialog de ressenti, avec la
+ * `onValidate(bandsUsed)` ferme le player et ouvre la page « Valider la séance », avec la
  * bande jouée pour chaque exercice à élastique ({ slug: kg }).
  *
  * Rendu dans un portail sur document.body, header applicatif masqué le temps de

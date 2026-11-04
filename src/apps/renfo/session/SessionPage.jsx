@@ -13,33 +13,35 @@ import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { DUREES } from '../../../lib/durees'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
-import { completeSession, deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
+import { deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
 import { painAreaLabel } from '../../../lib/feedback'
 import { KIND_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
 import { bandOf, blockLabel, doseLabel, mainDoseLabel, supersetLabel, supersetMembers } from '../content'
 import EquipmentBox from './EquipmentBox'
 import ExerciseRow from './ExerciseRow'
 import ExerciseSheet from './ExerciseSheet'
-import ValidateDialog from './ValidateDialog'
 import RenfoPlayer from '../player/RenfoPlayer'
 import { createBeeps } from '../player/beeps'
+import { garderBandesJouees, lireBandesJouees } from '../bandesJouees'
 
+// Séance à faire : les élastiques joués gardés depuis la fin du player (pas encore
+// en base) remplacent bands_used, pour le matériel affiché et le player.
 const loadPage = async (sessionId) => {
   const [session, bands] = await Promise.all([getSession(sessionId), getBands()])
-  return { session, bands }
+  const gardees = session.status === 'planned' ? lireBandesJouees(sessionId) : null
+  return { session: gardees ? { ...session, bands_used: gardees } : session, bands }
 }
 
 const sectionTitleSx = {
   fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'text.disabled',
 }
 
-/** Détail d'une séance Renfo : matériel, blocs, fiche exercice, player et validation. */
+/** Détail d'une séance Renfo : matériel, blocs, fiche exercice et player ; la validation a sa page. */
 const SessionPage = () => {
   const { sessionId } = useParams()
   const navigate = useAppNavigate()
   const [state, setState] = useState({ status: 'loading', sessionId })
   const [sheetSlug, setSheetSlug] = useState(null)
-  const [validate, setValidate] = useState(null) // { bandsUsed } quand le dialog de ressenti est ouvert
   const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
   const [suppressionOuverte, setSuppressionOuverte] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -100,11 +102,7 @@ const SessionPage = () => {
     setPlayer({ beeps })
   }
 
-  const submitValidation = async (feedback) => {
-    const updated = await completeSession(session.id, { bandsUsed: validate?.bandsUsed, feedback })
-    setSession(updated)
-    setValidate(null)
-  }
+  const ouvrirValidation = () => navigate(`/renfo/session/${session.id}/valider`, { direction: 'forward' })
 
   const doReset = async () => {
     setBusy(true)
@@ -210,7 +208,7 @@ const SessionPage = () => {
               <Button variant="contained" startIcon={<PlayArrow />} sx={btn} onClick={startPlayer} disabled={!blocks.length}>
                 Démarrer
               </Button>
-              <Button variant="outlined" sx={btn} onClick={() => setValidate({ bandsUsed: session.bands_used })} disabled={busy}>
+              <Button variant="outlined" sx={btn} onClick={ouvrirValidation} disabled={busy}>
                 Valider sans le player
               </Button>
               {free && (
@@ -232,12 +230,6 @@ const SessionPage = () => {
 
       <ExerciseSheet slug={sheetSlug} onClose={() => setSheetSlug(null)} />
 
-      <ValidateDialog
-        open={Boolean(validate)}
-        onClose={() => setValidate(null)}
-        onSubmit={submitValidation}
-      />
-
       <FeuilleFlottante
         ouverte={suppressionOuverte}
         onFermer={() => setSuppressionOuverte(false)}
@@ -256,9 +248,11 @@ const SessionPage = () => {
           beeps={player.beeps}
           onClose={() => setPlayer(null)}
           onValidate={(bandsUsed) => {
+            // Gardés jusqu'à la validation : un retour depuis le ressenti les retrouve.
+            garderBandesJouees(session.id, bandsUsed)
             setPlayer(null)
             setSession({ bands_used: bandsUsed })
-            setValidate({ bandsUsed })
+            ouvrirValidation()
           }}
         />
       )}

@@ -1,6 +1,8 @@
 // Constantes & helpers partagés de l'outil Training.
 // La pastille d'une séance = couleur de sa zone (plus de TYPE_DOT).
 
+import { JOURS_COURTS, formatShortDay as formatShortDayDates } from '../../lib/dates.js'
+
 // Variables CSS du thème (src/styles/theme.js) : la couleur suit le thème sans
 // passer par JS. Ce sont des chaînes `var(...)` : aucune opération de couleur dessus.
 // La couleur ne dit que l'intensité : vert facile, orange qualité, bleu sortie longue.
@@ -256,6 +258,49 @@ export const onWatchWarning = (n) =>
 
 // Jour court partagé (src/lib/dates.js), réexporté pour les écrans de Training.
 export { formatShortDay } from '../../lib/dates.js'
+
+// Jour de la semaine d'une date yyyy-MM-dd, lundi 0 à dimanche 6 (lue en UTC).
+const jourLundi = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7
+}
+
+/**
+ * Fenêtre de recherche des activités d'une séance, comme coros-match : la semaine
+ * (lundi au dimanche) de startDate, début de la semaine du plan, sinon de
+ * scheduledDate ; bornée à aujourd'hui, jamais avant le lundi.
+ * → { debut, fin } en yyyy-MM-dd, ou null sans date.
+ */
+export const fenetreRecherche = (startDate, scheduledDate, aujourdhui) => {
+  const ancre = (startDate ?? scheduledDate)?.slice(0, 10)
+  if (!ancre) return null
+  const lundi = addDaysISO(ancre, -jourLundi(ancre))
+  const dimanche = addDaysISO(lundi, 6)
+  const fin = dimanche > aujourdhui ? aujourdhui : dimanche
+  return { debut: lundi, fin: fin < lundi ? lundi : fin }
+}
+
+/**
+ * Texte d'une fenêtre de recherche : « le lun 2 nov » sur un seul jour, « entre le
+ * lun 2 et le mer 4 nov » dans un même mois, « entre le lun 26 oct et le mer 4 nov » sinon.
+ */
+export const plageRecherche = ({ debut, fin }) => {
+  if (debut === fin) return `le ${formatShortDayDates(debut)}`
+  const memeMois = debut.slice(0, 7) === fin.slice(0, 7)
+  const premier = memeMois
+    ? `${JOURS_COURTS[(jourLundi(debut) + 1) % 7]} ${Number(debut.slice(8, 10))}`
+    : formatShortDayDates(debut)
+  return `entre le ${premier} et le ${formatShortDayDates(fin)}`
+}
+
+/**
+ * Jour proposé pour une séance validée sans activité : le plus ancien entre la date
+ * prévue et aujourd'hui (aujourd'hui sans date prévue), jamais un jour à venir.
+ */
+export const jourSeanceParDefaut = (scheduledDate, aujourdhui) => {
+  const prevue = scheduledDate?.slice(0, 10)
+  return prevue && prevue < aujourdhui ? prevue : aujourdhui
+}
 
 /** yyyy-MM-dd → "jeudi 8 octobre". */
 export const formatLongDay = (iso) => {

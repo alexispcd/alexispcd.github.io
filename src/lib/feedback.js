@@ -1,5 +1,6 @@
-// Helpers du ressenti post-séance (RPE), partagés entre RpeForm (src/components) et les flux de
-// complétion. Séparés du composant pour ne pas casser le fast refresh.
+// Ressenti de fin de séance (effort, douleurs, commentaire), saisi sur la page « Valider
+// la séance » (src/ui/PageRessenti.jsx) de Training et de Renfo : valeur vierge, charge
+// utile écrite en base, zones de douleur et mot de l'effort (BarreEffort).
 
 /** État initial d'un ressenti vierge. */
 export const emptyFeedback = () => ({ rpe: null, painAreas: [], note: '' })

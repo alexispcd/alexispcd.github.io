@@ -11,6 +11,7 @@ const renfo = {
     { path: '/renfo', load: () => import('./RenfoHome'), handle: { title: 'Renfo', backTo: '/' } },
     { path: '/renfo/settings', load: () => import('./SettingsPage'), handle: { title: 'Réglages', backTo: '/renfo' } },
     { path: '/renfo/session/:sessionId', load: () => import('./session/SessionPage'), handle: { title: 'Séance', backTo: '/renfo' } },
+    { path: '/renfo/session/:sessionId/valider', load: () => import('./session/ValiderPage'), handle: { title: 'Valider la séance', backTo: (p) => `/renfo/session/${p.sessionId}` } },
   ],
 }
 

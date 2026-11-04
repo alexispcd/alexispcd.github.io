@@ -13,6 +13,7 @@ const training = {
     { path: '/training/settings', load: () => import('./SettingsPage'), handle: { title: 'Réglages', backTo: '/training' } },
     { path: '/training/plan/:planId', load: () => import('./dashboard/PlanDashboard'), handle: { title: 'Training', backTo: '/' } },
     { path: '/training/plan/:planId/session/:sessionId', load: () => import('./session/SessionPage'), handle: { title: 'Séance', backTo: (p) => `/training/plan/${p.planId}` } },
+    { path: '/training/plan/:planId/session/:sessionId/valider', load: () => import('./session/ValiderPage'), handle: { title: 'Valider la séance', backTo: (p) => `/training/plan/${p.planId}/session/${p.sessionId}` } },
   ],
 }
 

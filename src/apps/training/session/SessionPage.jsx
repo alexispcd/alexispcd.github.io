@@ -39,7 +39,6 @@ import {
   groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
 } from '../sessionMath'
 import PaceChart from './PaceChart'
-import CompleteDialog from './CompleteDialog'
 import { useEnvoiMontre } from './useEnvoiMontre'
 import SkipSheet from './SkipSheet'
 
@@ -80,7 +79,6 @@ const SessionPage = () => {
   const { afficher } = useMessage()
   const attente = useFinAttente(loading)
 
-  const [completeOpen, setCompleteOpen] = useState(false)
   const [sautOuvert, setSautOuvert] = useState(false)
   const [reinitOuverte, setReinitOuverte] = useState(false)
   const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
@@ -402,8 +400,12 @@ const SessionPage = () => {
               <Bouton variante="chip" onClick={siLibre(() => setSautOuvert(true))} sx={{ flex: 1, minWidth: 0 }}>
                 Sauter
               </Bouton>
-              <Bouton variante="ink" onClick={siLibre(() => setCompleteOpen(true))} sx={{ flex: 2, minWidth: 0 }}>
-                Valider & lier Coros
+              <Bouton
+                variante="ink"
+                onClick={siLibre(() => navigate(`/training/plan/${planId}/session/${sessionId}/valider`, { direction: 'forward' }))}
+                sx={{ flex: 2, minWidth: 0 }}
+              >
+                Valider la séance
               </Bouton>
             </>
           )}
@@ -422,15 +424,7 @@ const SessionPage = () => {
         </BarreBas>
       )}
 
-      {/* ── Dialogs ──────────────────────────────────────────────── */}
-      <CompleteDialog
-        open={completeOpen}
-        sessionId={sessionId}
-        scheduledDate={session.scheduled_date}
-        onClose={() => setCompleteOpen(false)}
-        onDone={() => { setCompleteOpen(false); reload().catch((e) => echec(e, RECHARGEMENT)) }}
-      />
-
+      {/* ── Feuilles ─────────────────────────────────────────────── */}
       {envoi.feuilles}
 
       <SkipSheet
