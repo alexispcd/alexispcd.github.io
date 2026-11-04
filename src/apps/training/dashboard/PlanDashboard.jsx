@@ -28,7 +28,7 @@ import {
   groupSessionsByZone, cleanText, onWatchWarning,
 } from '../constants'
 import SessionRow from './SessionRow'
-import CorosPushDialog from '../session/CorosPushDialog'
+import { useEnvoiMontre } from '../session/useEnvoiMontre'
 import SkipSheet from '../session/SkipSheet'
 import { DURATION, transition } from '../../../styles/motion'
 
@@ -71,7 +71,6 @@ const PlanDashboard = () => {
   const [sautOuvert, setSautOuvert] = useState(false)
   const [regenOuverte, setRegenOuverte] = useState(false)
   const [regenOnWatch, setRegenOnWatch] = useState(0) // séances envoyées qui vont disparaître
-  const [pushDialog, setPushDialog] = useState(null)
   const [archiveOuverte, setArchiveOuverte] = useState(false)
   const [genTimedOut, setGenTimedOut] = useState(false)
   const [adaptTitre, setAdaptTitre] = useState('')
@@ -183,6 +182,8 @@ const PlanDashboard = () => {
     const data = await getWeekSessions(week.id)
     setSessions(data)
   }, [plan, effectiveWeek])
+
+  const envoi = useEnvoiMontre({ onEnvoye: reloadSessions })
 
   // Au changement de semaine on ne vide PAS la liste (setSessions(null)) : on garde
   // l'ancienne rendue en fondu pour préserver la hauteur et donc la position de scroll.
@@ -299,16 +300,8 @@ const PlanDashboard = () => {
   const handleOpen = (session) =>
     navigate(`/training/plan/${planId}/session/${session.id}`)
 
-  // Swipe "Envoyer" : popup d'envoi vers la montre (séance pas encore envoyée).
-  const handlePush = (session) => setPushDialog(session)
-
-  const onPushed = (res) => {
-    setPushDialog(null)
-    afficher(res?.previous_copy?.upcoming
-      ? "Séance envoyée. Supprime l'ancienne copie dans l'app Coros."
-      : 'Séance envoyée sur ta montre')
-    reloadSessions().catch((e) => echec(e, 'Les données n\'ont pas pu être rechargées. Réessaie.'))
-  }
+  // Swipe "Envoyer" : feuille Date d'envoi sur la montre (séance pas encore envoyée).
+  const handlePush = (session) => envoi.ouvrir(session)
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
   const doRegen = async () => {
@@ -468,6 +461,7 @@ const PlanDashboard = () => {
           detail={`${adaptTitre} est sautée. Les séances des 10 prochains jours sont recalculées.`} />
         <BarreAttente place="carte" {...saut.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...archivage.barre} sx={CARTE_ATTENTE_SX} />
+        <BarreAttente place="carte" {...envoi.action.barre} sx={CARTE_ATTENTE_SX} />
 
         {/* En-tête plan */}
         <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
@@ -632,13 +626,8 @@ const PlanDashboard = () => {
         fermerLibelle="Annuler"
       />
 
-      {/* Popup d'envoi vers la montre (swipe) */}
-      <CorosPushDialog
-        open={Boolean(pushDialog)}
-        session={pushDialog}
-        onClose={() => setPushDialog(null)}
-        onDone={onPushed}
-      />
+      {/* Feuilles d'envoi sur la montre (swipe) */}
+      {envoi.feuilles}
 
       <FeuilleFlottante
         ouverte={archiveOuverte}

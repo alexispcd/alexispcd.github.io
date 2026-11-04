@@ -36,7 +36,9 @@ const ligne = {
  * Une action réseau lancée par une ligne passe par useAction : la feuille se ferme
  * et la BarreAttente place="carte" se montre en tête de la page.
  * - fermerLibelle : « Fermer » par défaut, « Annuler » ou « Rester » pour une confirmation.
- * - children : contenu libre en haut du premier bloc (usages fiche et réglage).
+ * - children : contenu libre en haut du premier bloc (usages fiche, réglage et date).
+ * - libelleAria : nom de la feuille pour le lecteur d'écran quand elle n'a pas de
+ *   `titre` (usage Date : le titre est dans children) ; sinon le titre la nomme.
  * Le premier bloc défile s'il dépasse l'écran, le second reste visible. Aucune
  * couleur, même pour une action qui défait : sa place en dernier suffit.
  */
@@ -46,6 +48,7 @@ const FeuilleFlottante = ({
   titre,
   lignes = [],
   fermerLibelle = 'Fermer',
+  libelleAria,
   children,
 }) => {
   const reduire = useReduireAnimations()
@@ -75,7 +78,7 @@ const FeuilleFlottante = ({
         <Box
           role="dialog"
           aria-modal="true"
-          aria-label={titre || undefined}
+          aria-label={libelleAria || titre || undefined}
           tabIndex={-1}
           sx={{
             position: 'absolute',

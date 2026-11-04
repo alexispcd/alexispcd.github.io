@@ -42,3 +42,12 @@ export const PAIN_CHIPS = PAIN_AREAS.flatMap((a) =>
 
 /** Libellé court d'une zone de douleur (« Genou G »), ou le code s'il est inconnu. */
 export const painAreaLabel = (code) => PAIN_CHIPS.find((c) => c.code === code)?.label ?? code
+
+/** Mot de l'effort ressenti : Facile 1 à 3, Modéré 4 à 6, Dur 7 et 8, Maximal 9 et 10. */
+export const motEffort = (note) => {
+  if (note == null) return ''
+  if (note <= 3) return 'Facile'
+  if (note <= 6) return 'Modéré'
+  if (note <= 8) return 'Dur'
+  return 'Maximal'
+}

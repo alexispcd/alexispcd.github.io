@@ -5,7 +5,7 @@ import AddCircleOutline from '@mui/icons-material/AddCircleOutlineOutlined'
 import DeleteOutline from '@mui/icons-material/DeleteOutlineOutlined'
 import { SectionLabel, GlassCard } from '../WizardParts'
 import { formatGoalTime } from '../../constants'
-import WheelTimePicker from '../WheelTimePicker'
+import RouesDuree from '../../../../ui/RouesDuree'
 
 const PREDICTION_LABELS = [
   ['five_k', '5 km'],
@@ -51,7 +51,7 @@ const StepGoal = ({ draft, patch }) => {
             </Typography>
           )}
       </Box>
-      <WheelTimePicker valueSec={draft.goalSec ?? 0} onChange={(sec) => patch({ goalSec: sec })} />
+      <RouesDuree secondes={draft.goalSec ?? 0} onChange={(sec) => patch({ goalSec: sec })} />
 
       {availablePreds.length > 0 && (
         <GlassCard sx={{ mt: 1.5, p: 1.75 }}>

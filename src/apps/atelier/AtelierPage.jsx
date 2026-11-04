@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { SPACE_BAS, border, radius, space } from '../../styles/tokens'
+import { SPACE_BAS, border, radius, space, textStyles } from '../../styles/tokens'
 import { PAIN_CHIPS } from '../../lib/feedback'
 import { BAND_PALETTE } from '../renfo/bandColor'
 import {
@@ -37,6 +37,12 @@ import { getCorosStatus } from '../../lib/training'
 import supabase from '../../lib/supabase'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import CasesCode from '../../ui/CasesCode'
+import Calendrier from '../../ui/Calendrier'
+import { moisDe } from '../../ui/calendrier'
+import RouesDuree from '../../ui/RouesDuree'
+import BarreEffort from '../../ui/BarreEffort'
+import { formatShortDay, formatShortDayAnnee } from '../../lib/dates'
+import { addDaysISO, joursCreneau, todayISO } from '../training/constants'
 import CarteSysteme from '../../components/CarteSysteme'
 import InstallBanner from '../../components/InstallBanner'
 
@@ -386,6 +392,129 @@ const DemoEcransSysteme = () => {
   )
 }
 
+// ─── Calendrier, roues de durée, barre d'effort ─────────────────────────────
+
+const EnTeteFeuille = ({ titre, sousTitre }) => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4], pt: space[16], px: space[16], pb: space[4] }}>
+    <Typography component="h2" sx={{ ...textStyles['titre-barre'], fontWeight: 700 }}>{titre}</Typography>
+    {sousTitre && <Typography variant="secondaire" sx={{ color: 'muted' }}>{sousTitre}</Typography>}
+  </Box>
+)
+
+const LegendeCalendrier = ({ children }) => (
+  <Typography variant="legende" sx={{ color: 'muted', pt: space[8], px: space[8] }}>{children}</Typography>
+)
+
+const DemoCalendrier = () => {
+  const { afficher } = useMessage()
+  const [ouverte, setOuverte] = useState(null)
+  const [cas, setCas] = useState(null) // { aujourdhui, min, max, creneau, date, mois }
+
+  const ouvrirBornes = () => {
+    const aujourdhui = todayISO()
+    const prevue = addDaysISO(aujourdhui, 3)
+    setCas({ aujourdhui, min: aujourdhui, max: addDaysISO(aujourdhui, 90), creneau: joursCreneau(prevue, 'B'), date: prevue, mois: moisDe(prevue) })
+    setOuverte('bornes')
+  }
+  const ouvrirLibre = () => {
+    setCas({ aujourdhui: todayISO(), min: undefined, max: undefined, creneau: [], date: '2026-08-15', mois: '2026-08' })
+    setOuverte('libre')
+  }
+  const fermer = () => setOuverte(null)
+  const regler = (champ) => (v) => setCas((c) => ({ ...c, [champ]: v }))
+
+  const creneauVisible = cas?.creneau.some((j) => moisDe(j) === cas.mois && (!cas.min || j >= cas.min) && (!cas.max || j <= cas.max))
+  const borneVisible = Boolean(cas?.max) && moisDe(cas.max) === cas.mois
+
+  return (
+    <Section titre="Calendrier">
+      <Rangee>
+        <Bouton petit variante="chip" onClick={ouvrirBornes}>Bornes et créneau</Bouton>
+        <Bouton petit variante="chip" onClick={ouvrirLibre}>Sans borne</Bouton>
+      </Rangee>
+      <Note>Sans borne : août 2026 prend 6 rangées, mars 2027 commence un lundi. Les chevrons ne bougent pas.</Note>
+      {cas && (
+        <FeuilleFlottante
+          ouverte={Boolean(ouverte)}
+          onFermer={fermer}
+          libelleAria={ouverte === 'libre' ? 'Choisir un jour' : 'Envoyer sur la montre'}
+          lignes={[{
+            libelle: ouverte === 'libre' ? 'Valider' : `Envoyer le ${formatShortDay(cas.date)}`,
+            onClick: () => afficher(`${formatShortDay(cas.date)} choisi`),
+          }]}
+          fermerLibelle="Annuler"
+        >
+          {ouverte === 'libre'
+            ? <EnTeteFeuille titre="Choisir un jour" sousTitre={formatShortDayAnnee(cas.date)} />
+            : <EnTeteFeuille titre="Envoyer sur la montre" sousTitre="Tempo continu 20 min · créneau Mer-Ven" />}
+          <Box sx={{ display: 'flex', flexDirection: 'column', px: space[12], pb: space[12] }}>
+            <Calendrier
+              mois={cas.mois}
+              onMois={regler('mois')}
+              valeur={cas.date}
+              min={cas.min}
+              max={cas.max}
+              creneau={cas.creneau}
+              aujourdhui={cas.aujourdhui}
+              onChoisir={regler('date')}
+            />
+            {creneauVisible && <LegendeCalendrier>En fond : les jours du créneau.</LegendeCalendrier>}
+            {borneVisible && <LegendeCalendrier>{`Jusqu'au ${formatShortDayAnnee(cas.max)}.`}</LegendeCalendrier>}
+          </Box>
+        </FeuilleFlottante>
+      )}
+    </Section>
+  )
+}
+
+const deuxChiffres = (n) => String(n).padStart(2, '0')
+const texteTemps = (sec) => {
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  return h > 0 ? `${h}:${deuxChiffres(m)}:${deuxChiffres(s)}` : `${m}:${deuxChiffres(s)}`
+}
+
+const DemoRoues = () => {
+  const { afficher } = useMessage()
+  const [temps, setTemps] = useState(2645)
+  const [feuille, setFeuille] = useState(false)
+  const [tempsFeuille, setTempsFeuille] = useState(5340)
+
+  return (
+    <Section titre="Roues de durée">
+      <RouesDuree secondes={temps} onChange={setTemps} />
+      <Note>{`Sur carte : ${texteTemps(temps)}`}</Note>
+      <Rangee>
+        <Bouton petit variante="chip" onClick={() => setFeuille(true)}>Dans une feuille</Bouton>
+      </Rangee>
+      <Note>{`Dans la feuille : ${texteTemps(tempsFeuille)}`}</Note>
+      <FeuilleFlottante
+        ouverte={feuille}
+        onFermer={() => setFeuille(false)}
+        libelleAria="Mon temps"
+        lignes={[{ libelle: 'Enregistrer', onClick: () => afficher(`Temps : ${texteTemps(tempsFeuille)}`) }]}
+        fermerLibelle="Annuler"
+      >
+        <EnTeteFeuille titre="Mon temps" sousTitre="Course fictive · semi du dim 13 sept 2026" />
+        <RouesDuree sansCarte secondes={tempsFeuille} onChange={setTempsFeuille} libelle="Mon temps" />
+      </FeuilleFlottante>
+    </Section>
+  )
+}
+
+const DemoEffort = () => {
+  const [note, setNote] = useState(null)
+  return (
+    <Section titre="Barre d'effort">
+      <BarreEffort note={note} onChange={setNote} />
+      <Rangee>
+        <Bouton petit variante="chip" onClick={() => setNote(null)}>Pas encore notée</Bouton>
+      </Rangee>
+    </Section>
+  )
+}
+
 const AtelierPage = () => {
   const [intensite, setIntensite] = useState('normale')
   const [exercices, setExercices] = useState(3)
@@ -651,6 +780,9 @@ const AtelierPage = () => {
         </Section>
 
         <DemoFeuille />
+        <DemoCalendrier />
+        <DemoRoues />
+        <DemoEffort />
         <DemoAttente />
         <DemoMessage />
         <DemoAction />

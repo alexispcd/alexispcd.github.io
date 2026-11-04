@@ -90,6 +90,23 @@ export const ZONE_DAYS = {
   C: 'Sam-Dim',
 }
 
+// Jours de chaque créneau, en décalage depuis le lundi.
+const CRENEAU_JOURS = { A: [0, 1], B: [2, 3, 4], C: [5, 6] }
+
+/**
+ * Dates (yyyy-MM-dd) du créneau d'une zone dans la semaine de scheduledDate, semaine du
+ * lundi : A lundi et mardi, B mercredi à vendredi, C samedi et dimanche.
+ */
+export const joursCreneau = (scheduledDate, zone) => {
+  const decalages = CRENEAU_JOURS[zone]
+  if (!scheduledDate || !decalages) return []
+  const [y, m, d] = scheduledDate.slice(0, 10).split('-').map(Number)
+  const jour = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+  if (Number.isNaN(jour)) return []
+  const lundi = addDaysISO(scheduledDate.slice(0, 10), -((jour + 6) % 7))
+  return decalages.map((n) => addDaysISO(lundi, n))
+}
+
 const DOW_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 /** "Jeu 9" à partir d'une date ISO (jour réel d'une séance faite). */
@@ -237,17 +254,8 @@ export const isCorosCopyUpcoming = (session, today = todayISO()) =>
 export const onWatchWarning = (n) =>
   `${n} séance${n > 1 ? 's' : ''} déjà envoyée${n > 1 ? 's' : ''} ${n > 1 ? 'resteront' : 'restera'} sur ta montre, à supprimer dans l'app Coros.`
 
-const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
-const MOIS_COURTS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc']
-
-/** yyyy-MM-dd → "jeu 29 oct" (sans point, comme le Design System). */
-export const formatShortDay = (iso) => {
-  if (!iso) return ''
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  if (Number.isNaN(date.getTime())) return ''
-  return `${JOURS_COURTS[date.getUTCDay()]} ${date.getUTCDate()} ${MOIS_COURTS[date.getUTCMonth()]}`
-}
+// Jour court partagé (src/lib/dates.js), réexporté pour les écrans de Training.
+export { formatShortDay } from '../../lib/dates.js'
 
 /** yyyy-MM-dd → "jeudi 8 octobre". */
 export const formatLongDay = (iso) => {

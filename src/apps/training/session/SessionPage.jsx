@@ -40,7 +40,7 @@ import {
 } from '../sessionMath'
 import PaceChart from './PaceChart'
 import CompleteDialog from './CompleteDialog'
-import CorosPushDialog from './CorosPushDialog'
+import { useEnvoiMontre } from './useEnvoiMontre'
 import SkipSheet from './SkipSheet'
 
 // ── Styles de chips de statut ────────────────────────────────────────────────
@@ -83,7 +83,6 @@ const SessionPage = () => {
   const [completeOpen, setCompleteOpen] = useState(false)
   const [sautOuvert, setSautOuvert] = useState(false)
   const [reinitOuverte, setReinitOuverte] = useState(false)
-  const [pushOpen, setPushOpen] = useState(false)
   const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
 
   const echec = (e, phrase) => afficher(texteErreur(e, phrase))
@@ -118,16 +117,19 @@ const SessionPage = () => {
     },
     echec: 'La mise à jour de ta montre n\'a pas abouti. Réessaie.',
   })
-  const actions = [saut, reinit, delier, restaurer, montre]
-  const locked = actions.some((a) => a.enCours)
-  // Action en cours : le toucher est ignoré, la carte d'attente est déjà en tête de page.
-  const siLibre = (fn) => () => { if (!locked) fn() }
 
   const reload = useCallback(async () => {
     const s = await getSession(sessionId)
     setSession(s)
     return s
   }, [sessionId])
+
+  const envoi = useEnvoiMontre({ onEnvoye: reload })
+
+  const actions = [saut, reinit, delier, restaurer, montre, envoi.action]
+  const locked = actions.some((a) => a.enCours)
+  // Action en cours : le toucher est ignoré, la carte d'attente est déjà en tête de page.
+  const siLibre = (fn) => () => { if (!locked) fn() }
 
   // Changement de séance : état de chargement remis au rendu, l'effet ne fait que charger.
   const [prevSessionId, setPrevSessionId] = useState(sessionId)
@@ -185,14 +187,6 @@ const SessionPage = () => {
         afficher('Séance restaurée, mais pas sur ta montre.')
       }
     })
-  }
-
-  const onPushed = (res) => {
-    setPushOpen(false)
-    afficher(res?.previous_copy?.upcoming
-      ? "Séance envoyée. Supprime l'ancienne copie dans l'app Coros."
-      : 'Séance envoyée sur ta montre')
-    reload().catch((e) => echec(e, RECHARGEMENT))
   }
 
   // Remplace le contenu de la copie Coros par la version actuelle de la séance.
@@ -329,7 +323,7 @@ const SessionPage = () => {
                 variant="outlined"
                 startIcon={<Watch />}
                 endIcon={isPushed ? <ExpandMore /> : undefined}
-                onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => setPushOpen(true)}
+                onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => envoi.ouvrir(session)}
                 disabled={locked}
                 sx={{
                   height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
@@ -368,7 +362,7 @@ const SessionPage = () => {
                 slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
               >
                 <MenuItem onClick={doUpdateCoros}>Mettre à jour</MenuItem>
-                <MenuItem onClick={() => { setWatchAnchor(null); setPushOpen(true) }}>
+                <MenuItem onClick={() => { setWatchAnchor(null); envoi.ouvrir(session) }}>
                   Envoyer à une autre date
                 </MenuItem>
               </Menu>
@@ -437,12 +431,7 @@ const SessionPage = () => {
         onDone={() => { setCompleteOpen(false); reload().catch((e) => echec(e, RECHARGEMENT)) }}
       />
 
-      <CorosPushDialog
-        open={pushOpen}
-        session={session}
-        onClose={() => setPushOpen(false)}
-        onDone={onPushed}
-      />
+      {envoi.feuilles}
 
       <SkipSheet
         session={session}
