@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Box, Typography } from '@mui/material'
 import BoutonIcone from '../ui/BoutonIcone'
 import FeuilleFlottante from '../ui/FeuilleFlottante'
+import Pastille from '../ui/Pastille'
 import { ChevronRetour, TroisPoints } from '../ui/Icones'
 import { space } from '../styles/tokens'
 
@@ -21,9 +22,11 @@ const BORD = `calc(${space[16]} - 10px)`
  * - onBack : chevron affiché seulement s'il est fourni (label « Retour »).
  * - actions : [{ label, onClick, disabled }], une ligne par action dans une
  *   FeuilleFlottante (second bloc « Fermer ») ; titreActions : son titre facultatif.
+ * - pastille : texte d'une Pastille à contour posée avant les trois points, à 4 px
+ *   (« S5 / 11 » sur le dashboard Training).
  * La feuille se ferme au changement de route.
  */
-const AppHeader = ({ titre, actions = [], titreActions, onBack, sx = {} }) => {
+const AppHeader = ({ titre, actions = [], titreActions, pastille, onBack, sx = {} }) => {
   const [ouverte, setOuverte] = useState(false)
 
   // AppHeader n'est jamais démonté : ajustement pendant le rendu plutôt qu'un effet,
@@ -57,11 +60,14 @@ const AppHeader = ({ titre, actions = [], titreActions, onBack, sx = {} }) => {
         )}
       </Box>
 
-      {aDesActions && (
-        <Box sx={{ display: 'flex', pointerEvents: 'auto' }}>
-          <BoutonIcone label="Actions" onClick={() => setOuverte(true)}>
-            <TroisPoints taille={22} />
-          </BoutonIcone>
+      {(aDesActions || pastille) && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: space[4], flexShrink: 0, pointerEvents: 'auto' }}>
+          {pastille && <Pastille variante="contour">{pastille}</Pastille>}
+          {aDesActions && (
+            <BoutonIcone label="Actions" onClick={() => setOuverte(true)}>
+              <TroisPoints taille={22} />
+            </BoutonIcone>
+          )}
         </Box>
       )}
 

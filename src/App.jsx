@@ -20,7 +20,7 @@ import { clearDataCache } from './lib/pwa'
 import { useAppNavigate } from './hooks/useAppNavigate'
 
 const AppLayout = () => {
-  const { headerActions, headerTitre, overlay } = useAppCtx()
+  const { headerActions, headerTitre, headerPastille, headerTitreBarre, overlay } = useAppCtx()
   const matches = useMatches()
   const lastMatch = matches.at(-1)
   const handle = lastMatch?.handle ?? {}
@@ -75,7 +75,8 @@ const AppLayout = () => {
             bgcolor: 'background.default',
           }} />
           <AppHeader
-            titre={handle.title ?? null}
+            titre={headerTitreBarre ?? handle.title ?? null}
+            pastille={headerPastille}
             actions={headerActions}
             titreActions={headerTitre}
             onBack={handleBack}
@@ -109,10 +110,18 @@ const App = () => {
   const apparence = useApparence(user)
   const { dark } = apparence
   // Actions de la barre du haut et titre facultatif de leur feuille, posés par la page.
-  const [header, setHeader] = useState({ actions: [], titre: null })
+  // Options facultatives : `pastille` (texte d'une Pastille à contour avant les trois
+  // points) et `titreBarre` (remplace handle.title). Tout est remis à zéro par
+  // setHeaderActions([]) au nettoyage de l'effet de la page.
+  const [header, setHeader] = useState({ actions: [], titre: null, pastille: null, titreBarre: null })
   // Stable : les pages la mettent dans les dépendances de leur effet.
-  const setHeaderActions = useCallback((actions, titre) => {
-    setHeader({ actions: actions ?? [], titre: titre ?? null })
+  const setHeaderActions = useCallback((actions, titre, options = {}) => {
+    setHeader({
+      actions: actions ?? [],
+      titre: titre ?? null,
+      pastille: options.pastille ?? null,
+      titreBarre: options.titreBarre ?? null,
+    })
   }, [])
   // Vrai quand un overlay plein écran est monté : le header applicatif s'efface.
   const [overlay, setOverlay] = useState(false)
@@ -183,7 +192,8 @@ const App = () => {
       <MessageProvider>
         <AppCtx.Provider value={{
           apparence, user, access, refreshAccess,
-          headerActions: header.actions, headerTitre: header.titre, setHeaderActions,
+          headerActions: header.actions, headerTitre: header.titre,
+          headerPastille: header.pastille, headerTitreBarre: header.titreBarre, setHeaderActions,
           overlay, setOverlay,
         }}>
           <AuthGate>

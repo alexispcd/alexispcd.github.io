@@ -37,7 +37,7 @@ import {
   cleanText, shortDayLabel, formatLongDay, isCorosCopyUpcoming,
 } from '../constants'
 import {
-  groupSteps, totalMeters, totalSeconds, keyPaceSec, stepSizeLabel,
+  groupSteps, plannedMeters, totalSeconds, keyPaceSec, stepSizeLabel,
 } from '../sessionMath'
 import PaceChart from './PaceChart'
 import { useEnvoiMontre } from './useEnvoiMontre'
@@ -268,7 +268,7 @@ const SessionPage = () => {
           )}
 
           <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
-            {totalMeters(steps) > 0 && <Metric value={`${formatKm(totalMeters(steps))} km`} label="distance" />}
+            {plannedMeters(steps) > 0 && <Metric value={`${formatKm(plannedMeters(steps))} km`} label="distance" />}
             {totalSeconds(steps) > 0 && <Metric value={`~${formatMin(Math.round(totalSeconds(steps) / 60))}`} label="durée" />}
             {keyPaceSec(steps) != null && <Metric value={`${formatPace(keyPaceSec(steps))} /km`} label="allure clé" />}
           </Box>

@@ -3,40 +3,45 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
 import { useMessage } from '../../../ui/useMessage'
-import { Box, Typography, Chip, Button, Alert } from '@mui/material'
-import EmojiEvents from '@mui/icons-material/EmojiEvents'
+import { Box, Typography, Button, Alert } from '@mui/material'
 import Autorenew from '@mui/icons-material/Autorenew'
 import ErrorOutlined from '@mui/icons-material/ErrorOutlined'
 import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import { useAppCtx } from '../../../lib/context'
-import { cardSx } from '../../../styles/glass'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
 import BarreAttente from '../../../ui/BarreAttente'
 import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { DUREES } from '../../../lib/durees'
+import Page from '../../../ui/Page'
+import { space } from '../../../styles/tokens'
+import CarteSysteme from '../../../components/CarteSysteme'
+import BandeauChiffres from '../../../ui/BandeauChiffres'
+import HistoSemaines from '../../../ui/HistoSemaines'
+import GrilleSemaine from '../../../ui/GrilleSemaine'
+import TableauSeances from '../../../ui/TableauSeances'
 import {
-  getPlan, getWeekSessions, subscribeToPlan,
+  getPlan, subscribeToPlan,
   skipSession, adaptSessions,
   regeneratePlan, archivePlan, deletePlan, generatePlan, countUpcomingOnWatch,
 } from '../../../lib/training'
 import {
-  BLOCK_STYLE, ZONE_STYLE, BLOCK_LABEL, PLAN_STATUS_LABEL,
-  ZONE_LABEL, ZONE_SUBLABEL, ZONE_DAYS, intensityOf,
-  formatGoalTime, formatKm, daysUntil, currentWeekNumber, formatWeekRange,
-  groupSessionsByZone, cleanText, onWatchWarning,
+  formatGoalTime, daysUntil, currentWeekNumber, cleanText, onWatchWarning, todayISO,
 } from '../constants'
-import SessionRow from './SessionRow'
+import {
+  seancesDeSemaine, kmFaits, kmSemaine, uneDecimale, formaterKm, compteARebours, histogramme,
+  joursGrille, blocGrille, ligneTableau, bandeauPasse,
+} from './vueSemaine'
 import { useEnvoiMontre } from '../session/useEnvoiMontre'
 import SkipSheet from '../session/SkipSheet'
-import { DURATION, transition } from '../../../styles/motion'
 
 const SAUT_ECHEC = 'La séance n\'a pas pu être sautée. Réessaie.'
 const ADAPTATION_ECHEC = 'L\'adaptation n\'a pas abouti. Réessaie.'
 
-// Carte d'attente en tête de page : l'écart du haut s'ouvre et se replie avec elle.
-const CARTE_ATTENTE_SX = { mx: 2, '& .MuiCollapse-wrapperInner': { pt: 1.5 } }
+// Carte d'attente en tête de page : son écart du bas s'ouvre et se replie avec elle,
+// rien n'est ajouté entre les cartes du dashboard quand elle est repliée.
+const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pb: space[12] } }
 
 const nombreAdaptees = (n) =>
   (n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
@@ -52,6 +57,8 @@ const PlanDashboard = () => {
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
+  // Relance du chargement (« Réessayer » de la carte d'échec).
+  const [essai, setEssai] = useState(0)
 
   const [regenBusy, setRegenBusy] = useState(false)
 
@@ -63,8 +70,6 @@ const PlanDashboard = () => {
     const v = sessionStorage.getItem(`training:selectedWeek:${planId}`)
     return v ? Number(v) : null
   })
-  const [sessions, setSessions] = useState(null)
-  const [sessionsLoading, setSessionsLoading] = useState(false)
 
   // Feuille « Sauter » : la séance visée reste posée pendant la fermeture de la feuille.
   const [sautCible, setSautCible] = useState(null)
@@ -76,7 +81,6 @@ const PlanDashboard = () => {
   const [adaptTitre, setAdaptTitre] = useState('')
 
   const attente = useFinAttente(loading)
-  const attenteSeances = useFinAttente(sessions === null)
 
   const saut = useAction({ attente: 'Saut de la séance', duree: DUREES.actionCourte, echec: SAUT_ECHEC })
   const adaptation = useAction({
@@ -93,9 +97,6 @@ const PlanDashboard = () => {
     attente: 'Génération de ton plan', duree: DUREES.actionCourte,
     echec: 'La génération n\'a pas pu redémarrer. Réessaie.',
   })
-
-  const selectedWeekRef = useRef(null)
-  const scrolledRef = useRef(false)
 
   const echec = (e, phrase) => afficher(texteErreur(e, phrase))
 
@@ -134,7 +135,6 @@ const PlanDashboard = () => {
 
   useEffect(() => {
     let cancelled = false
-    scrolledRef.current = false
     getPlan(planId)
       .then((p) => { if (!cancelled) { setPlan(p); setLoading(false) } })
       .catch((e) => {
@@ -142,7 +142,13 @@ const PlanDashboard = () => {
         if (!cancelled) { setLoadError('Les données n\'ont pas pu être chargées.'); setLoading(false) }
       })
     return () => { cancelled = true }
-  }, [planId])
+  }, [planId, essai])
+
+  const reessayer = () => {
+    setLoading(true)
+    setLoadError(null)
+    setEssai((n) => n + 1)
+  }
 
   // ── Garde-fou (suite) : retire de sessionStorage une semaine absente du plan ──
   useEffect(() => {
@@ -175,43 +181,8 @@ const PlanDashboard = () => {
     return () => clearTimeout(t)
   }, [isGenerating])
 
-  // ── Chargement des séances de la semaine sélectionnée ─────────────────────────
-  const reloadSessions = useCallback(async () => {
-    const week = plan?.weeks?.find((w) => w.week_number === effectiveWeek)
-    if (!week) return
-    const data = await getWeekSessions(week.id)
-    setSessions(data)
-  }, [plan, effectiveWeek])
-
-  const envoi = useEnvoiMontre({ onEnvoye: reloadSessions })
-
-  // Au changement de semaine on ne vide PAS la liste (setSessions(null)) : on garde
-  // l'ancienne rendue en fondu pour préserver la hauteur et donc la position de scroll.
-  // L'indicateur de chargement passe à true au rendu quand la semaine ou le plan
-  // change ; l'effet lance le chargement et le repasse à false.
-  const [prevSessionsSource, setPrevSessionsSource] = useState({ effectiveWeek, plan })
-  if (prevSessionsSource.effectiveWeek !== effectiveWeek || prevSessionsSource.plan !== plan) {
-    setPrevSessionsSource({ effectiveWeek, plan })
-    if (effectiveWeek != null && plan?.weeks?.length) setSessionsLoading(true)
-  }
-
-  useEffect(() => {
-    if (effectiveWeek == null || !plan?.weeks?.length) return
-    // Même chargement que reloadSessions, écrit en chaîne de promesses : tous les
-    // setState partent des callbacks, jamais du corps de l'effet.
-    const week = plan.weeks.find((w) => w.week_number === effectiveWeek)
-    Promise.resolve(week ? getWeekSessions(week.id) : undefined)
-      .then((data) => { if (week) setSessions(data) })
-      .catch((e) => console.error('[PlanDashboard]', e.message))
-      .finally(() => setSessionsLoading(false))
-  }, [effectiveWeek, plan])
-
-  // ── Scroll auto vers la semaine courante (une fois) ───────────────────────────
-  useEffect(() => {
-    if (scrolledRef.current || !selectedWeekRef.current) return
-    selectedWeekRef.current.scrollIntoView({ inline: 'center', block: 'nearest' })
-    scrolledRef.current = true
-  }, [effectiveWeek])
+  // Après un envoi sur la montre : plan relu sans repasser par l'écran de chargement.
+  const envoi = useEnvoiMontre({ onEnvoye: reloadPlan })
 
   // ── Actions du header ─────────────────────────────────────────────────────────
   const readOnly = plan?.status !== 'active'
@@ -225,9 +196,12 @@ const PlanDashboard = () => {
     actions.push({ label: 'Historique des séances', onClick: () => navigate('/historique', { direction: 'forward', state: { retour: `${location.pathname}${location.search}` } }) })
     actions.push({ label: 'Historique des plans', onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
     actions.push({ label: 'Réglages', onClick: () => navigate('/training/settings', { direction: 'forward' }) })
-    setHeaderActions(actions, plan.race_name)
+    // Plan en cours : pastille de la semaine sélectionnée ; plan passé : titre au nom du plan.
+    setHeaderActions(actions, plan.race_name, readOnly
+      ? { titreBarre: plan.race_name }
+      : { pastille: `S${effectiveWeek} / ${plan.weeks.length}` })
     return () => setHeaderActions([])
-  }, [plan, readOnly, navigate, setHeaderActions, location.pathname, location.search])
+  }, [plan, readOnly, effectiveWeek, navigate, setHeaderActions, location.pathname, location.search])
 
   // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
   // Même borne que regenerate-plan : semaines à partir de la courante incluse.
@@ -247,12 +221,9 @@ const PlanDashboard = () => {
     setSautOuvert(true)
   }
 
-  const marquerSautee = (id) =>
-    setSessions((prev) => prev?.map((s) => (s.id === id ? { ...s, status: 'skipped' } : s)) ?? prev)
-
-  // Rechargement à jour même depuis une adaptation lancée avant le chargement du plan.
-  const reloadSessionsRef = useRef(reloadSessions)
-  useEffect(() => { reloadSessionsRef.current = reloadSessions })
+  const marquerSautee = (id) => setPlan((p) => (p
+    ? { ...p, sessions: p.sessions.map((s) => (s.id === id ? { ...s, status: 'skipped' } : s)) }
+    : p))
 
   // Adaptation après un saut ; sauterAvant : le saut n'est pas encore écrit (dashboard).
   // La séance reste sautée si l'adaptation échoue.
@@ -270,7 +241,7 @@ const PlanDashboard = () => {
       }
       const { sessions: adapted } = await adaptSessions(sessionId)
       try {
-        await reloadSessionsRef.current()
+        await reloadPlan()
       } catch (e) {
         console.error('[PlanDashboard] rechargement après adaptation :', e)
       }
@@ -298,11 +269,15 @@ const PlanDashboard = () => {
     lancerAdaptationDemandee(demandeAdaptation)
   }, [demandeAdaptation])
 
-  const handleOpen = (session) =>
-    navigate(`/training/plan/${planId}/session/${session.id}`)
+  const seanceDe = (id) => plan?.sessions?.find((s) => s.id === id)
 
-  // Swipe "Envoyer" : feuille Date d'envoi sur la montre (séance pas encore envoyée).
-  const handlePush = (session) => envoi.ouvrir(session)
+  const handleOpen = (id) =>
+    navigate(`/training/plan/${planId}/session/${id}`)
+
+  // Glisser « Envoyer » : feuille Date d'envoi sur la montre (séance pas encore envoyée).
+  const handlePush = (id) => { const s = seanceDe(id); if (s) envoi.ouvrir(s) }
+
+  const handleSkipId = (id) => { const s = seanceDe(id); if (s) handleSkip(s) }
 
   // ── Handlers plan ─────────────────────────────────────────────────────────────
   const doRegen = async () => {
@@ -358,9 +333,14 @@ const PlanDashboard = () => {
 
   if (loadError) {
     return (
-      <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">{loadError}</Alert>
-      </Box>
+      <Page>
+        <CarteSysteme
+          titre="Impossible de charger ton plan"
+          phrase={loadError}
+          bouton="Réessayer"
+          onClick={reessayer}
+        />
+      </Page>
     )
   }
 
@@ -428,187 +408,68 @@ const PlanDashboard = () => {
 
   // ── Dashboard ─────────────────────────────────────────────────────────────────
   const weeks = plan.weeks
-  const totalWeeks = weeks.length
-  const currentWeek = currentWeekNumber(weeks)
+  const aujourdhui = todayISO()
   const effWeekObj = weeks.find((w) => w.week_number === effectiveWeek)
-  const nextWeekObj = weeks.find((w) => w.week_number === effectiveWeek + 1)
-  const isCurrentWeek = effectiveWeek === currentWeek
-  // Kilométrage d'une semaine = somme des distances de ses séances (agg_distance_m),
-  // aligné sur le total réel des séances affichées (pas la cible IA target_km).
-  const weekKm = (w) => (w.agg_distance_m ?? 0) / 1000
-  const maxKm = weeks.reduce((m, w) => Math.max(m, weekKm(w)), 0)
-  const days = daysUntil(plan.race_date)
+  const seances = effWeekObj ? seancesDeSemaine(plan.sessions, effWeekObj.id) : []
+  const histo = histogramme(weeks)
 
-  // Km réalisés de la semaine sélectionnée : séances faites, laps réels
-  // si synchronisés, sinon fallback sur l'agrégat prévu.
-  const doneMeters = (sessions ?? []).reduce((sum, s) => {
-    if (s.status !== 'done') return sum
-    const laps = s.actual_laps
-    if (Array.isArray(laps) && laps.length) {
-      return sum + laps.reduce((a, l) => a + (l.distance_m ?? 0), 0)
-    }
-    return sum + (s.agg_distance_m ?? 0)
-  }, 0)
-  const targetKm = effWeekObj ? weekKm(effWeekObj) : null
-  const doneKmLabel = doneMeters ? formatKm(doneMeters) : '0'
-  const donePct = targetKm ? Math.min(100, (doneMeters / 1000 / targetKm) * 100) : 0
+  const bandeau = readOnly
+    ? <BandeauChiffres cellules={bandeauPasse(plan, plan.sessions)} petite />
+    : (
+      <BandeauChiffres
+        etiquetteSouple
+        cellules={[
+          { etiquette: plan.race_name, valeur: compteARebours(daysUntil(plan.race_date)) },
+          { etiquette: 'Objectif', valeur: formatGoalTime(plan.goal_time_sec) ?? '-' },
+          {
+            etiquette: 'Semaine',
+            nombre: kmFaits(seances),
+            formater: formaterKm,
+            sous: `/ ${uneDecimale(kmSemaine(effWeekObj))} km`,
+          },
+        ]}
+      />
+    )
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'env(safe-area-inset-bottom, 0px)' }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-
-        {/* Cartes d'attente */}
+    <>
+      <Page gap={0}>
+        {/* Cartes d'attente : repliées, elles n'ajoutent aucun écart. */}
         <BarreAttente place="carte" {...adaptation.barre} sx={CARTE_ATTENTE_SX}
           detail={`${adaptTitre} est sautée. Les séances des 10 prochains jours sont recalculées.`} />
         <BarreAttente place="carte" {...saut.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...archivage.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...envoi.action.barre} sx={CARTE_ATTENTE_SX} />
 
-        {/* En-tête plan */}
-        <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mx: 2, mt: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {readOnly ? (
-              <Chip
-                label={PLAN_STATUS_LABEL[plan.status]?.toUpperCase() ?? plan.status}
-                size="small"
-                sx={{ height: 22, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em' }}
-              />
-            ) : (
-              <Chip
-                icon={<EmojiEvents sx={{ fontSize: '13px !important' }} />}
-                label="PLAN ACTIF"
-                size="small"
-                sx={{
-                  height: 22, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em',
-                  color: 'primary.main', bgcolor: 'chip',
-                  border: '1px solid', borderColor: 'primary.main',
-                  '& .MuiChip-icon': { color: 'primary.main' },
-                }}
-              />
-            )}
-            <Typography variant="caption" color="text.disabled">
-              Semaine {effectiveWeek} / {totalWeeks}
-            </Typography>
-          </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
+          {bandeau}
 
-          <Typography variant="h6" fontWeight={750} sx={{ mt: 1.25, letterSpacing: '-0.02em' }}>
-            {plan.race_name}
-          </Typography>
+          <HistoSemaines
+            semaines={histo.semaines}
+            max={histo.max}
+            blocs={histo.blocs}
+            selection={effectiveWeek}
+            onChoisir={selectWeek}
+          />
 
-          <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
-            {days != null && days >= 0 && (
-              <Metric value={`J−${days}`} label="avant course" />
-            )}
-            {plan.goal_time_sec != null && (
-              <Metric value={formatGoalTime(plan.goal_time_sec)} label="objectif" />
-            )}
-            {targetKm != null && (
-              <Metric
-                value={`${(sessionsLoading || sessions === null) ? '…' : doneKmLabel} / ${Math.round(targetKm)} km`}
-                label={isCurrentWeek ? 'cette semaine' : `semaine S${effectiveWeek}`}
-              />
-            )}
-          </Box>
+          <GrilleSemaine
+            jours={joursGrille(effWeekObj?.start_date, aujourdhui)}
+            blocs={seances.map((s) => blocGrille(s, plan, aujourdhui))}
+            onOuvrir={handleOpen}
+            vide="Aucune séance pour cette semaine."
+          />
 
-          {targetKm != null && (
-            <Box sx={{ mt: 1.5, height: 4, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
-              <Box sx={{ height: '100%', borderRadius: 2, bgcolor: 'primary.main', width: `${(sessionsLoading || sessions === null) ? 0 : donePct}%`, transition: transition('width', DURATION.fill) }} />
-            </Box>
+          {seances.length > 0 && (
+            <TableauSeances
+              lignes={seances.map((s) => ligneTableau(s, readOnly))}
+              glisser={!readOnly}
+              onOuvrir={handleOpen}
+              onSauter={handleSkipId}
+              onEnvoyer={handlePush}
+            />
           )}
         </Box>
-
-        {/* Bande de semaines */}
-        <SectionLabel>Semaines</SectionLabel>
-        <Box sx={{
-          display: 'flex', gap: 1, overflowX: 'auto', px: 2, py: 1.5,
-          scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
-        }}>
-          {weeks.map((w) => {
-            const sel = w.week_number === effectiveWeek
-            const blk = BLOCK_STYLE[w.block] ?? BLOCK_STYLE.construction
-            const h = maxKm ? Math.round(weekKm(w) / maxKm * 100) : 0
-            return (
-              <Box
-                key={w.id}
-                ref={sel ? selectedWeekRef : null}
-                onClick={() => selectWeek(w.week_number)}
-                sx={{
-                  flex: '0 0 58px', borderRadius: '14px', px: 1, py: 1,
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', gap: 0.75,
-                  transition: transition(['background-color', 'border-color', 'transform'], DURATION.fade),
-                  bgcolor: sel ? 'background.paper' : 'transparent',
-                  border: '1px solid', borderColor: sel ? 'primary.main' : 'divider',
-                  transform: sel ? 'translateY(-2px)' : 'none',
-                }}
-              >
-                <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: sel ? 'text.primary' : 'text.secondary' }}>
-                  S{w.week_number}
-                </Typography>
-                <Box sx={{ width: '100%', height: 34, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                  <Box sx={{ width: 16, height: `${Math.max(h, 6)}%`, borderRadius: '5px 5px 2px 2px', bgcolor: blk.main, opacity: 0.85 }} />
-                </Box>
-                <Typography sx={{ fontSize: '0.56rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-                  {weekKm(w) ? `${Math.round(weekKm(w))} km` : ''}
-                </Typography>
-              </Box>
-            )
-          })}
-        </Box>
-
-        {/* Légende des blocs */}
-        <Box sx={{ display: 'flex', gap: 2, px: 2.5, mt: 0.5 }}>
-          {Object.entries(BLOCK_LABEL).map(([key, label]) => (
-            <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '3px', bgcolor: BLOCK_STYLE[key].main }} />
-              <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>{label}</Typography>
-            </Box>
-          ))}
-        </Box>
-
-        {/* Séances de la semaine, groupées par zone */}
-        <Box sx={{ px: 2, mt: 2.5 }}>
-          {effWeekObj && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 0.5, mb: 1.5 }}>
-              {formatWeekRange(effWeekObj, nextWeekObj)}
-            </Typography>
-          )}
-          {attenteSeances.visible && (
-            <Box sx={{ py: 5 }}>
-              <BarreAttente place="section" duree={DUREES.chargementPage} {...attenteSeances} />
-            </Box>
-          )}
-          {!attenteSeances.visible && sessions !== null && (
-            <Box sx={{
-              opacity: sessionsLoading ? 0.45 : 1,
-              pointerEvents: sessionsLoading ? 'none' : 'auto',
-              transition: 'opacity .15s',
-            }}>
-              {sessions.length === 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  Aucune séance pour cette semaine.
-                </Typography>
-              )}
-              {groupSessionsByZone(sessions).map((group) => (
-                <ZoneGroup
-                  key={group.zone}
-                  group={group}
-                  readOnly={readOnly}
-                  onSkip={handleSkip}
-                  onOpen={handleOpen}
-                  onPush={handlePush}
-                />
-              ))}
-            </Box>
-          )}
-        </Box>
-
-        {!readOnly && (sessions?.length ?? 0) > 0 && (
-          <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', textAlign: 'center', mt: 1, px: 2 }}>
-            Tape une séance pour l'ouvrir · glisse à droite pour la sauter, à gauche pour l'envoyer
-          </Typography>
-        )}
-      </Box>
+      </Page>
 
       <SkipSheet
         session={sautCible}
@@ -627,7 +488,7 @@ const PlanDashboard = () => {
         fermerLibelle="Annuler"
       />
 
-      {/* Feuilles d'envoi sur la montre (swipe) */}
+      {/* Feuilles d'envoi sur la montre (glisser) */}
       {envoi.feuilles}
 
       <FeuilleFlottante
@@ -637,71 +498,8 @@ const PlanDashboard = () => {
         lignes={[{ libelle: 'Archiver le plan', onClick: doArchive }]}
         fermerLibelle="Annuler"
       />
-    </Box>
+    </>
   )
 }
-
-const Metric = ({ value, label }) => (
-  <Box>
-    <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-      {value}
-    </Typography>
-    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{label}</Typography>
-  </Box>
-)
-
-/** Groupe d'une zone : en-tête (pastille + plage de jours + compteur) et cartes
- *  reliées par un filet vertical coloré. */
-const ZoneGroup = ({ group, readOnly, onSkip, onOpen, onPush }) => {
-  const { zone, sessions, done, total } = group
-  // Rendu (couleur + sous libellé) dérivé de l'intensité de la séance de course
-  // qui occupe la zone : après adaptation, une zone A peut porter une qualité.
-  // ZONE_LABEL / ZONE_DAYS restent calés sur la zone (créneau de jours).
-  const runSession = sessions[0]
-  const key = runSession ? intensityOf(runSession.type) : zone
-  const z = ZONE_STYLE[key] ?? ZONE_STYLE.A
-  const sub = ZONE_SUBLABEL[key]
-
-  return (
-    <Box sx={{ mb: 2.25 }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.25, px: 0.5, pb: 1 }}>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.85, color: z.main, fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.03em' }}>
-          <Box sx={{ width: 10, height: 10, borderRadius: '3.5px', bgcolor: z.main }} />
-          {ZONE_LABEL[zone]}{sub ? ` · ${sub}` : ''}
-        </Box>
-        <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', fontWeight: 600 }}>
-          {ZONE_DAYS[zone]}
-        </Typography>
-        <Typography sx={{ ml: 'auto', fontSize: '0.7rem', color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-          {done} / {total}
-        </Typography>
-      </Box>
-
-      <Box sx={{ position: 'relative', pl: '14px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ position: 'absolute', left: '4px', top: '6px', bottom: '6px', width: '3px', borderRadius: '2px', bgcolor: z.main, opacity: 0.55 }} />
-        {sessions.map((s) => (
-          <SessionRow
-            key={s.id}
-            session={s}
-            canSkip={!readOnly && s.status !== 'done'}
-            canPush={!readOnly && (s.status === 'planned' || s.status === 'adapted')}
-            onSkip={onSkip}
-            onOpen={onOpen}
-            onPush={onPush}
-          />
-        ))}
-      </Box>
-    </Box>
-  )
-}
-
-const SectionLabel = ({ children }) => (
-  <Typography
-    variant="overline"
-    sx={{ display: 'block', color: 'text.disabled', letterSpacing: '0.12em', fontSize: '0.62rem', fontWeight: 600, mt: 2.5, mb: 1, px: 2.5 }}
-  >
-    {children}
-  </Typography>
-)
 
 export default PlanDashboard

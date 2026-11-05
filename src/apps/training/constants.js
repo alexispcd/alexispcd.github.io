@@ -15,13 +15,7 @@ export const ZONE_STYLE = {
 // Statut, bloc et résultat ne portent pas de couleur : neutres.
 export const NEUTRAL_STYLE = { main: 'var(--ink)', bg: 'var(--chip)' }
 
-export const BLOCK_STYLE = {
-  construction:    { main: 'var(--muted)', bg: 'var(--chip)' },
-  intensification: { main: 'var(--muted)', bg: 'var(--chip)' },
-  affutage:        { main: 'var(--muted)', bg: 'var(--chip)' },
-}
-
-// Pastille "adaptée" : partagée entre le dashboard (SessionRow) et la vue séance.
+// Pastille "adaptée" de la vue séance.
 export const ADAPTED_STYLE = NEUTRAL_STYLE
 
 // Verdict d'analyse post-séance : label + couleur (icônes côté vue séance).
@@ -62,15 +56,6 @@ export const PLAN_STATUS_LABEL = {
   active: 'Actif',
   completed: 'Terminé',
   archived: 'Archivé',
-}
-
-// ── Zones : ordre d'affichage + plage de jours (méthodo) ─────────────────────
-export const ZONE_ORDER = ['A', 'B', 'C']
-
-export const ZONE_SUBLABEL = {
-  A: 'Facile',
-  B: 'Qualité',
-  C: 'Sortie longue',
 }
 
 /**
@@ -117,25 +102,6 @@ export const shortDayLabel = (dateStr) => {
   const d = new Date(dateStr)
   if (Number.isNaN(d.getTime())) return null
   return `${DOW_SHORT[d.getDay()]} ${d.getDate()}`
-}
-
-/**
- * Groupe les séances d'une semaine par zone, dans l'ordre A, B, C.
- * Ne renvoie que les zones ayant au moins une séance (groupes vides masqués).
- * Chaque groupe : { zone, sessions, done, total }.
- */
-export const groupSessionsByZone = (sessions) => {
-  const byZone = new Map(ZONE_ORDER.map((z) => [z, []]))
-  for (const s of sessions ?? []) {
-    const z = ZONE_ORDER.includes(s.zone) ? s.zone : 'A'
-    byZone.get(z).push(s)
-  }
-  return ZONE_ORDER
-    .map((zone) => {
-      const list = byZone.get(zone)
-      return { zone, sessions: list, done: list.filter((s) => s.status === 'done').length, total: list.length }
-    })
-    .filter((g) => g.total > 0)
 }
 
 /**
@@ -207,18 +173,6 @@ export const parsePaceInput = (str) => {
   const [m, s] = parts.map(Number)
   if (Number.isNaN(m) || Number.isNaN(s) || s >= 60) return null
   return m * 60 + s
-}
-
-/** "1:29:00" (h:mm:ss) ou "42:30" (m:ss) → secondes. null si invalide. */
-export const parseTimeInput = (str) => {
-  if (str == null) return null
-  const parts = String(str).trim().split(/[:.\s]+/).filter(Boolean)
-  if (parts.length < 2 || parts.length > 3) return null
-  const nums = parts.map(Number)
-  if (nums.some(Number.isNaN)) return null
-  const [h, m, s] = parts.length === 3 ? nums : [0, ...nums]
-  if (m >= 60 || s >= 60) return null
-  return h * 3600 + m * 60 + s
 }
 
 /** Mètres → label course : "10 km", "Semi", "Marathon", sinon "X km". */
@@ -316,24 +270,6 @@ export const daysUntil = (raceDate) => {
   if (!raceDate) return null
   const ms = midnight(raceDate) - midnight(new Date())
   return Math.round(ms / 86_400_000)
-}
-
-/**
- * "Semaine du 6 au 12 juillet" (même mois) ou "Semaine du 29 juin au 5 juillet".
- * end = veille du start de la semaine suivante, sinon start + 6 jours (gère la S1 partielle).
- */
-export const formatWeekRange = (week, nextWeek) => {
-  if (!week?.start_date) return ''
-  const start = midnight(week.start_date)
-  const end = nextWeek?.start_date
-    ? new Date(midnight(nextWeek.start_date).getTime() - 86_400_000)
-    : new Date(start.getTime() + 6 * 86_400_000)
-  const sameMonth = start.getMonth() === end.getMonth()
-  const startLabel = sameMonth
-    ? String(start.getDate())
-    : start.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-  const endLabel = end.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-  return `Semaine du ${startLabel} au ${endLabel}`
 }
 
 /** Numéro de la semaine courante d'après les start_date des semaines. */

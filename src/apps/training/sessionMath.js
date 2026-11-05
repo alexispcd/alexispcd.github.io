@@ -1,6 +1,6 @@
 // Helpers partagés entre SessionPage (totaux, structure) et PaceChart (échelles).
 // Toute l'estimation est faite en code, sans dépendance.
-import { formatDistance, formatDuration } from './constants'
+import { formatDistance, formatDuration } from './constants.js'
 
 // Allure souple par défaut quand un step n'a pas de cible (récup libre) mais
 // qu'on doit tout de même estimer sa durée / distance.
@@ -22,9 +22,17 @@ export const estimateStepMeters = (step) => {
   return null
 }
 
-/** Somme des distances estimées de tous les steps (mètres). */
-export const totalMeters = (steps) =>
-  steps.reduce((a, s) => a + (estimateStepMeters(s) ?? 0), 0)
+/**
+ * Km prévus d'une séance, en mètres : une étape en distance compte sa distance, une
+ * étape en durée avec allure cible compte durée / allure ; une étape sans distance ni
+ * allure cible (récupération) compte 0. Pas d'allure de repli, contrairement aux durées.
+ */
+export const plannedMeters = (steps) =>
+  (steps ?? []).reduce((a, s) => {
+    if (s.distance_m != null) return a + s.distance_m
+    if (s.duration_sec != null && s.target_pace_sec) return a + (s.duration_sec / s.target_pace_sec) * 1000
+    return a
+  }, 0)
 
 /** Somme des durées estimées de tous les steps (secondes). */
 export const totalSeconds = (steps) =>
@@ -60,7 +68,7 @@ export const groupSteps = (steps) => {
   return groups
 }
 
-/** "400 m" / "3 min" — dimension primaire d'un step. */
+/** "400 m" / "3 min" : dimension primaire d'un step. */
 export const stepSizeLabel = (step) =>
   formatDistance(step.distance_m) ?? formatDuration(step.duration_sec) ?? ''
 

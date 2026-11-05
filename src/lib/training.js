@@ -1,6 +1,6 @@
 import supabase from './supabase'
 import { callFunction } from './functions'
-import { totalMeters, totalSeconds } from '../apps/training/sessionMath'
+import { plannedMeters, totalSeconds } from '../apps/training/sessionMath'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LECTURES
@@ -31,7 +31,13 @@ export const getPlans = async () => {
   }))
 }
 
-/** Plan + ses semaines ordonnées. */
+/**
+ * Plan, ses semaines ordonnées et toutes ses séances, en une requête de séances.
+ * - plan.sessions : chaque séance avec `steps` triés par order_index, `agg_distance_m`
+ *   (km prévus, plannedMeters) et `agg_duration_sec` (durée estimée).
+ * - plan.weeks : chaque semaine avec `agg_distance_m`, somme des km prévus de ses
+ *   séances (target_km, cible de la génération, n'est jamais affiché).
+ */
 export const getPlan = async (planId) => {
   const { data: plan, error } = await supabase
     .from('training_plans')
@@ -47,46 +53,35 @@ export const getPlan = async (planId) => {
     .order('week_number', { ascending: true })
   if (weeksErr) throw weeksErr
 
-  // Kilométrage réel de chaque semaine = somme des distances des séances (mêmes
-  // steps que les sous-titres de séance), et non target_km (cible IA qui ne
-  // correspond pas toujours au total des séances générées).
   const { data: sessRows, error: sessErr } = await supabase
     .from('training_sessions')
-    .select('week_id, session_steps(distance_m, duration_sec, target_pace_sec)')
+    .select('*, session_steps(distance_m, duration_sec, target_pace_sec, step_type, order_index)')
     .eq('plan_id', planId)
+    .order('scheduled_date', { ascending: true })
   if (sessErr) throw sessErr
 
+  const sessions = (sessRows ?? []).map(({ session_steps, ...s }) => {
+    const steps = (session_steps ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    return {
+      ...s,
+      steps,
+      agg_distance_m: plannedMeters(steps) || null,
+      agg_duration_sec: totalSeconds(steps) || null,
+    }
+  })
+
   const metersByWeek = {}
-  for (const row of sessRows ?? []) {
-    metersByWeek[row.week_id] = (metersByWeek[row.week_id] ?? 0) + totalMeters(row.session_steps ?? [])
+  for (const s of sessions) {
+    metersByWeek[s.week_id] = (metersByWeek[s.week_id] ?? 0) + (s.agg_distance_m ?? 0)
   }
 
   return {
     ...plan,
     weeks: (weeks ?? []).map((w) => ({ ...w, agg_distance_m: metersByWeek[w.id] ?? 0 })),
+    sessions,
   }
-}
-
-/**
- * Séances d'une semaine (sans steps détaillés), avec un agrégat distance/durée
- * calculé depuis session_steps pour le sous-titre "volume".
- */
-export const getWeekSessions = async (weekId) => {
-  const { data, error } = await supabase
-    .from('training_sessions')
-    .select('*, session_steps(distance_m, duration_sec, target_pace_sec)')
-    .eq('week_id', weekId)
-    .order('scheduled_date', { ascending: true })
-  if (error) throw error
-
-  return (data ?? []).map(({ session_steps, ...s }) => {
-    const steps = session_steps ?? []
-    return {
-      ...s,
-      agg_distance_m: totalMeters(steps) || null,
-      agg_duration_sec: totalSeconds(steps) || null,
-    }
-  })
 }
 
 /** Séance + steps ordonnés + numéro, bloc et début (week_start) de la semaine parente. */
@@ -322,7 +317,7 @@ export const startCorosOauth = () => callFunction('coros-oauth', { action: 'star
 export const disconnectCoros = () => callFunction('coros-oauth', { action: 'disconnect' })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// REALTIME / POLLING — suivi du statut de génération
+// REALTIME / POLLING : suivi du statut de génération
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
