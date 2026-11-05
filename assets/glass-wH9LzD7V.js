@@ -1,1 +1,0 @@
-import{Q as e}from"./index-Bhbpi6S-.js";var t={background:e=>e.palette.background.paper,boxShadow:`none`,border:`none`},n=t,r=t,i={sx:{bgcolor:t=>e(t.palette.mode)}};export{r as n,n as r,i as t};

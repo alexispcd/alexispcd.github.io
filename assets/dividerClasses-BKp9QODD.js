@@ -1,1 +1,0 @@
-import{mn as e,pn as t}from"./index-Bhbpi6S-.js";function n(t){return e(`MuiDivider`,t)}var r=t(`MuiDivider`,[`root`,`absolute`,`fullWidth`,`inset`,`middle`,`flexItem`,`vertical`,`withChildren`,`textAlignRight`,`textAlignLeft`,`wrapper`,`wrapperVertical`]);export{n,r as t};
