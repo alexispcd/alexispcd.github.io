@@ -18,16 +18,24 @@ TYPOGRAPHIE (titres, focus, rationale, advice)
 - N'utilise JAMAIS de tiret cadratin (—) ni de tiret demi-cadratin (–) dans le texte généré.
 - Pour séparer deux idées, utilise " : ", " · ", une virgule, ou reformule en deux phrases.
 
+RÉDACTION DES TEXTES AFFICHÉS À L'ATHLÈTE (title, focus, rationale, summary)
+- Ces règles ne concernent que les textes affichés. Les données techniques de ce prompt (zones, allures en secondes, fractions) restent ta référence de calcul.
+- Tutoie toujours l'athlète, jamais de vouvoiement.
+- Allures en m:ss /km (exemple : "5:50 /km"), jamais en secondes ni en "s/km".
+- Intensité en % de VMA (exemple : "62 % de ta VMA"), jamais "fraction 0.62".
+- Aucun mot interne : ni "Zone A", "Zone B", "Zone C", ni nom de champ (target_pace_sec, rationale...). Dis "le créneau Lun-Mar", "le créneau Mer-Ven", "le créneau Sam-Dim", ou "la séance facile", "la séance de qualité", "la sortie longue".
+- Une allure plus petite est plus rapide : 3:46 /km est plus rapide et plus intense que 4:03 /km. N'écris jamais l'inverse.
+
 ALLURES (dérivées de la VMA, en secondes/km)
 - allure_sec = round(3600 / (VMA_kmh * fraction))
 - Facile : fraction 0.60 à 0.66. L'endurance fondamentale doit rester confortable, en aisance respiratoire totale. En cas de doute, choisis la fraction basse.
 - Sortie longue : fraction 0.62 à 0.68, légèrement plus soutenue que le facile mais toujours en endurance.
-- Tempo (allure seuil) : fraction 0.85 à 0.88 — si un threshold_pace_sec est fourni, utilise-le comme base tempo.
+- Tempo (allure seuil) : fraction 0.85 à 0.88 ; si un threshold_pace_sec est fourni, utilise-le comme base tempo.
 - Fractionné (intervalles) : fraction 0.93 à 1.00 selon la longueur (plus court = plus rapide).
 - pace_tolerance_sec : ~5 en qualité, ~10-12 en facile/longue (l'allure exacte importe peu en endurance).
-- Justifie l'allure de chaque séance dans "rationale" (1 phrase).
+- Justifie l'allure de chaque séance dans "rationale" (1 phrase), en m:ss /km ou en % de VMA, selon les règles de rédaction ci-dessus.
 
-STEPS (séances de course uniquement) — FORMAT COMPACT
+STEPS (séances de course uniquement) : FORMAT COMPACT
 - Toute séance de course (facile, fractionne, tempo, sortie_longue) porte un tableau "steps" ordonné reflétant le déroulé, dans l'ordre. N'émets JAMAIS "order_index", "repeat_group" ni "repeat_index" : ils sont dérivés automatiquement.
 - Deux formes d'élément dans "steps" :
   1. Step simple : { "step_type": warmup|run|interval|recovery|cooldown, "target_pace_sec", "pace_tolerance_sec"?, ("distance_m" OU "duration_sec") }. Un step est borné par distance_m OU duration_sec. "target_pace_sec" requis SAUF pour "recovery" (allure libre).
@@ -63,7 +71,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "zone": "A",
           "type": "facile",
           "title": "Sortie facile",
-          "rationale": "endurance fondamentale à 63% VMA",
+          "rationale": "Endurance fondamentale à 63 % de ta VMA.",
           "steps": [
             { "step_type": "run", "target_pace_sec": 350, "pace_tolerance_sec": 10, "duration_sec": 2700 }
           ]
@@ -73,7 +81,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "zone": "B",
           "type": "fractionne",
           "title": "6x1000m",
-          "rationale": "VMA courte, allure 5-10k",
+          "rationale": "VMA courte, à ton allure 5 à 10 km.",
           "steps": [
             { "step_type": "warmup", "target_pace_sec": 360, "pace_tolerance_sec": 10, "duration_sec": 900 },
             { "repeat": 6, "interval": { "target_pace_sec": 250, "pace_tolerance_sec": 5, "distance_m": 1000 }, "recovery": { "duration_sec": 90 } },
@@ -85,7 +93,7 @@ export const PLAN_OUTPUT_SCHEMA = `{
           "zone": "C",
           "type": "sortie_longue",
           "title": "Sortie longue",
-          "rationale": "volume aérobie",
+          "rationale": "Volume aérobie, en restant à l'aise.",
           "steps": [
             { "step_type": "run", "target_pace_sec": 345, "pace_tolerance_sec": 10, "distance_m": 15000 }
           ]

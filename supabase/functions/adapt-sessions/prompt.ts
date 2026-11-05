@@ -71,7 +71,8 @@ SORTIE :
   { "adapted": [ { "id": "<uuid de la séance>", "title": "...", "rationale": "...", "type": "<optionnel, seulement s'il change>", "steps": [ ...mêmes règles de steps que ci-dessus... ] } ] }
 - Pour une séance de COURSE adaptée, renvoie TOUJOURS le tableau "steps" complet (il remplace intégralement l'existant).
 - N'inclure QUE les séances réellement modifiées. Ne modifie JAMAIS la date ni la zone d'une séance : la zone est un créneau de jours, pas un niveau d'intensité, et elle ne contient qu'une séance.
-- Si tu changes la NATURE d'une séance, renvoie son nouveau "type" parmi facile, fractionne, tempo, sortie_longue.`
+- Si tu changes la NATURE d'une séance, renvoie son nouveau "type" parmi facile, fractionne, tempo, sortie_longue.
+- La justification (rationale) respecte les règles de rédaction ci-dessus.`
 }
 
 function describeSession(s: SessionContent): string {

@@ -274,6 +274,10 @@ Couleurs, définies dans `ZONE_STYLE` (`src/apps/training/constants.js:4`) et in
 - Sauter (vue 10b, `session/SkipSheet.jsx`, même feuille pour le bouton de la page séance et le glisser d'une ligne du dashboard) : rien n'est écrit avant le choix. « Sauter et adapter » : depuis la page séance, `skipSession` (carte « Saut de la séance ») puis navigation vers le dashboard avec `location.state.adapter = { sessionId, titre }` ; le dashboard lance l'adaptation une seule fois (ref de garde, StrictMode) et retire le state (`navigate` replace). Depuis le dashboard, saut puis adaptation sous la même carte « Adaptation de tes séances ». « Sauter sans adapter » : carte « Saut de la séance », la séance passe à sautée. Une adaptation qui échoue laisse la séance sautée
 - `resetSession` efface aussi le ressenti (`rpe`, `pain_areas`, `feedback_note`) ; « Délier Coros » passe `{ garderRessenti: true }` jusqu'à son retrait en T2
 
+### Rédaction des textes de l'IA (lot T2b)
+
+Textes affichés à l'athlète (titres, `focus`, `summary`, `rationale`, `advice`) : tutoiement, allures en m:ss /km (jamais en secondes ni « s/km »), intensité en % de VMA (jamais « fraction 0.62 »), aucun mot interne (« Zone A », noms de champs : on dit « le créneau Lun-Mar » ou « la séance facile »), et une allure plus petite est plus rapide. Règles dans la section RÉDACTION de `_shared/training/methodology.ts` (transmise par `TRAINING_RULES` à génération, régénération et adaptation, dont la sortie le rappelle), et en une phrase dans les deux prompts de `complete-session` (qui n'importe pas `methodology.ts`). Les données techniques envoyées à l'IA (zones, secondes) ne changent pas. Les textes déjà en base ont été réécrits une fois en SQL, hors repo : jamais de texte réel dans le repo.
+
 ### Logique d'adaptation (fenêtre glissante)
 
 Déclenchée uniquement par "Je saute", pas de bilan de fin de semaine.

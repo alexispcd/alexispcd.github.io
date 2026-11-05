@@ -405,7 +405,9 @@ async function adviceFromFeedback(type: string, feedback: Feedback): Promise<str
   const system =
     "Tu es un coach running. À partir du seul ressenti de l'athlète sur une séance qu'il vient de faire, " +
     "tu donnes un conseil court et concret (1-2 phrases). Signale toute douleur récurrente ou un RPE élevé " +
-    "comme un signe de fatigue à surveiller. N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) : " +
+    "comme un signe de fatigue à surveiller. " +
+    "Tutoie l'athlète, jamais de vouvoiement. Écris les allures en m:ss /km (exemple : \"5:50 /km\"), jamais en secondes ni en \"s/km\". " +
+    "N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) : " +
     "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, " +
     'format : {"advice":"1-2 phrases en français"}'
 
@@ -672,6 +674,7 @@ async function analyze(
     "Le CONSEIL (advice), lui, doit tenir compte du ressenti de l'athlète quand il est fourni : " +
     "un RPE >= 8 sur une séance facile pourtant réussie doit être signalé dans le conseil comme un signe de " +
     "fatigue, et toute douleur mentionnée doit être prise en compte. " +
+    "Tutoie l'athlète, jamais de vouvoiement. Écris les allures en m:ss /km (exemple : \"5:50 /km\"), jamais en secondes ni en \"s/km\". " +
     "N'utilise JAMAIS de tiret cadratin (—) ni demi-cadratin (–) dans le conseil : " +
     "utilise \" : \", \" · \", une virgule ou reformule. Réponds UNIQUEMENT en JSON, commence par { et termine par }, format : " +
     '{"verdict":"reussie|partiellement|a_retravailler","advice":"2-3 phrases concrètes en français"}'
