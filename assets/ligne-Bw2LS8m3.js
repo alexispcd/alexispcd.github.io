@@ -1,1 +1,0 @@
-import{U as e,V as t,tt as n}from"./index-CruJWCWz.js";var r={display:`flex`,alignItems:`center`,gap:n[12],width:`100%`,textAlign:`left`,justifyContent:`flex-start`,color:`ink`,...t,...e};export{r as t};
