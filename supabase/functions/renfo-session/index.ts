@@ -6,7 +6,7 @@ import { internalError } from "../_shared/http.ts"
 import { availableExercises, EXERCISE_INDEX } from "../_shared/strength/catalog.ts"
 import {
   ajuster, assembler, type Bases, type Choix, type Composition, doseDe, dosesDeSeance, type DoneSession,
-  estNouveauFormat, groupesDe, planMiseAJour, remplacants, remplacer, validateComposition,
+  estNouveauFormat, groupesDe, planMiseAJour, remplacants, remplacer, sansBande, validateComposition,
 } from "../_shared/strength/compose.ts"
 import { generateSessions, loadStrengthSetup, PROFILE_MISSING, type StrengthSetup } from "../_shared/strength/generate.ts"
 import { buildFreeSessionPrompt, buildSystemPrompt, type PriorSession } from "../_shared/strength/prompt.ts"
@@ -249,11 +249,19 @@ async function loadEditable(ctx: Ctx, sessionId: unknown): Promise<Editable> {
   return { session: data as Row }
 }
 
-/** Écrit le nouveau contenu (et le titre) d'une séance, renvoie la ligne complète. */
-async function saveContent(ctx: Ctx, sessionId: string, content: SessionContent): Promise<Response> {
+/**
+ * Écrit le nouveau contenu (et le titre) d'une séance, renvoie la ligne complète.
+ * extra : autres colonnes écrites en même temps (bands_used pour adjust et replace).
+ */
+async function saveContent(
+  ctx: Ctx,
+  sessionId: string,
+  content: SessionContent,
+  extra: Record<string, unknown> = {},
+): Promise<Response> {
   const { data, error } = await ctx.admin
     .from("strength_sessions")
-    .update({ content, title: content.title })
+    .update({ ...extra, content, title: content.title })
     .eq("id", sessionId)
     .eq("user_id", ctx.userId)
     .select("*")
@@ -416,7 +424,10 @@ async function adjustAction(ctx: Ctx, body: Record<string, unknown>): Promise<Re
     return json(400, BAD_SETTING)
   }
 
-  const response = await saveContent(ctx, session.id as string, ajuster(session.content as SessionContent, exercise.slug, dose))
+  // L'élastique joué de l'exercice laisse la place au réglage (sinon bandOf le préfère).
+  const response = await saveContent(ctx, session.id as string, ajuster(session.content as SessionContent, exercise.slug, dose), {
+    bands_used: sansBande(session.bands_used, exercise.slug),
+  })
   if (!response.ok) return response
   const { error } = await ctx.admin.from("strength_exercise_bases").upsert({
     user_id: ctx.userId,
@@ -455,7 +466,9 @@ async function replaceAction(ctx: Ctx, body: Record<string, unknown>): Promise<R
     bandsKg: setup.bandsKg,
     bandChoisie: old?.band_kg ?? null,
   })
-  const response = await saveContent(ctx, session.id as string, remplacer(content, index, slug, dose))
+  const response = await saveContent(ctx, session.id as string, remplacer(content, index, slug, dose), {
+    bands_used: sansBande(session.bands_used, slug),
+  })
   if (response.ok) await addMissingBases(ctx, [dose])
   return response
 }

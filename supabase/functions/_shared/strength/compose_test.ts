@@ -5,7 +5,7 @@ import {
   ajuster, assembler, bandeDuMilieu, type Choix, compositionDe, type Composition, derniereFois, doseDe,
   type DoneSession, estimerComposition, estNouveauFormat, exercicesDuTheme, exercicesRecents, groupesDisponibles,
   groupesTries, intensiteDeduite, maxExercices, planMiseAJour, preremplir, raisonSuggestion, remplacants, remplacer,
-  repartition, themePourGroupe, titreSeance, validateComposition, validerChoix,
+  repartition, sansBande, themePourGroupe, titreSeance, validateComposition, validerChoix,
 } from "./compose.ts"
 import { BETWEEN_BLOCKS_SEC, estimateSessionMinutes, TRANSITION_SEC, workSeconds } from "./estimate.ts"
 import { groupOfFocus, type SessionContent, SUPERSET_EXERCISES_MAX, SUPERSET_REST_SEC } from "./rules.ts"
@@ -501,4 +501,15 @@ Deno.test("raisonSuggestion : groupes dans l'ordre, date la plus récente parmi 
   assertEquals(raisonSuggestion({ supersets: [{ focus: "pull" as const }, { focus: "trunk" as const }] }, [done("2026-10-20", "trunk")]),
     { groupes: ["haut", "tronc"], depuis: "2026-10-20T18:00:00+00:00" })
   assertEquals(raisonSuggestion(c, []), { groupes: ["jambes", "tronc"], depuis: null })
+})
+
+// ── Élastiques joués ─────────────────────────────────────────────────────────
+
+Deno.test("sansBande : retire l'exercice, null quand plus rien ne reste", () => {
+  assertEquals(sansBande({ face_pull: 15, curl_biceps: 10 }, "face_pull"), { curl_biceps: 10 })
+  assertEquals(sansBande({ face_pull: 15 }, "face_pull"), null)
+  assertEquals(sansBande({ face_pull: 15 }, "pompes"), { face_pull: 15 })
+  assertEquals(sansBande(null, "face_pull"), null)
+  assertEquals(sansBande({}, "face_pull"), null)
+  assertEquals(sansBande([15], "face_pull"), null)
 })

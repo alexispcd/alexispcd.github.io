@@ -8,6 +8,7 @@ import Bouton from '../../../ui/Bouton'
 import Carte from '../../../ui/Carte'
 import ControleSegmente from '../../../ui/ControleSegmente'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import GardeChangements from '../../../ui/GardeChangements'
 import Page from '../../../ui/Page'
 import { ChevronDroit } from '../../../ui/Icones'
 import { useMessage } from '../../../ui/useMessage'
@@ -33,16 +34,39 @@ const avecId = (s, apparait = false) => ({ ...s, id: prochainId++, apparait })
 
 const filet = { borderTop: `${border.filet} solid`, borderColor: 'line' }
 
+// Attente par défaut : le modèle choisit les exercices.
+const PREPARATION = {
+  titre: 'Préparation de ta séance',
+  detail: "Jusqu'à 30 secondes, reste sur cet écran.",
+  duree: DUREES.preparationRenfo,
+}
+
+/** Deux compositions identiques : intensité, puis chaque superset dans l'ordre (thème, exercices, tours). */
+const memeComposition = (a, b) =>
+  a.intensity === b.intensity &&
+  a.supersets.length === b.supersets.length &&
+  a.supersets.every((s, i) => {
+    const t = b.supersets[i]
+    return s.focus === t.focus && s.exercise_count === t.exercise_count && s.rounds === t.rounds
+  })
+
 /**
- * Composition d'une séance, sa préparation et ses échecs, sur la même route. Réutilisable
- * pour modifier une séance (lot R3) :
+ * Composition d'une séance, sa préparation et ses échecs, sur la même route. Sert à
+ * créer une séance (ComposerPage) et à la modifier (session/ModifierPage) :
  * - depart : { intensity (ou null : aucun segment choisi), supersets: [{ focus, exercise_count, rounds }] }.
  * - donnees : { profile, bands, done, bases }.
  * - libelleEnvoi : texte du bouton (« Créer la séance »).
  * - envoyer(composition) : promesse de { session } ; onSession(session) une fois prête.
  * - onEnAttente(err) : renvoie l'identifiant de séance d'une erreur qui doit ouvrir une séance existante, sinon null.
+ * Modification seulement :
+ * - onInchange : appelé au lieu d'envoyer quand la composition est celle du départ.
+ * - attenteDe(composition) : { titre, detail, duree } de l'attente ; la préparation par défaut.
+ * - garde : confirmation avant de quitter une composition changée (GardeChangements),
+ *   coupée pendant l'envoi pour que la navigation de fin passe.
  */
-const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEnAttente }) => {
+const EditeurSeance = ({
+  depart, donnees, libelleEnvoi, envoyer, onSession, onEnAttente, onInchange, attenteDe, garde = false,
+}) => {
   const { afficher } = useMessage()
   const available = useMemo(
     () => availableExercises(donnees.profile?.equipment ?? [], donnees.bands.map((b) => b.kg)),
@@ -109,8 +133,10 @@ const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEn
     modifier(id, { retire: true })
   }
 
+  const change = !memeComposition(composition, depart)
+
   const lancer = (c) => {
-    setEnvoi({ phase: 'preparation', composition: c })
+    setEnvoi({ phase: 'preparation', composition: c, attente: attenteDe?.(c) ?? PREPARATION })
     envoyer(c).then(
       ({ session }) => setEnvoi((e) => ({ ...e, issue: { session } })),
       (err) => {
@@ -145,16 +171,17 @@ const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEn
     const c = envoi.composition
     const resume = resumeComposition(c.intensity, c.supersets.length)
     const titre = titreSeance(c.supersets.map((s) => s.focus))
+    const { attente } = envoi
     return (
       <Page gap={space[24]}>
         {envoi.phase === 'preparation' ? (
           <CarteEtat resume={resume} titre={titre}>
-            <Typography variant="corps-fort">Préparation de ta séance</Typography>
-            <Typography variant="secondaire" sx={{ color: 'muted' }}>Jusqu'à 30 secondes, reste sur cet écran.</Typography>
+            <Typography variant="corps-fort">{attente.titre}</Typography>
+            {attente.detail && <Typography variant="secondaire" sx={{ color: 'muted' }}>{attente.detail}</Typography>}
             <BarreAttente
               place="section"
-              phrase="Préparation de ta séance"
-              duree={DUREES.preparationRenfo}
+              phrase={attente.titre}
+              duree={attente.duree}
               visible
               fini={Boolean(envoi.issue)}
               onFin={finPreparation}
@@ -229,7 +256,7 @@ const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEn
           pleineLargeur
           disabled={!actifs.length}
           raison="Ajoute au moins un superset."
-          onClick={() => lancer(composition)}
+          onClick={() => (onInchange && !change ? onInchange() : lancer(composition))}
         >
           {libelleEnvoi}
         </Bouton>
@@ -241,6 +268,8 @@ const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEn
         titre={`Groupe du superset ${feuille?.numero ?? ''}`}
         lignes={groupesDisponibles(available).map((g) => ({ libelle: GROUP_LABELS[g], onClick: () => choisirGroupe(g) }))}
       />
+
+      {garde && <GardeChangements actif={change} />}
     </Page>
   )
 }

@@ -214,7 +214,7 @@ test('triset : rôles, liste des rôles et libellé du bloc', () => {
   assert.equal(c.slug, 'curl_biceps')
   assert.deepEqual(c.roles, ['A', 'B', 'C'])
   assert.equal(c.blockLabel, 'Triset 2 · Haut du corps')
-  assert.equal(steps.find((s) => s.blockIndex === 3 && s.kind === 'work').blockLabel, 'Triset 3 · Tronc et coureur')
+  assert.equal(steps.find((s) => s.blockIndex === 3 && s.kind === 'work').blockLabel, 'Triset 3 · Tronc')
   assert.equal(steps.at(-1).slug, 'posture_enfant')
 })
 
@@ -264,7 +264,7 @@ test('blockProgress : un segment par bloc, poids et fraction faite', () => {
   const { steps, totalSeconds } = buildSequence(FULL)
   const start = blockProgress(steps, 0)
   assert.deepEqual(start.map((s) => s.label), [
-    'Échauffement', 'Triset 1 · Jambes', 'Triset 2 · Haut du corps', 'Triset 3 · Tronc et coureur', 'Retour au calme',
+    'Échauffement', 'Triset 1 · Jambes', 'Triset 2 · Haut du corps', 'Triset 3 · Tronc', 'Retour au calme',
   ])
   assert.ok(start.every((s) => s.done === 0))
   assert.equal(start.reduce((sum, s) => sum + s.weight, 0), totalSeconds)

@@ -698,6 +698,20 @@ export function remplacer(content: SessionContent, blockIndex: number, slug: str
 }
 
 /**
+ * Élastiques joués (strength_sessions.bands_used) sans celui de `slug` : un réglage ou
+ * un remplacement de l'exercice prend effet à la place de la bande jouée. Renvoie
+ * null si plus rien ne reste.
+ */
+export function sansBande(bandsUsed: unknown, slug: string): Record<string, number> | null {
+  if (!isRecord(bandsUsed)) return null
+  const reste: Record<string, number> = {}
+  for (const [cle, kg] of Object.entries(bandsUsed)) {
+    if (cle !== slug && typeof kg === "number") reste[cle] = kg
+  }
+  return Object.keys(reste).length ? reste : null
+}
+
+/**
  * Remplaçants de `slug` dans le bloc `blockIndex` : même catégorie, absents de la
  * séance. Pour un exercice à barre : une seule hauteur dans son superset après
  * remplacement, deux au plus sur la séance.

@@ -112,10 +112,12 @@ export const mainDoseLabel = (item) => {
   return `${item.sets} × ${value}${side} · repos ${item.rest_sec} s`
 }
 
-/** En-tête d'un superset : "3 tours · repos 75 s après B", ou "après C" pour un triset. */
-export const supersetLabel = (block) =>
-  `${block.rounds} tours · repos ${block.rest_sec} s après ${supersetMembers(block).at(-1)?.role ?? 'B'}`
-
 /** Chemin d'une photo d'exercice (frame 0 = départ, 1 = arrivée), ou null sans photo. */
 export const photoUrl = (slug, frame) =>
   EXERCISE_INDEX[slug]?.image ? `${import.meta.env?.BASE_URL ?? '/'}renfo/${slug}-${frame}.webp` : null
+
+// Séparateur des anciens titres de cycle : tiret long ou moyen entouré d'espaces.
+const SEPARATEUR_TITRE = /\s[–—]\s/
+
+/** Titre affiché d'une séance : coupé avant la partie de cycle (« Corps complet »). */
+export const titreAffiche = (title) => String(title ?? '').split(SEPARATEUR_TITRE)[0].trim()

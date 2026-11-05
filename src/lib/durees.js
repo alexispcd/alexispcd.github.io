@@ -6,7 +6,7 @@ export const DUREES = {
   rechercheActivites: 1600, // recherche des activités d'une séance (coros-match)
   validation: 3900, // validation d'une séance avec analyse (complete-session)
   envoiMontre: 2100, // envoi ou mise à jour sur la montre (coros-push)
-  preparationRenfo: 15500, // préparation d'une séance Renfo (renfo-session)
+  preparationRenfo: 7100, // préparation d'une séance Renfo (renfo-session), mesuré le 4 novembre, un appel, nouveau modèle
   administration: 700, // actions de l'Administration (admin-users)
   sources: 400, // état d'une source de données (coros-oauth)
 

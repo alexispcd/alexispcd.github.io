@@ -36,3 +36,15 @@ export const effacerBandesJouees = (sessionId) => {
     // Rien à effacer.
   }
 }
+
+/**
+ * Retire l'élastique joué d'un exercice, après un réglage ou un remplacement réussis :
+ * le nouveau réglage prend effet. Si rien ne reste, la clé est effacée.
+ */
+export const retirerBandeJouee = (sessionId, slug) => {
+  const bandes = lireBandesJouees(sessionId)
+  if (!bandes || !(slug in bandes)) return
+  const reste = { ...bandes }
+  delete reste[slug]
+  garderBandesJouees(sessionId, reste)
+}

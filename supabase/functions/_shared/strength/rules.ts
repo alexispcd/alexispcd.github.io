@@ -47,7 +47,7 @@ export type TrisetFocus =
 export const TRISET_FOCUS_LABELS: Record<TrisetFocus, string> = {
   legs: "Jambes",
   upper: "Haut du corps",
-  core_runner: "Tronc et coureur",
+  core_runner: "Tronc",
   lower_legs: "Jambes",
   posterior_calves: "Chaîne postérieure et mollets",
   trunk: "Tronc",
