@@ -50,8 +50,9 @@ const section = (etiquette, texte) => (
  * puis « Remplacer l'exercice » et « Fermer ».
  * - cible : { dose, block } de l'exercice, gardée par le parent pendant la fermeture.
  * - modifiable : séance à faire au nouveau format ; sinon ni dose ni « Remplacer ».
+ * - sansRemplacer : pas de « Remplacer l'exercice » (fiche ouverte dans le player).
  */
-const FicheExercice = ({ ouverte, onFermer, cible, bandsUsed, bands, modifiable, onAjuster, onRemplacer }) => {
+const FicheExercice = ({ ouverte, onFermer, cible, bandsUsed, bands, modifiable, sansRemplacer = false, onAjuster, onRemplacer }) => {
   const dose = cible?.dose
   const ex = dose ? EXERCISE_INDEX[dose.slug] : null
   const depart = dose ? photoUrl(dose.slug, 0) : null
@@ -61,7 +62,7 @@ const FicheExercice = ({ ouverte, onFermer, cible, bandsUsed, bands, modifiable,
       ouverte={ouverte && Boolean(ex)}
       onFermer={onFermer}
       libelleAria={ex ? `Fiche de l'exercice ${ex.name}` : "Fiche de l'exercice"}
-      lignes={modifiable ? [{ libelle: "Remplacer l'exercice", onClick: onRemplacer }] : []}
+      lignes={modifiable && !sansRemplacer ? [{ libelle: "Remplacer l'exercice", onClick: onRemplacer }] : []}
     >
       {ex && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12], p: space[16], textAlign: 'left' }}>

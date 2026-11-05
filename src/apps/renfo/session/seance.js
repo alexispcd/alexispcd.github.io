@@ -8,7 +8,7 @@ import {
 import { formatShortDay } from '../../../lib/dates.js'
 import { jourLocal, libelleSupersets } from '../accueil.js'
 import { formatKg } from '../bandColor.js'
-import { ANCHOR_LABELS, bandOf, doseLabel, mainDoseLabel, supersetMembers, titreAffiche } from '../content.js'
+import { ANCHOR_LABELS, bandOf, doseLabel, mainDoseLabel, supersetMembers, supersetRank, titreAffiche } from '../content.js'
 
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
@@ -37,15 +37,11 @@ export const ligneEnTete = (session) => {
 }
 
 /** Rang d'un superset parmi ceux de la séance (1, 2, 3), ou null pour un autre bloc. */
-export const rangSuperset = (content, blockIndex) => {
-  const blocs = blocsDe(content)
-  if (blocs[blockIndex]?.type !== 'superset') return null
-  return blocs.slice(0, blockIndex + 1).filter((b) => b.type === 'superset').length
-}
+export const rangSuperset = (content, blockIndex) => supersetRank(blockIndex, blocsDe(content))
 
 /** Exercices d'un bloc dans l'ordre de jeu. */
 export const exercicesDuBloc = (block) =>
-  (block?.type === 'superset' ? supersetMembers(block).map(({ dose }) => dose) : block?.items ?? [])
+  (block?.type === 'superset' ? supersetMembers(block) : block?.items ?? [])
 
 const nomDe = (slug) => EXERCISE_INDEX[slug]?.name ?? slug
 

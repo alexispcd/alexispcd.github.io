@@ -15,7 +15,6 @@ import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { availableExercises } from '../../../../supabase/functions/_shared/strength/catalog.ts'
 import { estNouveauFormat, remplacants } from '../../../../supabase/functions/_shared/strength/compose.ts'
-import { retirerBandeJouee } from '../bandesJouees'
 import { ligneBouton } from '../compose/ligne'
 import ExerciseThumb from './ExerciseThumb'
 import PastillesExercice from './PastillesExercice'
@@ -110,7 +109,6 @@ const RemplacerPage = () => {
   const choisir = async (nouveau) => {
     const { ok } = await action.lancer(() => replaceExercise(session.id, blockIndex, slug, nouveau))
     if (!ok) return
-    retirerBandeJouee(session.id, slug)
     retour()
   }
 

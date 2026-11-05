@@ -106,12 +106,13 @@ export const getSession = async (sessionId) =>
     .single())
 
 /**
- * Valide une séance : bandes jouées et ressenti (feedback au format toFeedbackPayload,
- * ou null). Les bandes jouées deviennent ensuite la base de leurs exercices.
+ * Valide une séance : bandes jouées (bands_used de la séance, pour une ancienne séance
+ * réinitialisée) et ressenti (feedback au format toFeedbackPayload, ou null). Les
+ * élastiques réglés dans la séance sont déjà la base de leurs exercices (Ajuster).
  */
 export const completeSession = async (sessionId, { bandsUsed, feedback }) => {
   const hasBands = Boolean(bandsUsed && Object.keys(bandsUsed).length)
-  const session = unwrap(await supabase
+  return unwrap(await supabase
     .from('strength_sessions')
     .update({
       status: 'done',
@@ -124,23 +125,6 @@ export const completeSession = async (sessionId, { bandsUsed, feedback }) => {
     .eq('id', sessionId)
     .select(SESSION_COLUMNS)
     .single())
-  // Jusqu'au lot R4, où Ajuster passera dans le player.
-  if (hasBands) await saveBandBases(bandsUsed)
-  return session
-}
-
-// Élastique de chaque exercice joué dans sa base, sans toucher à reps ni duration_sec.
-// Un échec part en console : la séance est déjà validée.
-const saveBandBases = async (bandsUsed) => {
-  try {
-    const user_id = await userId()
-    const updated_at = new Date().toISOString()
-    const rows = Object.entries(bandsUsed).map(([slug, kg]) => ({ user_id, slug, band_kg: Number(kg), updated_at }))
-    const { error } = await supabase.from('strength_exercise_bases').upsert(rows, { onConflict: 'user_id,slug' })
-    if (error) throw error
-  } catch (e) {
-    console.error('[renfo] bases des élastiques non écrites', e)
-  }
 }
 
 /** Remet une séance à faire. Les bandes jouées sont conservées. */
@@ -157,8 +141,9 @@ export const deleteFreeSession = async (sessionId) =>
   unwrap(await supabase.from('strength_sessions').delete().eq('id', sessionId).is('cycle_id', null))
 
 // ── Séances composées ────────────────────────────────────────────────────────
-// Chaque action renvoie { session }. createSession : l'accueil et la composition
-// (lot R2) ; updateSession, adjustExercise, replaceExercise : aucun écran encore.
+// Chaque action renvoie { session }. createSession : l'accueil et la composition ;
+// updateSession : Modifier ; adjustExercise : Ajuster (page séance et player) ;
+// replaceExercise : Remplacer.
 
 /** Bases des exercices du compte (dernier réglage) : { [slug]: { reps, duration_sec, band_kg } }. */
 export const getExerciseBases = async () => {

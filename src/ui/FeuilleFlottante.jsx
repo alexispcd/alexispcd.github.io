@@ -39,6 +39,8 @@ const ligne = {
  * - children : contenu libre en haut du premier bloc (usages fiche, réglage et date).
  * - libelleAria : nom de la feuille pour le lecteur d'écran quand elle n'a pas de
  *   `titre` (usage Date : le titre est dans children) ; sinon le titre la nomme.
+ * - ancree : usage Plan, la feuille tient de 60 px sous le haut jusqu'en bas même si
+ *   son contenu est court ; le premier bloc défile.
  * Le premier bloc défile s'il dépasse l'écran, le second reste visible. Aucune
  * couleur, même pour une action qui défait : sa place en dernier suffit.
  */
@@ -49,6 +51,7 @@ const FeuilleFlottante = ({
   lignes = [],
   fermerLibelle = 'Fermer',
   libelleAria,
+  ancree = false,
   children,
 }) => {
   const reduire = useReduireAnimations()
@@ -67,6 +70,9 @@ const FeuilleFlottante = ({
   }
 
   const enTete = Boolean(titre || children)
+  // S'arrête à 60 px du haut de la page, sous la bande de la barre d'état
+  // (src/lib/barreEtat.js, 8 px).
+  const haut = `calc(env(safe-area-inset-top, 0px) + ${size.cible} + ${space[16]})`
 
   return (
     <Modal
@@ -85,16 +91,14 @@ const FeuilleFlottante = ({
             left: space[12],
             right: space[12],
             bottom: SPACE_BAS,
-            // S'arrête à 60 px du haut de la page, sous la bande de la barre d'état
-            // (src/lib/barreEtat.js, 8 px).
-            maxHeight: `calc(100% - ${SPACE_BAS} - env(safe-area-inset-top, 0px) - ${size.cible} - ${space[16]})`,
+            ...(ancree ? { top: haut } : { maxHeight: `calc(100% - ${SPACE_BAS} - ${haut})` }),
             display: 'flex',
             flexDirection: 'column',
             gap: space[8],
             outline: 'none',
           }}
         >
-          <Box sx={{ ...bloc, flex: '0 1 auto', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'none' }}>
+          <Box sx={{ ...bloc, flex: ancree ? '1 1 auto' : '0 1 auto', minHeight: 0, overflowY: 'auto', overscrollBehavior: 'none' }}>
             {titre && (
               <Typography variant="secondaire" sx={{ color: 'muted', textAlign: 'center', py: space[14], px: space[16] }}>
                 {titre}

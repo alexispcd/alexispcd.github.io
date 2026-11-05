@@ -4,48 +4,28 @@
 import { EXERCISE_INDEX } from '../../../supabase/functions/_shared/strength/catalog.ts'
 import { TRISET_FOCUS_LABELS } from '../../../supabase/functions/_shared/strength/rules.ts'
 
-/** Rôles des membres d'un superset, dans l'ordre de jeu. */
-const ROLES = ['A', 'B', 'C', 'D']
-
 /**
- * Membres d'un superset dans l'ordre de jeu, avec leur rôle A, B, C, D : liste
- * `exercises` du nouveau format, sinon a, b, puis c pour un triset. Les anciennes
- * séances n'ont que A et B.
+ * Exercices d'un superset dans l'ordre de jeu : liste `exercises` du nouveau format,
+ * sinon a, b, puis c (les anciennes séances n'ont parfois que a et b).
  */
 export const supersetMembers = (block) =>
-  (Array.isArray(block.exercises) ? block.exercises : [block.a, block.b, block.c])
-    .map((dose, i) => (dose ? { dose, role: ROLES[i] } : null))
-    .filter(Boolean)
+  (Array.isArray(block.exercises) ? block.exercises : [block.a, block.b, block.c]).filter(Boolean)
 
-const isTriset = (block) => Boolean(block.focus || block.c || Array.isArray(block.exercises))
-
-/** Rang d'un superset parmi les supersets de la séance (1, 2, 3) et leur nombre. */
-const supersetRank = (index, blocks) => ({
-  n: blocks.slice(0, index + 1).filter((b) => b.type === 'superset').length,
-  total: blocks.filter((b) => b.type === 'superset').length,
-})
+/** Rang d'un superset parmi les supersets de la séance (1, 2, 3), ou null pour un autre bloc. */
+export const supersetRank = (index, blocks) =>
+  (blocks[index]?.type === 'superset' ? blocks.slice(0, index + 1).filter((b) => b.type === 'superset').length : null)
 
 /**
- * Libellé d'un bloc : "Échauffement", "Bloc principal", "Superset 2",
- * "Triset 1 · Jambes" (triset avec focus) ou "Triset 1" (trois membres sans focus).
+ * Libellé d'un bloc : « Superset 2 · Haut du corps », « Superset 2 » sans thème,
+ * « Échauffement », « Retour au calme », « Bloc principal ».
  */
-export const blockLabel = (block, index, blocks) => {
+export const blockHeading = (block, index, blocks) => {
   if (block.type === 'warmup') return 'Échauffement'
   if (block.type === 'main') return 'Bloc principal'
   if (block.type === 'cooldown') return 'Retour au calme'
-  const { n } = supersetRank(index, blocks)
-  if (!isTriset(block)) return `Superset ${n}`
+  const n = supersetRank(index, blocks)
   const focus = TRISET_FOCUS_LABELS[block.focus]
-  return focus ? `Triset ${n} · ${focus}` : `Triset ${n}`
-}
-
-/** Libellé avec le rang sur le total pour les supersets : "Triset 2 sur 3 · Haut du corps". */
-export const blockHeading = (block, index, blocks) => {
-  if (block.type !== 'superset') return blockLabel(block, index, blocks)
-  const { n, total } = supersetRank(index, blocks)
-  const word = isTriset(block) ? 'Triset' : 'Superset'
-  const focus = TRISET_FOCUS_LABELS[block.focus]
-  return `${word} ${n} sur ${total}${focus ? ` · ${focus}` : ''}`
+  return focus ? `Superset ${n} · ${focus}` : `Superset ${n}`
 }
 
 export const ANCHOR_LABELS = {
@@ -61,15 +41,15 @@ export const MOVE_BAR_LABELS = {
   low: 'Déplace la barre en bas',
 }
 
-/** Tous les dosages d'une séance dans l'ordre de jeu : { dose, block, blockIndex, role }. */
+/** Tous les dosages d'une séance dans l'ordre de jeu : { dose, block, blockIndex }. */
 export const listDoses = (content) => {
   const out = []
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   blocks.forEach((block, blockIndex) => {
     if (block.type === 'superset') {
-      for (const { dose, role } of supersetMembers(block)) out.push({ dose, block, blockIndex, role })
+      for (const dose of supersetMembers(block)) out.push({ dose, block, blockIndex })
     } else {
-      for (const dose of block.items ?? []) out.push({ dose, block, blockIndex, role: null })
+      for (const dose of block.items ?? []) out.push({ dose, block, blockIndex })
     }
   })
   return out

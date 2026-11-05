@@ -4,8 +4,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  blockProgress, buildSequence, lastAnchorBefore, nextWorkStep, PREP_SEC, stepSeconds, upcomingWork,
+  blockProgress, buildSequence, focusStep, lastAnchorBefore, nextWorkStep, PREP_SEC, stepSeconds,
 } from './sequence.js'
+import { supersetMembers } from '../content.js'
 import {
   BETWEEN_BLOCKS_SEC, TRANSITION_SEC, estimateSessionMinutes,
 } from '../../../../supabase/functions/_shared/strength/estimate.ts'
@@ -40,6 +41,9 @@ const SESSION = {
 }
 
 const works = (steps) => steps.filter((s) => s.kind === 'work')
+
+// Lettre d'un exercice dans son superset (A, B, C, D), pour lire les motifs.
+const lettre = (content, s) => 'ABCD'[supersetMembers(content.blocks[s.blockIndex]).findIndex((d) => d.slug === s.slug)]
 
 test('séance complète : sas de préparation, puis travail et repos alternés', () => {
   const { steps } = buildSequence(SESSION)
@@ -103,16 +107,17 @@ test('ancien superset A+B : A, transition, B, repos après B sauf au dernier tou
   // Le repos entre blocs porte l'index du bloc qui suit : il ouvre la liste.
   const [blockRest, ...ss] = steps.filter((s) => s.blockIndex === 3)
   assert.equal(blockRest.restType, 'block')
-  const pattern = ss.map((s) => (s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
+  const pattern = ss.map((s) => (s.kind === 'work' ? `${lettre(SESSION, s)}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
   // mollet_excentrique est unilatéral : deux steps A par tour.
   assert.deepEqual(pattern, [
     'A1', 'A1', `rest:transition:${TRANSITION_SEC}`, 'B1', 'rest:round:60',
     'A2', 'A2', `rest:transition:${TRANSITION_SEC}`, 'B2',
   ])
-  const a = steps.find((s) => s.role === 'A' && s.blockIndex === 2)
-  assert.equal(a.blockLabel, 'Superset 1')
-  assert.deepEqual(a.roles, ['A', 'B'])
+  const a = steps.find((s) => s.slug === 'pont_fessier_unipodal')
+  assert.equal(a.heading, 'Superset 1')
+  assert.equal(a.rang, 1)
   assert.equal(a.roundCount, 3)
+  assert.equal('role' in a, false)
 })
 
 test('BETWEEN_BLOCKS_SEC entre deux blocs', () => {
@@ -194,11 +199,11 @@ const LEGS = {
   ],
 }
 
-test('triset : A, B, C enchaînés, repos après C sauf au dernier tour', () => {
+test('ancien superset a, b, c : enchaînés, repos après c sauf au dernier tour', () => {
   const { steps } = buildSequence(FULL)
   const [blockRest, ...ts] = steps.filter((s) => s.blockIndex === 1)
   assert.equal(blockRest.restType, 'block')
-  const pattern = ts.map((s) => (s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
+  const pattern = ts.map((s) => (s.kind === 'work' ? `${lettre(FULL, s)}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
   const t = `rest:transition:${TRANSITION_SEC}`
   // squat_bulgare et mollet_excentrique sont unilatéraux : deux steps par tour.
   assert.deepEqual(pattern, [
@@ -208,27 +213,29 @@ test('triset : A, B, C enchaînés, repos après C sauf au dernier tour', () => 
   ])
 })
 
-test('triset : rôles, liste des rôles et libellé du bloc', () => {
+test('ancien superset a, b, c : libellé du bloc avec son thème, sans rôle', () => {
   const { steps } = buildSequence(FULL)
-  const c = steps.find((s) => s.role === 'C' && s.blockIndex === 2)
-  assert.equal(c.slug, 'curl_biceps')
-  assert.deepEqual(c.roles, ['A', 'B', 'C'])
-  assert.equal(c.blockLabel, 'Triset 2 · Haut du corps')
-  assert.equal(steps.find((s) => s.blockIndex === 3 && s.kind === 'work').blockLabel, 'Triset 3 · Tronc')
+  const c = steps.find((s) => s.slug === 'curl_biceps')
+  assert.equal(c.heading, 'Superset 2 · Haut du corps')
+  assert.equal(c.rang, 2)
+  assert.equal(steps.find((s) => s.blockIndex === 3 && s.kind === 'work').heading, 'Superset 3 · Tronc')
+  assert.ok(steps.every((s) => !('role' in s) && !('roles' in s)))
+  assert.ok(steps.every((s) => !String(s.heading ?? '').includes('Triset')))
   assert.equal(steps.at(-1).slug, 'posture_enfant')
 })
 
-test('triset sans focus : libellé Triset n', () => {
+test('superset sans thème : libellé Superset n', () => {
   const content = { blocks: [{ type: 'superset', rounds: 2, rest_sec: 60,
     a: { slug: 'pompes', reps: 10 }, b: { slug: 'dead_bug', reps: 10 }, c: { slug: 'planche', duration_sec: 30 } }] }
   const { steps } = buildSequence(content)
-  assert.equal(steps[1].blockLabel, 'Triset 1')
+  assert.equal(steps[1].heading, 'Superset 1')
 })
 
-test('ancienne séance jambes : bloc principal puis supersets A+B, aucun c', () => {
+test('ancienne séance jambes : bloc principal en séries puis supersets a et b', () => {
   const { steps } = buildSequence(LEGS)
-  assert.ok(works(steps).every((s) => s.role !== 'C'))
-  assert.equal(steps.find((s) => s.blockIndex === 2 && s.kind === 'work').blockLabel, 'Superset 1')
+  assert.equal(steps.find((s) => s.blockIndex === 2 && s.kind === 'work').heading, 'Superset 1')
+  assert.equal(steps.find((s) => s.blockIndex === 1 && s.kind === 'work').heading, 'Bloc principal')
+  assert.equal(steps.find((s) => s.blockIndex === 1 && s.kind === 'work').set, 1)
   assert.equal(works(steps).filter((s) => s.slug === 'squat_bulgare').length, 6)
 })
 
@@ -239,38 +246,28 @@ test('total cohérent avec estimateSessionMinutes : trisets et séance jambes', 
   }
 })
 
-test('upcomingWork : prochains exercices avec le repos qui les précède', () => {
+test('focusStep : step de travail courant, sinon le prochain', () => {
   const { steps } = buildSequence(FULL)
-  // Sur le côté gauche du squat bulgare (triset 1, tour 1).
-  const i = steps.findIndex((s) => s.slug === 'squat_bulgare' && s.side === 'gauche')
-  const next = upcomingWork(steps, i, 2)
-  // Le côté droit n'est pas compté.
-  assert.deepEqual(next.map(({ step }) => step.slug), ['sdt_roumain_elastique', 'mollet_excentrique'])
-  assert.equal(next[0].rest.restType, 'transition')
-  assert.equal(next[1].step.side, 'gauche')
-  // Dernier membre du tour 1 : le suivant est A du tour 2, après le repos du tour.
-  const lastC = steps.findIndex((s) => s.slug === 'mollet_excentrique' && s.side === 'droite' && s.round === 1)
-  const [first] = upcomingWork(steps, lastC, 1)
-  assert.equal(first.step.slug, 'squat_bulgare')
-  assert.equal(first.step.round, 2)
-  assert.equal(first.rest.duration_sec, 75)
-  // Pendant un repos, le repos courant n'est pas répété.
-  assert.equal(upcomingWork(steps, lastC + 1, 1)[0].rest, null)
-  // Fin de séance.
-  assert.deepEqual(upcomingWork(steps, steps.length - 1, 2), [])
+  assert.equal(focusStep(steps, 0).slug, 'cercles_hanche')
+  const transition = steps.findIndex((s) => s.restType === 'transition' && s.blockIndex === 1)
+  assert.equal(focusStep(steps, transition).slug, steps[transition + 1].slug)
+  const block = steps.findIndex((s) => s.restType === 'block')
+  assert.equal(focusStep(steps, block).blockIndex, 1)
+  assert.equal(focusStep(steps, steps.length - 1).slug, 'posture_enfant')
+  assert.equal(focusStep(steps, steps.length), null)
 })
 
 test('blockProgress : un segment par bloc, poids et fraction faite', () => {
   const { steps, totalSeconds } = buildSequence(FULL)
   const start = blockProgress(steps, 0)
-  assert.deepEqual(start.map((s) => s.label), [
-    'Échauffement', 'Triset 1 · Jambes', 'Triset 2 · Haut du corps', 'Triset 3 · Tronc', 'Retour au calme',
+  assert.deepEqual(start.map((s) => s.heading), [
+    'Échauffement', 'Superset 1 · Jambes', 'Superset 2 · Haut du corps', 'Superset 3 · Tronc', 'Retour au calme',
   ])
   assert.ok(start.every((s) => s.done === 0))
   assert.equal(start.reduce((sum, s) => sum + s.weight, 0), totalSeconds)
   const warmupWeight = steps.filter((s) => s.blockIndex === 0).reduce((sum, s) => sum + stepSeconds(s), 0)
   assert.equal(start[0].weight, warmupWeight)
-  // Au premier step du triset 2 : échauffement et triset 1 faits, la suite à faire.
+  // Au premier step du superset 2 : échauffement et superset 1 faits, la suite à faire.
   const i = steps.findIndex((s) => s.blockIndex === 2 && s.kind === 'work')
   const mid = blockProgress(steps, i)
   assert.deepEqual(mid.map((s) => s.done > 0.999 ? 1 : s.done), [1, 1, mid[2].done, 0, 0])
@@ -279,7 +276,7 @@ test('blockProgress : un segment par bloc, poids et fraction faite', () => {
   assert.ok(blockProgress(steps, steps.length).every((s) => s.done === 1))
 })
 
-test('séance jambes en trisets : libellés des focus propres au type', () => {
+test('séance jambes à trois supersets : libellés des thèmes propres au type', () => {
   const content = {
     blocks: [
       { type: 'warmup', items: [{ slug: 'cercles_hanche', reps: 8 }] },
@@ -293,9 +290,9 @@ test('séance jambes en trisets : libellés des focus propres au type', () => {
     ],
   }
   const { steps, totalSeconds } = buildSequence(content)
-  const labels = [...new Set(works(steps).map((s) => s.blockLabel))]
+  const labels = [...new Set(works(steps).map((s) => s.heading))]
   assert.deepEqual(labels, [
-    'Échauffement', 'Triset 1 · Quadriceps', 'Triset 2 · Ischios et fessiers', 'Triset 3 · Pied et mollet', 'Retour au calme',
+    'Échauffement', 'Superset 1 · Quadriceps', 'Superset 2 · Ischios et fessiers', 'Superset 3 · Pied et mollet', 'Retour au calme',
   ])
   assert.equal(Math.round(totalSeconds / 60), estimateSessionMinutes(content))
 })
@@ -325,23 +322,22 @@ test('superset de 4 exercices sur 5 tours : A, B, C, D, repos après D sauf au d
   const { steps } = buildSequence(COMPOSEE)
   const [blockRest, ...ts] = steps.filter((s) => s.blockIndex === 1)
   assert.equal(blockRest.restType, 'block')
-  const pattern = ts.map((s) => (s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
+  const pattern = ts.map((s) => (s.kind === 'work' ? `${lettre(COMPOSEE, s)}${s.round}` : `rest:${s.restType}:${s.duration_sec}`))
   const t = `rest:transition:${TRANSITION_SEC}`
   const round = (n) => [`A${n}`, t, `B${n}`, t, `C${n}`, t, `D${n}`]
   assert.deepEqual(pattern, [
     ...round(1), 'rest:round:60', ...round(2), 'rest:round:60', ...round(3), 'rest:round:60',
     ...round(4), 'rest:round:60', ...round(5),
   ])
-  const d = steps.find((s) => s.role === 'D')
-  assert.equal(d.slug, 'dead_bug')
-  assert.deepEqual(d.roles, ['A', 'B', 'C', 'D'])
+  const d = steps.find((s) => s.slug === 'dead_bug')
+  assert.equal(d.heading, 'Superset 1 · Quadriceps')
   assert.equal(d.roundCount, 5)
 })
 
 test('superset d\'un seul tour : aucun repos après le dernier tour', () => {
   const { steps } = buildSequence(COMPOSEE)
   const ts = steps.filter((s) => s.blockIndex === 2)
-  assert.deepEqual(ts.map((s) => s.kind === 'work' ? `${s.role}${s.round}` : `rest:${s.restType}`), [
+  assert.deepEqual(ts.map((s) => s.kind === 'work' ? `${lettre(COMPOSEE, s)}${s.round}` : `rest:${s.restType}`), [
     'rest:block', 'A1', 'rest:transition', 'B1',
   ])
   assert.ok(!steps.some((s) => s.restType === 'round' && s.blockIndex === 2))

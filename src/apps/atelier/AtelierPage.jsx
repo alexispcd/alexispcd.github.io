@@ -41,6 +41,7 @@ import Calendrier from '../../ui/Calendrier'
 import { moisDe } from '../../ui/calendrier'
 import RouesDuree from '../../ui/RouesDuree'
 import BarreEffort from '../../ui/BarreEffort'
+import BandeCote from '../../ui/BandeCote'
 import { formatShortDay, formatShortDayAnnee } from '../../lib/dates'
 import { addDaysISO, joursCreneau, todayISO } from '../training/constants'
 import CarteSysteme from '../../components/CarteSysteme'
@@ -515,6 +516,26 @@ const DemoEffort = () => {
   )
 }
 
+const DemoBandeCote = () => {
+  const [cote, setCote] = useState('gauche')
+  const suivant = { gauche: 'droite', droite: null }
+  return (
+    <Section titre="Bande de côté">
+      <Carte sx={{ position: 'relative', height: '188px', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <BandeCote cote={cote} ecart="40px" />
+        <Typography sx={{ ...textStyles['chiffre-player-moyen'], fontVariantNumeric: 'tabular-nums' }}>12</Typography>
+        <Typography sx={{ fontSize: '22px', lineHeight: '26px', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+          {cote === 'gauche' ? 'Gauche' : cote === 'droite' ? 'Droite' : 'Deux côtés'}
+          {cote && <Box component="span" sx={{ color: 'muted', fontWeight: 600 }}>{cote === 'gauche' ? ' · 1 / 2' : ' · 2 / 2'}</Box>}
+        </Typography>
+      </Carte>
+      <Rangee>
+        <Bouton petit variante="chip" onClick={() => setCote(cote ? suivant[cote] : 'gauche')}>Côté suivant</Bouton>
+      </Rangee>
+    </Section>
+  )
+}
+
 const AtelierPage = () => {
   const [intensite, setIntensite] = useState('normale')
   const [exercices, setExercices] = useState(3)
@@ -783,6 +804,7 @@ const AtelierPage = () => {
         <DemoCalendrier />
         <DemoRoues />
         <DemoEffort />
+        <DemoBandeCote />
         <DemoAttente />
         <DemoMessage />
         <DemoAction />

@@ -9,7 +9,7 @@ import { DUREES } from '../../../lib/durees'
 import { texteErreur } from '../../../lib/reseau'
 import { etatSousPage } from '../../../lib/retour'
 import { painAreaLabel } from '../../../lib/feedback'
-import { adjustExercise, deleteFreeSession, getBands, getPendingSession, getSession, resetSession } from '../../../lib/renfo'
+import { deleteFreeSession, getBands, getPendingSession, getSession, resetSession } from '../../../lib/renfo'
 import { SPACE_BAS, border, radius, size, space, textStyles } from '../../../styles/tokens'
 import { DURATION, transition } from '../../../styles/motion'
 import BarreAttente from '../../../ui/BarreAttente'
@@ -28,31 +28,29 @@ import { useMessage } from '../../../ui/useMessage'
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
 import { estNouveauFormat } from '../../../../supabase/functions/_shared/strength/compose.ts'
 import { bandColorFor, formatKg } from '../bandColor'
-import { garderBandesJouees, lireBandesJouees, retirerBandeJouee } from '../bandesJouees'
 import { ANCHOR_LABELS, bandOf, equipmentSummary, titreAffiche } from '../content'
 import Depli from '../compose/Depli'
 import { ligneBouton } from '../compose/ligne'
 import RenfoPlayer from '../player/RenfoPlayer'
 import { createBeeps } from '../player/beeps'
-import AjusterExercice from './AjusterExercice'
+import { arretLibelle, effacerPosition, etatBlocs, lirePosition } from '../player/position'
+import { buildSequence } from '../player/sequence'
 import ExerciseThumb from './ExerciseThumb'
-import FicheExercice from './FicheExercice'
 import PastillesExercice from './PastillesExercice'
+import { useFicheExercice } from './useFicheExercice'
 import {
   doseDeLigne, exercicesDuBloc, ligneBloc, ligneEnTete, phraseReinitialisation, phraseSuppression, prevu,
   rangSuperset, themesSeance, titreBloc,
 } from './seance'
 
-// Séance à faire : les élastiques joués gardés depuis la fin du player (pas encore
-// en base) remplacent bands_used, pour le matériel affiché, la fiche et le player.
-const avecBandesJouees = (session) => {
-  const gardees = session.status === 'planned' ? lireBandesJouees(session.id) : null
-  return gardees ? { ...session, bands_used: gardees } : session
-}
+// Position gardée par le player (séance en cours ou finie sans être validée). Une
+// séance faite n'en a pas ; une séance changée depuis (Modifier, Remplacer) la perd.
+const positionDe = (session) =>
+  (session.status === 'planned' ? lirePosition(session.id, buildSequence(session.content).steps) : null)
 
 const chargerPage = async (sessionId) => {
   const [session, bands] = await Promise.all([getSession(sessionId), getBands()])
-  return { session: avecBandesJouees(session), bands }
+  return { session, bands, position: positionDe(session) }
 }
 
 const SEANCE_EN_ATTENTE = 'Une autre séance est déjà à faire. Fais-la ou supprime-la d\'abord.'
@@ -63,16 +61,11 @@ const filet = { borderTop: `${border.filet} solid`, borderColor: 'line' }
 // Carte d'attente en tête de page : l'écart du bas s'ouvre et se replie avec elle.
 const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pb: space[12] } }
 
-// Réglage de départ d'Ajuster : la dose actuelle et l'élastique affiché.
-const reglageDe = (dose, bandsUsed) => ({
-  quantite: dose.duration_sec ?? dose.reps,
-  kg: bandOf(dose, bandsUsed),
-})
-
 /**
  * Page d'une séance Renfo : en-tête, ressenti d'une séance faite, blocs en accordéon,
  * fiche, Ajuster et menu des trois points ; Remplacer, Modifier et la validation ont
- * leur page.
+ * leur page. Séance en cours dans le player (position gardée) : « En cours », état des
+ * blocs, « Recommencer » et « Reprendre » ; finie sans être validée : « Valider la séance ».
  */
 const SessionPage = () => {
   const { sessionId } = useParams()
@@ -82,13 +75,9 @@ const SessionPage = () => {
   const { afficher } = useMessage()
   const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const [ouvert, setOuvert] = useState(null) // index du bloc déplié
-  // Exercice de la fiche : { dose, block, blockIndex }, gardé pendant la fermeture.
-  const [cible, setCible] = useState(null)
-  const [feuille, setFeuille] = useState(null) // 'fiche' | 'ajuster' | null
-  const [reglage, setReglage] = useState(null)
   const [confirmation, setConfirmation] = useState(null) // 'supprimer' | 'reinitialiser'
   const [confirmationOuverte, setConfirmationOuverte] = useState(false)
-  const [player, setPlayer] = useState(null) // { beeps } quand le player est ouvert
+  const [player, setPlayer] = useState(null) // { beeps, position } quand le player est ouvert
   const attente = useFinAttente(chargement.status === 'loading')
 
   const suppression = useAction({
@@ -99,17 +88,11 @@ const SessionPage = () => {
     attente: 'Réinitialisation de la séance', duree: DUREES.actionCourte,
     echec: REINITIALISATION_ECHEC,
   })
-  const enregistrement = useAction({
-    attente: 'Enregistrement du réglage', duree: DUREES.enregistrement,
-    echec: "Le réglage n'a pas abouti. Réessaie.",
-  })
-  const occupe = suppression.enCours || reinitialisation.enCours || enregistrement.enCours
 
   // Changement de séance : tout repart au rendu, l'effet ne fait que charger.
   if (chargement.sessionId !== sessionId) {
     setChargement({ status: 'loading', sessionId, essai: 0 })
     setOuvert(null)
-    setFeuille(null)
   }
 
   useEffect(() => {
@@ -129,6 +112,13 @@ const SessionPage = () => {
   const titre = session ? titreAffiche(session.title) : ''
   const libre = session ? session.cycle_id == null : false
   const modifiable = Boolean(session) && statut === 'planned' && libre && estNouveauFormat(session.content)
+  const setSession = (next) => setChargement((c) => ({ ...c, session: next }))
+
+  const remplacer = ({ blockIndex, dose }) => {
+    navigate(`/renfo/session/${session.id}/remplacer/${blockIndex}/${dose.slug}`, { direction: 'forward', state: etatSousPage(location) })
+  }
+  const fiche = useFicheExercice({ session, bands: chargement.bands, modifiable, onRemplacer: remplacer, onSession: setSession })
+  const occupe = suppression.enCours || reinitialisation.enCours || fiche.action.enCours
 
   // Trois points : actions selon l'état ; rien pendant le chargement ou une attente.
   useEffect(() => {
@@ -191,10 +181,12 @@ const SessionPage = () => {
   const { content } = session
   const blocks = Array.isArray(content?.blocks) ? content.blocks : []
   const faite = statut === 'done'
-  const setSession = (next) => setChargement((c) => ({ ...c, session: next }))
+  const position = faite ? null : chargement.position
+  const { steps } = buildSequence(content)
+  const etats = position ? etatBlocs(steps, position.cursor, position.fin) : null
 
   // Bips créés et débloqués DANS le geste utilisateur (contrainte iOS), confiés au player.
-  const demarrer = () => {
+  const lancer = (depuis) => {
     if (occupe) return
     let beeps
     try {
@@ -203,50 +195,36 @@ const SessionPage = () => {
     } catch {
       beeps = null
     }
-    setPlayer({ beeps })
+    setPlayer({ beeps, position: depuis })
+  }
+
+  // Recommencer : la position tombe, le player repart de la préparation, sans confirmation.
+  const recommencer = () => {
+    if (occupe) return
+    effacerPosition(session.id)
+    setChargement((c) => ({ ...c, position: null }))
+    lancer(null)
+  }
+
+  // Fermeture du player : la position est relue (gardée en quittant ou en fin de séance).
+  const fermerPlayer = () => {
+    setPlayer(null)
+    const relue = positionDe(session)
+    setChargement((c) => ({ ...c, position: relue }))
   }
 
   const ouvrirValidation = () => navigate(`/renfo/session/${session.id}/valider`, { direction: 'forward', state: etatSousPage(location) })
 
-  const ouvrirFiche = (dose, block, blockIndex) => {
-    setCible({ dose, block, blockIndex })
-    setFeuille('fiche')
-  }
-
-  const ouvrirAjuster = () => {
-    setReglage(reglageDe(cible.dose, session.bands_used))
-    setFeuille('ajuster')
-  }
-
-  const enregistrer = async () => {
-    const { dose } = cible
-    const depart = reglageDe(dose, session.bands_used)
-    if (reglage.quantite === depart.quantite && reglage.kg === depart.kg) {
-      setFeuille('fiche')
-      return
-    }
-    setFeuille(null)
-    const ex = EXERCISE_INDEX[dose.slug]
-    const envoi = { slug: dose.slug, [ex?.mode === 'duration' ? 'duration_sec' : 'reps']: reglage.quantite }
-    if (ex?.equipment.includes('band') && reglage.kg != null) envoi.band_kg = reglage.kg
-    const { ok, valeur } = await enregistrement.lancer(() => adjustExercise(session.id, envoi))
-    if (!ok) return
-    retirerBandeJouee(session.id, dose.slug)
-    setSession(avecBandesJouees(valeur.session))
-  }
-
-  const remplacer = () => {
-    const { blockIndex, dose } = cible
-    navigate(`/renfo/session/${session.id}/remplacer/${blockIndex}/${dose.slug}`, { direction: 'forward', state: etatSousPage(location) })
-  }
-
   const confirmer = async () => {
     if (confirmation === 'reinitialiser') {
       const { ok, valeur } = await reinitialisation.lancer(() => resetSession(session.id))
-      if (ok) setSession(avecBandesJouees(valeur))
+      if (!ok) return
+      effacerPosition(session.id)
+      setChargement((c) => ({ ...c, session: valeur, position: null }))
       return
     }
     const { ok } = await suppression.lancer(() => deleteFreeSession(session.id))
+    if (ok) effacerPosition(session.id)
     // Retour d'où la séance a été ouverte (l'Historique), avec son état, sinon l'accueil.
     if (ok) navigate(location.state?.retour ?? '/renfo', { replace: true, direction: 'back', state: location.state?.retourEtat ?? null })
   }
@@ -261,7 +239,7 @@ const SessionPage = () => {
       <Box sx={{ flex: '1 0 auto', px: space[16], pt: `calc(${HEADER_HEIGHT}px + ${space[8]})`, pb: faite ? SPACE_BAS : space[24] }}>
         <BarreAttente place="carte" {...suppression.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...reinitialisation.barre} sx={CARTE_ATTENTE_SX} />
-        <BarreAttente place="carte" {...enregistrement.barre} sx={CARTE_ATTENTE_SX} />
+        <BarreAttente place="carte" {...fiche.action.barre} sx={CARTE_ATTENTE_SX} />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
           {/* En-tête */}
@@ -271,7 +249,7 @@ const SessionPage = () => {
               <Pastille>
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: space[4] }}>
                   <MarqueSeance etat={faite ? 'faite' : 'aFaire'} zone="ink" />
-                  {faite ? 'Faite' : 'À faire'}
+                  {faite ? 'Faite' : position ? 'En cours' : 'À faire'}
                 </Box>
               </Pastille>
             </Box>
@@ -339,7 +317,7 @@ const SessionPage = () => {
                     <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1 1 0', minWidth: 0 }}>
                       <Typography variant="corps-fort" component="span">{titreBloc(block)}</Typography>
                       <Typography variant="secondaire" component="span" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>
-                        {ligneBloc(block)}
+                        {etats?.[i] ?? ligneBloc(block)}
                       </Typography>
                     </Box>
                     <Box
@@ -363,7 +341,7 @@ const SessionPage = () => {
                       return (
                         <ButtonBase
                           key={`${dose.slug}-${j}`}
-                          onClick={() => ouvrirFiche(dose, block, i)}
+                          onClick={() => fiche.ouvrir(dose, block, i)}
                           sx={{ ...ligneBouton, ...filet, minHeight: size.ligneDouble, py: space[8], boxSizing: 'border-box' }}
                         >
                           <ExerciseThumb slug={dose.slug} size={48} radius={radius.inner} sansContour />
@@ -392,31 +370,24 @@ const SessionPage = () => {
         </Box>
       </Box>
 
-      {!faite && (
+      {!faite && position?.fin && (
+        <BarreBas phrase="Terminée, pas encore validée">
+          <Bouton variante="ink" onClick={ouvrirValidation} sx={{ flex: 1, minWidth: 0 }}>Valider la séance</Bouton>
+        </BarreBas>
+      )}
+      {!faite && position && !position.fin && (
+        <BarreBas phrase={arretLibelle(steps, position.cursor)}>
+          <Bouton variante="chip" onClick={recommencer} sx={{ flex: 1, minWidth: 0 }}>Recommencer</Bouton>
+          <Bouton variante="ink" onClick={() => lancer(position)} sx={{ flex: 2, minWidth: 0 }}>Reprendre</Bouton>
+        </BarreBas>
+      )}
+      {!faite && !position && (
         <BarreBas>
-          <Bouton variante="ink" onClick={demarrer} sx={{ flex: 1, minWidth: 0 }}>Démarrer</Bouton>
+          <Bouton variante="ink" onClick={() => lancer(null)} sx={{ flex: 1, minWidth: 0 }}>Démarrer</Bouton>
         </BarreBas>
       )}
 
-      <FicheExercice
-        ouverte={feuille === 'fiche'}
-        onFermer={() => setFeuille(null)}
-        cible={cible}
-        bandsUsed={session.bands_used}
-        bands={bands}
-        modifiable={modifiable}
-        onAjuster={ouvrirAjuster}
-        onRemplacer={remplacer}
-      />
-      <AjusterExercice
-        ouverte={feuille === 'ajuster'}
-        slug={cible?.dose.slug}
-        valeur={reglage}
-        onChange={setReglage}
-        bands={bands}
-        onEnregistrer={enregistrer}
-        onAnnuler={() => setFeuille('fiche')}
-      />
+      {fiche.feuilles}
 
       <FeuilleFlottante
         ouverte={confirmationOuverte}
@@ -428,18 +399,14 @@ const SessionPage = () => {
 
       {player && (
         <RenfoPlayer
-          content={content}
-          kindLabel={titre}
-          weekLabel={null}
+          session={session}
           bands={bands}
-          initialBandsUsed={session.bands_used}
           beeps={player.beeps}
-          onClose={() => setPlayer(null)}
-          onValidate={(bandsUsed) => {
-            // Gardés jusqu'à la validation : un retour depuis le ressenti les retrouve.
-            garderBandesJouees(session.id, bandsUsed)
+          position={player.position}
+          onSession={setSession}
+          onFermer={fermerPlayer}
+          onValider={() => {
             setPlayer(null)
-            setSession({ ...session, bands_used: bandsUsed })
             ouvrirValidation()
           }}
         />

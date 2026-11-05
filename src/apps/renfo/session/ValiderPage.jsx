@@ -13,7 +13,7 @@ import { DUREES } from '../../../lib/durees'
 import { emptyFeedback } from '../../../lib/feedback'
 import { completeSession, getSession } from '../../../lib/renfo'
 import { space } from '../../../styles/tokens'
-import { effacerBandesJouees, lireBandesJouees } from '../bandesJouees'
+import { effacerPosition } from '../player/position'
 
 /** Page « Valider la séance » de Renfo : le ressenti seul, sans activité. */
 const ValiderPage = () => {
@@ -96,10 +96,10 @@ const ValiderPage = () => {
   }
 
   const valider = async (feedback) => {
-    const bandsUsed = lireBandesJouees(session.id) ?? session.bands_used
-    const { ok } = await action.lancer(() => completeSession(session.id, { bandsUsed, feedback }))
+    // Élastiques joués d'une ancienne séance réinitialisée : gardés tels quels.
+    const { ok } = await action.lancer(() => completeSession(session.id, { bandsUsed: session.bands_used, feedback }))
     if (!ok) return
-    effacerBandesJouees(session.id)
+    effacerPosition(session.id)
     retour()
   }
 

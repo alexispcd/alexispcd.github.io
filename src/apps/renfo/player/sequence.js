@@ -7,17 +7,19 @@
 //   entre deux exercices.
 // - Bloc principal : `sets` séries par exercice, `rest_sec` entre les séries et
 //   avant l'exercice suivant.
-// - Superset (A, B) ou triset (A, B, C) : `rounds` fois les membres dans l'ordre,
-//   TRANSITION_SEC entre deux membres, puis `rest_sec` après le dernier membre sauf
-//   après le dernier tour.
+// - Superset (liste `exercises` du nouveau format, sinon a, b, c) : `rounds` fois
+//   les exercices dans l'ordre, TRANSITION_SEC entre deux exercices, puis `rest_sec`
+//   après le dernier sauf après le dernier tour.
 // - BETWEEN_BLOCKS_SEC entre deux blocs.
 // - Un exercice unilatéral produit deux steps (gauche puis droite) sans repos.
 // - Mode duration : décompte automatique ; mode reps : avancée manuelle.
 // - Aucun repos après le dernier step.
+// Chaque step porte son bloc (`blockIndex`, `blockType`, `heading`, `rang` du
+// superset) ; un repos entre deux blocs appartient au bloc qui suit.
 
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
 import { BETWEEN_BLOCKS_SEC, TRANSITION_SEC } from '../../../../supabase/functions/_shared/strength/estimate.ts'
-import { blockLabel, supersetMembers } from '../content.js'
+import { blockHeading, supersetMembers, supersetRank } from '../content.js'
 
 /** Sas de mise en place avant le premier exercice. */
 export const PREP_SEC = 10
@@ -60,14 +62,14 @@ export const buildSequence = (content) => {
     const common = {
       kind: 'work', ...base, slug: dose.slug, exercise,
       band_kg: dose.band_kg ?? null, anchor: exercise?.anchor ?? null,
-      side: null, role: null, roles: null, round: null, roundCount: null, set: null, setCount: null,
+      side: null, round: null, roundCount: null, set: null, setCount: null,
       ...meta,
     }
     return exercise?.unilateral ? SIDES.map((side) => ({ ...common, side })) : [common]
   }
 
   blocks.forEach((block, blockIndex) => {
-    const meta = { blockIndex, blockType: block.type, blockLabel: blockLabel(block, blockIndex, blocks) }
+    const meta = { blockIndex, blockType: block.type, heading: blockHeading(block, blockIndex, blocks), rang: supersetRank(blockIndex, blocks) }
     if (blockIndex > 0 && steps.length) pending = rest(BETWEEN_BLOCKS_SEC, 'block', meta)
 
     if (block.type === 'warmup' || block.type === 'cooldown') {
@@ -87,13 +89,12 @@ export const buildSequence = (content) => {
       }
     } else if (block.type === 'superset') {
       const members = supersetMembers(block)
-      const roles = members.map((m) => m.role)
       const roundCount = Math.max(1, block.rounds ?? 1)
       for (let round = 1; round <= roundCount; round++) {
         const roundMeta = { ...meta, round, roundCount }
-        members.forEach(({ dose, role }, i) => {
+        members.forEach((dose, i) => {
           if (i > 0) pending = rest(TRANSITION_SEC, 'transition', roundMeta)
-          emit(workSteps(dose, { ...roundMeta, role, roles }))
+          emit(workSteps(dose, roundMeta))
         })
         if (round < roundCount) pending = rest(block.rest_sec ?? 0, 'round', roundMeta)
       }
@@ -101,7 +102,7 @@ export const buildSequence = (content) => {
   })
 
   if (steps.length) {
-    steps.unshift({ kind: 'prep', advance: 'auto', duration_sec: PREP_SEC, blockIndex: null, blockLabel: null })
+    steps.unshift({ kind: 'prep', advance: 'auto', duration_sec: PREP_SEC, blockIndex: null, heading: null, rang: null })
   }
   steps.forEach((step, i) => { step.index = i })
   const totalSeconds = steps.reduce((sum, step) => sum + stepSeconds(step), 0)
@@ -120,32 +121,21 @@ export const lastAnchorBefore = (steps, index) => {
   return null
 }
 
-/** Second côté d'un exercice unilatéral : même exercice, juste après le premier côté. */
-const isSecondSide = (steps, i) =>
-  steps[i]?.side === SIDES[1] && steps[i - 1]?.kind === 'work' && steps[i - 1].slug === steps[i].slug
-
 /**
- * Les `n` prochains steps de travail après l'index, chacun avec le repos qui le
- * précède (`rest`, step de repos ou null). Le second côté d'un unilatéral n'est pas
- * compté : il suit son premier côté sans repos et porte le même exercice.
- * @returns {Array<{ step, rest }>}
+ * Step qui situe la séance : le step de travail courant, ou pendant une pause
+ * (préparation, repos, transition) le prochain step de travail. Null après la fin.
  */
-export const upcomingWork = (steps, index, n) => {
-  const out = []
-  for (let i = index + 1; i < steps.length && out.length < n; i++) {
-    const step = steps[i]
-    if (step.kind !== 'work' || isSecondSide(steps, i)) continue
-    const before = steps[i - 1]
-    out.push({ step, rest: i - 1 > index && before?.kind === 'rest' ? before : null })
-  }
-  return out
+export const focusStep = (steps, index) => {
+  const step = steps[index]
+  if (!step) return null
+  return step.kind === 'work' ? step : nextWorkStep(steps, index)
 }
 
 /**
  * Avancement par bloc : un segment par bloc de la séance, dans l'ordre, avec son
- * libellé, son poids (somme des stepSeconds de ses steps, repos d'entrée compris) et
+ * libellé (`heading`), son poids (somme des stepSeconds de ses steps, repos d'entrée compris) et
  * la fraction faite (steps d'index strictement inférieur à `index`).
- * @returns {Array<{ blockIndex, label, weight, done }>}
+ * @returns {Array<{ blockIndex, heading, weight, done }>}
  */
 export const blockProgress = (steps, index) => {
   const segments = new Map()
@@ -153,7 +143,7 @@ export const blockProgress = (steps, index) => {
     if (step.blockIndex == null) continue
     let seg = segments.get(step.blockIndex)
     if (!seg) {
-      seg = { blockIndex: step.blockIndex, label: step.blockLabel, weight: 0, doneWeight: 0, count: 0, doneCount: 0 }
+      seg = { blockIndex: step.blockIndex, heading: step.heading, weight: 0, doneWeight: 0, count: 0, doneCount: 0 }
       segments.set(step.blockIndex, seg)
     }
     const sec = stepSeconds(step)
@@ -164,9 +154,9 @@ export const blockProgress = (steps, index) => {
       seg.doneCount += 1
     }
   }
-  return [...segments.values()].map(({ blockIndex, label, weight, doneWeight, count, doneCount }) => ({
+  return [...segments.values()].map(({ blockIndex, heading, weight, doneWeight, count, doneCount }) => ({
     blockIndex,
-    label,
+    heading,
     weight,
     // Bloc sans durée estimable : avancement au nombre de steps.
     done: weight > 0 ? doneWeight / weight : count ? doneCount / count : 0,
