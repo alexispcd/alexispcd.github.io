@@ -1,0 +1,1 @@
+import{vn as e,yn as t}from"./index-DyZAMu0P.js";function n(e){return t(`MuiDivider`,e)}var r=e(`MuiDivider`,[`root`,`absolute`,`fullWidth`,`inset`,`middle`,`flexItem`,`vertical`,`withChildren`,`textAlignRight`,`textAlignLeft`,`wrapper`,`wrapperVertical`]);export{n,r as t};
