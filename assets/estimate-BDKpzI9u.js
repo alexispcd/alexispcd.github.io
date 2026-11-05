@@ -1,1 +1,0 @@
-import{u as e}from"./rules-BQRkijNP.js";function t(t){let n=e[t.slug],r=t.duration_sec??(t.reps??0)*(n?.sec_per_rep??0);return n?.unilateral?r*2:r}var n=e=>Array.isArray(e.exercises)?e.exercises:[e.a,e.b,e.c].filter(e=>!!e);export{t as n,n as t};
