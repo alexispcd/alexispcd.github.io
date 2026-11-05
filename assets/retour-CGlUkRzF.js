@@ -1,0 +1,1 @@
+var e=e=>({retourEtat:e.state??null}),t=e=>e.state?.retourEtat??null;export{e as n,t};

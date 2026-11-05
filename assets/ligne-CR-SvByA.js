@@ -1,1 +1,0 @@
-import{F as e,L as t,Y as n}from"./index-C2S0kbO0.js";var r={display:`flex`,alignItems:`center`,gap:n[12],width:`100%`,textAlign:`left`,justifyContent:`flex-start`,color:`ink`,...e,...t};export{r as t};
