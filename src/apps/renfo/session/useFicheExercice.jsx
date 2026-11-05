@@ -59,7 +59,10 @@ export const useFicheExercice = ({ session, bands, modifiable, sansRemplacer = f
     setFeuille(null)
     const ex = EXERCISE_INDEX[dose.slug]
     const envoi = { slug: dose.slug, [ex?.mode === 'duration' ? 'duration_sec' : 'reps']: reglage.quantite }
-    if (ex?.equipment.includes('band') && reglage.kg != null) envoi.band_kg = reglage.kg
+    // Élastique envoyé seulement s'il est encore au compte : un poids supprimé depuis
+    // serait refusé (400), et sans band_kg le serveur garde le poids actuel.
+    const auCompte = (bands ?? []).some((b) => Number(b.kg) === Number(reglage.kg))
+    if (ex?.equipment.includes('band') && reglage.kg != null && auCompte) envoi.band_kg = reglage.kg
     const { ok, valeur } = await action.lancer(() => adjustExercise(session.id, envoi))
     if (ok) onSession(valeur.session)
   }

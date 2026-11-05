@@ -1,251 +1,309 @@
 import { useEffect, useState } from 'react'
-import {
-  Alert, Box, Button, IconButton, Switch, ToggleButton,
-  ToggleButtonGroup, Typography,
-} from '@mui/material'
-import Add from '@mui/icons-material/Add'
-import EditOutlined from '@mui/icons-material/EditOutlined'
-import DeleteOutlined from '@mui/icons-material/DeleteOutlined'
+import { Box, Typography } from '@mui/material'
+import { bandeLaPlusProche } from '../../../supabase/functions/_shared/strength/compose.ts'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
-import { cardSx } from '../../styles/glass'
-import { texteErreur } from '../../lib/reseau'
-import { useMessage } from '../../ui/useMessage'
+import CarteSysteme from '../../components/CarteSysteme'
+import { DUREES } from '../../lib/durees'
+import { enregistrerReglages, getBands, getExerciseBases, getProfile, saveProfile } from '../../lib/renfo'
+import { SPACE_BAS, space } from '../../styles/tokens'
+import BarreAttente from '../../ui/BarreAttente'
+import BarreBas from '../../ui/BarreBas'
+import Bouton from '../../ui/Bouton'
+import Carte from '../../ui/Carte'
+import ControleSegmente from '../../ui/ControleSegmente'
 import FeuilleFlottante from '../../ui/FeuilleFlottante'
 import GardeChangements from '../../ui/GardeChangements'
-import BarreAttente from '../../ui/BarreAttente'
+import LigneSaisie from '../../ui/LigneSaisie'
+import Pastille from '../../ui/Pastille'
 import { useAction } from '../../ui/useAction'
 import { useFinAttente } from '../../ui/useFinAttente'
-import { DUREES } from '../../lib/durees'
-import {
-  addBand, deleteBand, getActiveCycle, getBands, getProfile, saveProfile, updateBand,
-} from '../../lib/renfo'
 import { formatKg } from './bandColor'
-import BandChip from './BandChip'
-import SectionLabel from './SectionLabel'
-import BandDialog from './settings/BandDialog'
+import {
+  appliquerReport, lirePoids, memesReglages, nombreExercices, phraseSuppression, planDeReport,
+} from './reglages'
+import FeuilleElastique from './settings/FeuilleElastique'
 
-// Coins concentriques : radius carte = inset (16 = p 2) + radius des éléments (12) = 28.
-const CARD_RADIUS = '28px'
+const PROFIL_DEFAUT = { frequency: 2, equipment: [] }
+const COULEUR_DEFAUT = '#2F68CC'
 
-const DEFAULT_PROFILE = { frequency: 2, equipment: [] }
+const OBJETS = {
+  bar: {
+    libelle: 'Barre de traction',
+    phrase: 'Les exercices à la barre ne seront plus proposés dans tes prochaines séances.',
+    retirer: 'Retirer la barre de traction',
+  },
+  chair: {
+    libelle: 'Chaise',
+    phrase: 'Les exercices avec chaise ne seront plus proposés dans tes prochaines séances.',
+    retirer: 'Retirer la chaise',
+  },
+}
+const ORDRE_OBJETS = ['bar', 'chair']
 
-const EQUIPMENT = [
-  { id: 'bar', label: 'Barre de traction', sub: 'mobile : en haut, à mi-hauteur ou en bas' },
-  { id: 'chair', label: 'Chaise', sub: null },
-]
-
-const loadSettings = async () => {
-  const [profile, bands, cycle] = await Promise.all([getProfile(), getBands(), getActiveCycle()])
-  return { profile, bands, hasCycle: Boolean(cycle) }
+// Sans profil, il est créé avec les valeurs par défaut, sans rien afficher ; si
+// l'écriture échoue, la page continue avec ces valeurs (l'ouverture suivante réessaiera).
+const chargerReglages = async () => {
+  const [profil, bands, bases] = await Promise.all([getProfile(), getBands(), getExerciseBases()])
+  let p = profil
+  if (!p) {
+    try {
+      p = await saveProfile(PROFIL_DEFAUT)
+    } catch (e) {
+      console.error('[renfo settings] création du profil', e)
+      p = PROFIL_DEFAUT
+    }
+  }
+  return {
+    enregistre: {
+      frequency: p.frequency,
+      equipment: p.equipment ?? [],
+      bands: bands.map(({ kg, color }) => ({ kg, color })),
+    },
+    bases,
+  }
 }
 
-const sameProfile = (a, b) =>
-  a.frequency === b.frequency && [...a.equipment].sort().join() === [...b.equipment].sort().join()
+// Brouillon tiré de l'enregistré : chaque élastique vient de son propre poids.
+const brouillonDe = (enregistre) => ({
+  ...enregistre,
+  equipment: [...enregistre.equipment],
+  bands: enregistre.bands.map((b) => ({ ...b, origine: b.kg })),
+})
 
-/** Réglages Renfo : fréquence, matériel et inventaire d'élastiques. */
+const parPoids = (bands) => [...bands].sort((a, b) => a.kg - b.kg)
+
+const Etiquette = ({ children }) => (
+  <Typography variant="etiquette" component="h2" sx={{ color: 'muted', px: space[4], pt: space[8] }}>{children}</Typography>
+)
+
+/** Réglages Renfo : objectif par semaine et matériel, enregistrés d'un coup par la barre du bas. */
 const SettingsPage = () => {
-  const [state, setState] = useState({ status: 'loading' })
-  const [draft, setDraft] = useState(DEFAULT_PROFILE)
-  const [saving, setSaving] = useState(false)
-  const [bandDialog, setBandDialog] = useState(null) // { band } ; band null pour un ajout
-  // Élastique visé : reste posé pendant la fermeture de la feuille.
-  const [toDelete, setToDelete] = useState(null)
-  const [suppressionOuverte, setSuppressionOuverte] = useState(false)
-  const { afficher } = useMessage()
-  const attente = useFinAttente(state.status === 'loading')
-  const attenteEnregistrement = useFinAttente(saving)
-  const suppression = useAction({
-    attente: "Suppression de l'élastique", duree: DUREES.actionCourte,
-    echec: "L'élastique n'a pas pu être supprimé. Réessaie.",
+  const [chargement, setChargement] = useState({ status: 'loading', essai: 0 })
+  const [brouillon, setBrouillon] = useState(null)
+  // Feuille ouverte et sa cible (kg d'un élastique, 'bar' ou 'chair'), gardée pendant la fermeture.
+  const [feuille, setFeuille] = useState(null) // 'choix' | 'actions' | 'elastique' | 'suppression' | 'retrait' | null
+  const [cible, setCible] = useState(null)
+  const [saisie, setSaisie] = useState(null) // { kgTexte, color } de la feuille élastique
+  const attente = useFinAttente(chargement.status === 'loading')
+  const action = useAction({
+    attente: 'Enregistrement de tes réglages', duree: DUREES.enregistrement,
+    echec: "Tes réglages n'ont pas pu être enregistrés. Réessaie.",
   })
 
   useEffect(() => {
-    let cancelled = false
-    loadSettings().then(
+    let annule = false
+    chargerReglages().then(
       (res) => {
-        if (cancelled) return
-        setState({ status: 'ready', ...res })
-        setDraft(res.profile ?? DEFAULT_PROFILE)
+        if (annule) return
+        setChargement((c) => ({ ...c, status: 'ready', ...res }))
+        setBrouillon(brouillonDe(res.enregistre))
       },
       (err) => {
         console.error('[renfo settings]', err)
-        if (!cancelled) setState({ status: 'error' })
+        if (!annule) setChargement((c) => ({ ...c, status: 'error' }))
       },
     )
-    return () => { cancelled = true }
-  }, [])
+    return () => { annule = true }
+  }, [chargement.essai])
 
-  if (attente.visible) {
+  const reessayer = () => setChargement((c) => ({ status: 'loading', essai: c.essai + 1 }))
+
+  if (attente.visible || chargement.status === 'loading') {
     return (
       <Box sx={{ height: '100%', pt: `${HEADER_HEIGHT}px` }}>
         <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
   }
-  if (state.status === 'error') {
+  if (chargement.status === 'error' || !brouillon) {
     return (
-      <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">Impossible de charger les réglages.</Alert>
+      <Box sx={{ px: space[16], pt: `calc(${HEADER_HEIGHT}px + ${space[8]})` }}>
+        <CarteSysteme
+          titre="Impossible de charger les réglages"
+          phrase="Les données n'ont pas pu être chargées."
+          bouton="Réessayer"
+          onClick={reessayer}
+        />
       </Box>
     )
   }
 
-  const { profile, bands, hasCycle } = state
-  const dirty = !profile || !sameProfile(draft, profile)
-  // Garde : un vrai changement seulement (dirty vaut vrai à la première visite sans
-  // profil). Les élastiques s'enregistrent tout de suite, hors garde.
-  const change = !sameProfile(draft, profile ?? DEFAULT_PROFILE)
+  const { enregistre, bases } = chargement
+  const change = !memesReglages(brouillon, enregistre)
+  const enAttente = action.barre.visible
+  const bandes = parPoids(brouillon.bands)
+  const objets = ORDRE_OBJETS.filter((id) => brouillon.equipment.includes(id))
+  const avecMateriel = objets.length > 0 || bandes.length > 0
 
-  const toggleEquipment = (id) => setDraft((d) => ({
-    ...d,
-    equipment: d.equipment.includes(id) ? d.equipment.filter((e) => e !== id) : [...d.equipment, id],
-  }))
-
-  const doSaveProfile = async () => {
-    setSaving(true)
-    try {
-      const saved = await saveProfile(draft)
-      setState((s) => ({ ...s, profile: saved }))
-      setDraft(saved)
-    } catch (e) {
-      afficher(texteErreur(e, "Tes réglages n'ont pas pu être enregistrés. Réessaie."))
-    } finally {
-      setSaving(false)
-    }
+  const ouvrir = (nom, c = null) => {
+    setCible(c)
+    setFeuille(nom)
   }
 
-  const saveBand = async ({ kg, color }) => {
-    const current = bandDialog?.band
-    const saved = current ? await updateBand(current.id, { kg, color }) : await addBand({ kg, color })
-    setState((s) => ({
-      ...s,
-      bands: [...s.bands.filter((b) => b.id !== saved.id), saved].sort((a, b) => a.kg - b.kg),
+  const fermer = () => setFeuille(null)
+
+  const ajouterObjet = (id) => setBrouillon((b) => ({ ...b, equipment: [...b.equipment, id] }))
+  const retirerObjet = (id) => setBrouillon((b) => ({ ...b, equipment: b.equipment.filter((e) => e !== id) }))
+
+  const ouvrirElastique = (kg) => {
+    const bande = kg == null ? null : brouillon.bands.find((b) => b.kg === kg)
+    setSaisie({ kgTexte: bande ? formatKg(bande.kg) : '', color: bande?.color ?? COULEUR_DEFAUT })
+    ouvrir('elastique', kg)
+  }
+
+  // Feuille élastique : poids pris par un autre élastique du brouillon que celui modifié.
+  // Calculé seulement feuille ouverte : rien ne bouge pendant sa fermeture.
+  const poidsSaisi = saisie && feuille === 'elastique' ? lirePoids(saisie.kgTexte) : NaN
+  const pris = Number.isFinite(poidsSaisi) && brouillon.bands.some((b) => b.kg === poidsSaisi && b.kg !== cible)
+  const saisieValide = poidsSaisi > 0 && !pris
+
+  const enregistrerElastique = () => {
+    if (!saisieValide) return
+    setBrouillon((b) => ({
+      ...b,
+      bands: cible == null
+        ? [...b.bands, { kg: poidsSaisi, color: saisie.color, origine: null }]
+        : b.bands.map((x) => (x.kg === cible ? { ...x, kg: poidsSaisi, color: saisie.color } : x)),
     }))
-    setBandDialog(null)
+    setCible(cible == null ? null : poidsSaisi)
+    fermer()
   }
 
-  const doDelete = () => {
-    const id = toDelete?.id
-    if (!id) return
-    suppression.lancer(async () => {
-      await deleteBand(id)
-      setState((s) => ({ ...s, bands: s.bands.filter((b) => b.id !== id) }))
-    })
+  const supprimerElastique = () => setBrouillon((b) => ({ ...b, bands: b.bands.filter((x) => x.kg !== cible) }))
+
+  // Confirmation de suppression, calculée sur le brouillon.
+  const titreSuppression = typeof cible === 'number'
+    ? phraseSuppression(
+        cible,
+        nombreExercices(bases, planDeReport(enregistre.bands, brouillon.bands), cible),
+        bandeLaPlusProche(cible, brouillon.bands.filter((b) => b.kg !== cible).map((b) => b.kg)),
+      )
+    : ''
+
+  const enregistrer = async () => {
+    const envoi = brouillon
+    const report = planDeReport(enregistre.bands, envoi.bands)
+    const { ok } = await action.lancer(() => enregistrerReglages({
+      frequency: envoi.frequency, equipment: envoi.equipment, bands: envoi.bands, report,
+    }))
+    if (!ok) return
+    const nouveau = {
+      frequency: envoi.frequency,
+      equipment: [...envoi.equipment],
+      bands: parPoids(envoi.bands).map(({ kg, color }) => ({ kg, color })),
+    }
+    setChargement((c) => ({ ...c, enregistre: nouveau, bases: appliquerReport(c.bases, report) }))
+    setBrouillon(brouillonDe(nouveau))
   }
+
+  const objetRetire = OBJETS[cible] ?? null
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, pb: 'calc(env(safe-area-inset-bottom, 0px) + 32px)' }}>
-      <Box sx={{ maxWidth: 640, mx: 'auto', px: 2 }}>
+    <Box sx={{ height: '100%', overflowY: 'auto', overscrollBehavior: 'none', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          flex: '1 0 auto',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: space[12],
+          px: space[16],
+          pt: `calc(${HEADER_HEIGHT}px + ${space[8]})`,
+          pb: change || enAttente ? space[24] : SPACE_BAS,
+          pointerEvents: enAttente ? 'none' : undefined,
+        }}
+      >
+        <Etiquette>Objectif par semaine</Etiquette>
+        <Carte>
+          <ControleSegmente
+            label="Séances par semaine"
+            options={[1, 2, 3].map((n) => ({ valeur: n, libelle: String(n) }))}
+            valeur={brouillon.frequency}
+            onChange={(n) => setBrouillon((b) => ({ ...b, frequency: n }))}
+          />
+        </Carte>
 
-        <BarreAttente place="carte" {...suppression.barre} sx={{ '& .MuiCollapse-wrapperInner': { pt: 2 } }} />
-
-        <SectionLabel>Fréquence</SectionLabel>
-        <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, p: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Séances par semaine</Typography>
-          <ToggleButtonGroup
-            exclusive
-            fullWidth
-            value={draft.frequency}
-            onChange={(_, v) => v && setDraft((d) => ({ ...d, frequency: v }))}
-            sx={{ '& .MuiToggleButton-root': { borderRadius: '12px', fontWeight: 700, fontSize: '1rem', py: 1 } }}
-          >
-            {[1, 2, 3].map((n) => <ToggleButton key={n} value={n}>{n}</ToggleButton>)}
-          </ToggleButtonGroup>
-          {hasCycle && (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
-              S'applique au prochain cycle
-            </Typography>
-          )}
-        </Box>
-
-        <SectionLabel>Matériel</SectionLabel>
-        <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, px: 2, py: 1 }}>
-          {EQUIPMENT.map((eq) => (
-            <Box key={eq.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body1" fontWeight={600}>{eq.label}</Typography>
-                {eq.sub && <Typography variant="caption" color="text.secondary">{eq.sub}</Typography>}
-              </Box>
-              <Switch
-                checked={draft.equipment.includes(eq.id)}
-                onChange={() => toggleEquipment(eq.id)}
+        <Etiquette>Matériel</Etiquette>
+        {avecMateriel ? (
+          <Carte sansMarge>
+            {objets.map((id) => (
+              <LigneSaisie key={id} type="choix" libelle={OBJETS[id].libelle} onClick={() => ouvrir('retrait', id)} />
+            ))}
+            {bandes.map((b) => (
+              <LigneSaisie
+                key={b.kg}
+                type="choix"
+                libelle="Élastique"
+                aria-label={`Élastique de ${formatKg(b.kg)} kg`}
+                droite={<Pastille variante="bande" grande couleur={b.color}>{`${formatKg(b.kg)} kg`}</Pastille>}
+                onClick={() => ouvrir('actions', b.kg)}
               />
-            </Box>
-          ))}
-        </Box>
-
-        {attenteEnregistrement.visible
-          ? (
-            <BarreAttente
-              place="barre"
-              phrase="Enregistrement de tes réglages"
-              duree={DUREES.enregistrement}
-              {...attenteEnregistrement}
-              sx={{ mt: 2, height: 46 }}
-            />
-          )
-          : (
-            <Button
-              variant="contained"
-              fullWidth
-              sx={{ mt: 2, height: 46, borderRadius: '23px', textTransform: 'none', fontWeight: 700, boxShadow: 'none' }}
-              disabled={!dirty}
-              onClick={doSaveProfile}
-            >
-              {profile ? 'Enregistrer' : 'Valider ces réglages'}
-            </Button>
-          )}
-
-        <SectionLabel>Élastiques</SectionLabel>
-        <Box sx={{ ...cardSx, borderRadius: CARD_RADIUS, px: 2, py: 1 }}>
-          {bands.length === 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
-              Aucun élastique : les exercices avec élastique ne seront pas proposés.
-            </Typography>
-          )}
-          {bands.map((band) => (
-            <Box key={band.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 0.75 }}>
-              <BandChip kg={band.kg} color={band.color} />
-              <Typography variant="body2" sx={{ flex: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {formatKg(band.kg)} kg
-              </Typography>
-              <IconButton size="small" aria-label="Modifier" onClick={() => setBandDialog({ band })}>
-                <EditOutlined fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                aria-label="Supprimer"
-                disabled={suppression.enCours}
-                onClick={() => { setToDelete(band); setSuppressionOuverte(true) }}
-              >
-                <DeleteOutlined fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
-          <Button
-            startIcon={<Add />}
-            fullWidth
-            onClick={() => setBandDialog({ band: null })}
-            sx={{ mt: 0.5, mb: 0.5, borderRadius: '12px', textTransform: 'none', fontWeight: 600, justifyContent: 'flex-start' }}
-          >
-            Ajouter un élastique
-          </Button>
-        </Box>
+            ))}
+          </Carte>
+        ) : (
+          <Typography variant="secondaire" sx={{ color: 'muted', px: space[4] }}>
+            Sans matériel, seuls les exercices au poids du corps sont proposés.
+          </Typography>
+        )}
+        <Bouton niveau="page" pleineLargeur onClick={() => ouvrir('choix')} sx={{ mt: space[8] }}>
+          Ajouter du matériel
+        </Bouton>
       </Box>
 
-      <BandDialog
-        open={Boolean(bandDialog)}
-        band={bandDialog?.band ?? null}
-        bands={bands}
-        onClose={() => setBandDialog(null)}
-        onSave={saveBand}
+      {(change || enAttente) && (
+        <BarreBas>
+          {enAttente
+            ? <BarreAttente place="barre" {...action.barre} sx={{ flex: 1, minWidth: 0 }} />
+            : <Bouton onClick={enregistrer} sx={{ flex: 1 }}>Enregistrer</Bouton>}
+        </BarreBas>
+      )}
+
+      <FeuilleFlottante
+        ouverte={feuille === 'choix'}
+        onFermer={fermer}
+        titre="Ajouter du matériel"
+        lignes={[
+          ...ORDRE_OBJETS.filter((id) => !brouillon.equipment.includes(id))
+            .map((id) => ({ libelle: OBJETS[id].libelle, onClick: () => ajouterObjet(id) })),
+          { libelle: 'Élastique', onClick: () => ouvrirElastique(null) },
+        ]}
       />
 
       <FeuilleFlottante
-        ouverte={suppressionOuverte}
-        onFermer={() => setSuppressionOuverte(false)}
-        titre={toDelete ? `L'élastique de ${formatKg(toDelete.kg)} kg ne sera plus proposé dans tes prochaines séances.` : ''}
-        lignes={[{ libelle: "Supprimer l'élastique", onClick: doDelete }]}
+        ouverte={feuille === 'actions'}
+        onFermer={fermer}
+        titre={typeof cible === 'number' ? `Élastique de ${formatKg(cible)} kg` : ''}
+        lignes={[
+          { libelle: "Modifier l'élastique", onClick: () => ouvrirElastique(cible) },
+          { libelle: "Supprimer l'élastique", onClick: () => ouvrir('suppression', cible) },
+        ]}
+      />
+
+      <FeuilleElastique
+        ouverte={feuille === 'elastique'}
+        titre={cible == null ? 'Ajouter un élastique' : "Modifier l'élastique"}
+        valeur={saisie}
+        onChange={setSaisie}
+        pris={pris}
+        valide={saisieValide}
+        onEnregistrer={enregistrerElastique}
+        onAnnuler={fermer}
+      />
+
+      <FeuilleFlottante
+        ouverte={feuille === 'suppression'}
+        onFermer={fermer}
+        titre={titreSuppression}
+        lignes={[{ libelle: "Supprimer l'élastique", onClick: supprimerElastique }]}
+        fermerLibelle="Annuler"
+      />
+
+      <FeuilleFlottante
+        ouverte={feuille === 'retrait'}
+        onFermer={fermer}
+        titre={objetRetire?.phrase ?? ''}
+        lignes={objetRetire ? [{ libelle: objetRetire.retirer, onClick: () => retirerObjet(cible) }] : []}
         fermerLibelle="Annuler"
       />
 

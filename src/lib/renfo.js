@@ -35,47 +35,22 @@ export const getBands = async () =>
     (b) => ({ ...b, kg: Number(b.kg) }),
   )
 
-// Code Postgres d'une violation de contrainte unique : (user_id, kg) déjà pris.
-const UNIQUE_VIOLATION = '23505'
-
-const bandError = (error) => {
-  // `doublon` : message écrit à la main, affiché tel quel par BandDialog.
-  if (error?.code === UNIQUE_VIOLATION) return Object.assign(new Error('Tu as déjà un élastique de ce poids'), { doublon: true })
-  return error
-}
-
-export const addBand = async ({ kg, color }) => {
-  const { data, error } = await supabase
-    .from('strength_bands')
-    .insert({ user_id: await userId(), kg, color })
-    .select('id, kg, color')
-    .single()
-  if (error) throw bandError(error)
-  return { ...data, kg: Number(data.kg) }
-}
-
-export const updateBand = async (id, { kg, color }) => {
-  const { data, error } = await supabase
-    .from('strength_bands')
-    .update({ kg, color })
-    .eq('id', id)
-    .select('id, kg, color')
-    .single()
-  if (error) throw bandError(error)
-  return { ...data, kg: Number(data.kg) }
-}
-
-export const deleteBand = async (id) =>
-  unwrap(await supabase.from('strength_bands').delete().eq('id', id))
+/**
+ * Enregistre les réglages d'un coup, tout ou rien (fonction renfo_enregistrer_reglages) :
+ * objectif, matériel, élastiques (tous remplacés) et report des bases d'exercices,
+ * report = [{ de, vers }] en kg.
+ */
+export const enregistrerReglages = async ({ frequency, equipment, bands, report }) =>
+  unwrap(await supabase.rpc('renfo_enregistrer_reglages', {
+    p_frequency: frequency,
+    p_equipment: equipment,
+    p_bands: bands.map(({ kg, color }) => ({ kg, color })),
+    p_report: report,
+  }))
 
 // ── Cycles et séances ────────────────────────────────────────────────────────
 
-const CYCLE_COLUMNS = 'id, number, start_date, frequency, status, generation_status, generated_weeks, main_exercises'
 const SESSION_COLUMNS = 'id, cycle_id, week_index, week_start, position, kind, title, content, status, completed_at, bands_used, rpe, pain_areas, feedback_note, created_at'
-
-/** Cycle actif du compte, ou null. */
-export const getActiveCycle = async () =>
-  unwrap(await supabase.from('strength_cycles').select(CYCLE_COLUMNS).eq('status', 'active').maybeSingle())
 
 /** Séances faites, de cycle comprises, de la plus récente à la plus ancienne (60 au plus). */
 export const getDoneSessions = async () =>
