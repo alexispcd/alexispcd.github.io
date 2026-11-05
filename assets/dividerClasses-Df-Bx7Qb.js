@@ -1,1 +1,0 @@
-import{fn as e,pn as t}from"./index-BeN-VT6X.js";function n(e){return t(`MuiDivider`,e)}var r=e(`MuiDivider`,[`root`,`absolute`,`fullWidth`,`inset`,`middle`,`flexItem`,`vertical`,`withChildren`,`textAlignRight`,`textAlignLeft`,`wrapper`,`wrapperVertical`]);export{n,r as t};
