@@ -35,9 +35,12 @@ const AppLayout = () => {
   // Retour d'où l'on vient quand la page a été ouverte avec state.retour (Compte vers
   // Administration, Accueil vers Administration), sinon backTo. Toujours animé vers
   // l'arrière : la profondeur du chemin ne dit pas le sens (/admin vers /compte).
+  // state.retourEtat : état rendu à la page cible, pour qu'elle garde son propre
+  // retour (séance ouverte depuis l'Historique, voir src/lib/retour.js).
   const cible = location.state?.retour ?? backTo
+  const retourEtat = location.state?.retourEtat
   const handleBack = cible !== undefined
-    ? () => navigate(cible, { direction: 'back' })
+    ? () => navigate(cible, { direction: 'back', ...(retourEtat !== undefined ? { state: retourEtat } : {}) })
     : undefined
   // Accueil : ni barre ni fond, l'en-tête de la page défile avec elle.
   const barre = !overlay && !handle.sansBarre

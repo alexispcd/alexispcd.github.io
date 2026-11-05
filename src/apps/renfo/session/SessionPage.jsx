@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { Box, ButtonBase, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import CarteSysteme from '../../../components/CarteSysteme'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { useAppCtx } from '../../../lib/context'
 import { DUREES } from '../../../lib/durees'
+import { texteErreur } from '../../../lib/reseau'
+import { etatSousPage } from '../../../lib/retour'
 import { painAreaLabel } from '../../../lib/feedback'
-import { adjustExercise, deleteFreeSession, getBands, getSession, resetSession } from '../../../lib/renfo'
+import { adjustExercise, deleteFreeSession, getBands, getPendingSession, getSession, resetSession } from '../../../lib/renfo'
 import { SPACE_BAS, border, radius, size, space, textStyles } from '../../../styles/tokens'
 import { DURATION, transition } from '../../../styles/motion'
 import BarreAttente from '../../../ui/BarreAttente'
@@ -22,6 +24,7 @@ import { sansMouvement } from '../../../ui/appui'
 import { ChevronBas, ChevronDroit } from '../../../ui/Icones'
 import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
+import { useMessage } from '../../../ui/useMessage'
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
 import { estNouveauFormat } from '../../../../supabase/functions/_shared/strength/compose.ts'
 import { bandColorFor, formatKg } from '../bandColor'
@@ -52,6 +55,9 @@ const chargerPage = async (sessionId) => {
   return { session: avecBandesJouees(session), bands }
 }
 
+const SEANCE_EN_ATTENTE = 'Une autre séance est déjà à faire. Fais-la ou supprime-la d\'abord.'
+const REINITIALISATION_ECHEC = "La séance n'a pas pu être remise à faire. Réessaie."
+
 const filet = { borderTop: `${border.filet} solid`, borderColor: 'line' }
 
 // Carte d'attente en tête de page : l'écart du bas s'ouvre et se replie avec elle.
@@ -71,7 +77,9 @@ const reglageDe = (dose, bandsUsed) => ({
 const SessionPage = () => {
   const { sessionId } = useParams()
   const navigate = useAppNavigate()
+  const location = useLocation()
   const { setHeaderActions } = useAppCtx()
+  const { afficher } = useMessage()
   const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const [ouvert, setOuvert] = useState(null) // index du bloc déplié
   // Exercice de la fiche : { dose, block, blockIndex }, gardé pendant la fermeture.
@@ -89,7 +97,7 @@ const SessionPage = () => {
   })
   const reinitialisation = useAction({
     attente: 'Réinitialisation de la séance', duree: DUREES.actionCourte,
-    echec: "La séance n'a pas pu être remise à faire. Réessaie.",
+    echec: REINITIALISATION_ECHEC,
   })
   const enregistrement = useAction({
     attente: 'Enregistrement du réglage', duree: DUREES.enregistrement,
@@ -132,19 +140,31 @@ const SessionPage = () => {
       setConfirmation(quoi)
       setConfirmationOuverte(true)
     }
+    // Une seule séance à faire à la fois : la réinitialisation n'est proposée que si
+    // aucune autre n'attend. Échec de lecture : même message qu'un échec de réinitialisation.
+    const reinitialiser = () => {
+      getPendingSession().then(
+        (attendue) => {
+          if (attendue) afficher(SEANCE_EN_ATTENTE)
+          else confirmer('reinitialiser')
+        },
+        (e) => afficher(texteErreur(e, REINITIALISATION_ECHEC)),
+      )
+    }
+    const sousPage = (chemin) => () => navigate(chemin, { direction: 'forward', state: etatSousPage(location) })
     const supprimer = libre ? [{ label: 'Supprimer la séance', onClick: () => confirmer('supprimer'), disabled: occupe }] : []
     const actions = statut === 'done'
-      ? [{ label: 'Réinitialiser la séance', onClick: () => confirmer('reinitialiser'), disabled: occupe }, ...supprimer]
+      ? [{ label: 'Réinitialiser la séance', onClick: reinitialiser, disabled: occupe }, ...supprimer]
       : [
-          { label: 'Valider sans le player', onClick: () => navigate(`/renfo/session/${sessionId}/valider`, { direction: 'forward' }), disabled: occupe },
+          { label: 'Valider sans le player', onClick: sousPage(`/renfo/session/${sessionId}/valider`), disabled: occupe },
           ...(modifiable
-            ? [{ label: 'Modifier la séance', onClick: () => navigate(`/renfo/session/${sessionId}/modifier`, { direction: 'forward' }), disabled: occupe }]
+            ? [{ label: 'Modifier la séance', onClick: sousPage(`/renfo/session/${sessionId}/modifier`), disabled: occupe }]
             : []),
           ...supprimer,
         ]
     setHeaderActions(actions, titre)
     return () => setHeaderActions([])
-  }, [statut, libre, modifiable, occupe, titre, sessionId, navigate, setHeaderActions])
+  }, [statut, libre, modifiable, occupe, titre, sessionId, navigate, location, afficher, setHeaderActions])
 
   if (attente.visible) {
     return (
@@ -186,7 +206,7 @@ const SessionPage = () => {
     setPlayer({ beeps })
   }
 
-  const ouvrirValidation = () => navigate(`/renfo/session/${session.id}/valider`, { direction: 'forward' })
+  const ouvrirValidation = () => navigate(`/renfo/session/${session.id}/valider`, { direction: 'forward', state: etatSousPage(location) })
 
   const ouvrirFiche = (dose, block, blockIndex) => {
     setCible({ dose, block, blockIndex })
@@ -217,7 +237,7 @@ const SessionPage = () => {
 
   const remplacer = () => {
     const { blockIndex, dose } = cible
-    navigate(`/renfo/session/${session.id}/remplacer/${blockIndex}/${dose.slug}`, { direction: 'forward' })
+    navigate(`/renfo/session/${session.id}/remplacer/${blockIndex}/${dose.slug}`, { direction: 'forward', state: etatSousPage(location) })
   }
 
   const confirmer = async () => {
@@ -227,7 +247,8 @@ const SessionPage = () => {
       return
     }
     const { ok } = await suppression.lancer(() => deleteFreeSession(session.id))
-    if (ok) navigate('/renfo', { replace: true, direction: 'back' })
+    // Retour d'où la séance a été ouverte (l'Historique), avec son état, sinon l'accueil.
+    if (ok) navigate(location.state?.retour ?? '/renfo', { replace: true, direction: 'back', state: location.state?.retourEtat ?? null })
   }
 
   const { anchors, chair, bands: kgs } = equipmentSummary(content, session.bands_used)

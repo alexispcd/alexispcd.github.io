@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { etatSeance } from '../../../lib/retour'
 import { Box } from '@mui/material'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -20,6 +21,8 @@ const ValiderPage = () => {
   const navigate = useAppNavigate()
   const location = useLocation()
   const pageSeance = `/renfo/session/${sessionId}`
+  // État de la séance (son retour vers l'Historique), rendu après un replace.
+  const etat = etatSeance(location)
 
   const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const [ressenti, setRessenti] = useState(emptyFeedback)
@@ -50,7 +53,7 @@ const ValiderPage = () => {
       (s) => {
         if (annule) return
         if (s.status !== 'planned') {
-          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back' })
+          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back', state: etat })
           return
         }
         setChargement((c) => ({ ...c, status: 'ready', session: s }))
@@ -61,7 +64,7 @@ const ValiderPage = () => {
       },
     )
     return () => { annule = true }
-  }, [sessionId, chargement.essai, navigate])
+  }, [sessionId, chargement.essai, navigate, etat])
 
   if (attente.visible) {
     return (
@@ -88,7 +91,7 @@ const ValiderPage = () => {
 
   const retour = () => {
     if (!montee.current) return
-    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back' })
+    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back', state: etat })
     else navigate(-1, { direction: 'back' })
   }
 

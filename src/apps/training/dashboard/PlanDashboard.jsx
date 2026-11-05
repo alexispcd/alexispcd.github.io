@@ -222,11 +222,12 @@ const PlanDashboard = () => {
       actions.push({ label: 'Régénérer les semaines restantes', onClick: () => { setRegenOnWatch(0); setRegenOuverte(true) } })
       actions.push({ label: 'Archiver ce plan', onClick: () => setArchiveOuverte(true) })
     }
-    actions.push({ label: 'Mes anciens plans', onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
+    actions.push({ label: 'Historique des séances', onClick: () => navigate('/historique', { direction: 'forward', state: { retour: `${location.pathname}${location.search}` } }) })
+    actions.push({ label: 'Historique des plans', onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
     actions.push({ label: 'Réglages', onClick: () => navigate('/training/settings', { direction: 'forward' }) })
     setHeaderActions(actions, plan.race_name)
     return () => setHeaderActions([])
-  }, [plan, readOnly, navigate, setHeaderActions])
+  }, [plan, readOnly, navigate, setHeaderActions, location.pathname, location.search])
 
   // ── Séances déjà sur la montre qu'une régénération ferait disparaître ─────────
   // Même borne que regenerate-plan : semaines à partir de la courante incluse.

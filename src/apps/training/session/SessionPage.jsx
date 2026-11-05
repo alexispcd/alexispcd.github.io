@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
+import { etatSousPage } from '../../../lib/retour'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { texteErreur } from '../../../lib/reseau'
 import { useMessage } from '../../../ui/useMessage'
@@ -72,6 +73,7 @@ const VERDICT_ICON = {
 const SessionPage = () => {
   const { planId, sessionId } = useParams()
   const navigate = useAppNavigate()
+  const location = useLocation()
 
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -402,7 +404,7 @@ const SessionPage = () => {
               </Bouton>
               <Bouton
                 variante="ink"
-                onClick={siLibre(() => navigate(`/training/plan/${planId}/session/${sessionId}/valider`, { direction: 'forward' }))}
+                onClick={siLibre(() => navigate(`/training/plan/${planId}/session/${sessionId}/valider`, { direction: 'forward', state: etatSousPage(location) }))}
                 sx={{ flex: 2, minWidth: 0 }}
               >
                 Valider la séance

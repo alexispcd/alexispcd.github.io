@@ -1,19 +1,12 @@
 // Calculs purs de l'accueil Renfo : semaine en cours et phrases de la carte
 // « Prochaine séance ». Dates calendaires locales (yyyy-MM-dd).
 
-import { MOIS_COURTS, formatShortDay } from '../../lib/dates.js'
+import { MOIS_COURTS, MOIS_LONGS, formatShortDay, jourLocal } from '../../lib/dates.js'
 import { addDaysISO, mondayOf } from './dates.js'
 import { raisonSuggestion, titreSeance } from '../../../supabase/functions/_shared/strength/compose.ts'
 
-const deux = (n) => String(n).padStart(2, '0')
-
-/** Jour local (yyyy-MM-dd) d'un horodatage, ou null. */
-export const jourLocal = (horodatage) => {
-  if (!horodatage) return null
-  const d = new Date(horodatage)
-  if (Number.isNaN(d.getTime())) return null
-  return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}`
-}
+// Jour local d'un horodatage, partagé avec l'Historique des séances.
+export { jourLocal }
 
 /**
  * Séances faites de la semaine du lundi au dimanche de `today` (jour local de
@@ -70,3 +63,16 @@ export const libelleSupersets = (n) => `${n} superset${n > 1 ? 's' : ''}`
 /** « Normale · 3 supersets ». */
 export const resumeComposition = (intensity, n) =>
   `${INTENSITE_LABELS[intensity] ?? ''} · ${libelleSupersets(n)}`
+
+/**
+ * Sous-ligne de la ligne « Historique des séances » : séances faites dans le mois de
+ * `today` (jour local de completed_at). « 3 séances faites en novembre »,
+ * « 1 séance faite en novembre », « Aucune séance en novembre ».
+ */
+export const ligneHistorique = (sessions, today) => {
+  const mois = today.slice(0, 7)
+  const n = (sessions ?? []).filter((s) => jourLocal(s?.completed_at)?.slice(0, 7) === mois).length
+  const nom = MOIS_LONGS[Number(mois.slice(5, 7)) - 1]
+  if (n === 0) return `Aucune séance en ${nom}`
+  return n > 1 ? `${n} séances faites en ${nom}` : `1 séance faite en ${nom}`
+}

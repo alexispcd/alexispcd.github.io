@@ -9,15 +9,16 @@ import admin from './admin/module'
 // Atelier : page temporaire de la refonte, retirée à la fin (lot F1).
 import atelier from './atelier/module'
 import compte from './compte/module'
+import historique from './historique/module'
 
 // Registre unique des modules : routes et home en dérivent. Aucun module n'est
 // désactivé dans le code : seuls les droits du compte (user_modules) décident de ce
 // qui est visible et accessible, admin compris.
 // Ajouter un module : créer src/apps/<id>/module.js puis l'ajouter ici. L'ordre du
 // tableau est celui de la liste Modules de l'Accueil.
-// Un module `commun` (page Compte) est ouvert à tous les comptes : il porte son propre
-// canAccess, n'est jamais attribuable et n'apparaît pas sur l'Accueil.
-export const modules = [training, renfo, cotes, revisions, veille, admin, atelier, compte]
+// Un module `commun` (Compte, Historique des séances) a son propre canAccess (tous les
+// comptes pour Compte), n'est jamais attribuable et n'apparaît pas sur l'Accueil.
+export const modules = [training, renfo, cotes, revisions, veille, admin, atelier, compte, historique]
 
 /**
  * Accès d'un compte à un module : le canAccess du descripteur s'il en a un, sinon

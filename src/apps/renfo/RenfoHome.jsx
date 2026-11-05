@@ -12,9 +12,10 @@ import Page from '../../ui/Page'
 import { useFinAttente } from '../../ui/useFinAttente'
 import { availableExercises } from '../../../supabase/functions/_shared/strength/catalog.ts'
 import { compositionDe, preremplir, titreSeance } from '../../../supabase/functions/_shared/strength/compose.ts'
-import { phraseEnAttente, phraseSuggestion, semaineEnCours } from './accueil'
+import { ligneHistorique, phraseEnAttente, phraseSuggestion, semaineEnCours } from './accueil'
 import { chargerDonnees } from './compose/donnees'
 import { todayISO } from './dates'
+import LigneHistorique from './home/LigneHistorique'
 import ProchaineSeance from './home/ProchaineSeance'
 import SemaineCarte from './home/SemaineCarte'
 
@@ -119,6 +120,11 @@ const RenfoHome = () => {
           <Bouton variante="texte" petit pleineLargeur onClick={() => composer('vide')}>Composer autrement</Bouton>
         </ProchaineSeance>
       ) : null}
+
+      <LigneHistorique
+        sousLigne={ligneHistorique(done, today)}
+        onClick={() => navigate('/historique', { direction: 'forward', state: { retour: '/renfo' } })}
+      />
     </Page>
   )
 }

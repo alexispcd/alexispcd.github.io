@@ -1,6 +1,10 @@
 // Dates courtes partagées par toute l'app, sur des dates calendaires yyyy-MM-dd lues en UTC.
 
 export const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
+export const MOIS_LONGS = [
+  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+]
 export const MOIS_COURTS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc']
 
 const lire = (iso) => {
@@ -22,4 +26,14 @@ export const formatShortDayAnnee = (iso) => {
   const date = lire(iso)
   if (!date) return ''
   return `${formatShortDay(iso)} ${date.getUTCFullYear()}`
+}
+
+const deux = (n) => String(n).padStart(2, '0')
+
+/** Jour local (yyyy-MM-dd) d'un horodatage, dans le fuseau du navigateur, ou null. */
+export const jourLocal = (horodatage) => {
+  if (!horodatage) return null
+  const d = new Date(horodatage)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}`
 }

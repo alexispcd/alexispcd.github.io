@@ -1,10 +1,7 @@
 // Calcul pur de la grille du Calendrier, en UTC, sur des dates yyyy-MM-dd et des mois
 // yyyy-MM. Semaine du lundi. Testé par calendrier.test.js (node --test).
 
-const MOIS_LONGS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
-]
+import { MOIS_LONGS } from '../lib/dates.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { etatSeance } from '../../../lib/retour'
 import { Box } from '@mui/material'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
@@ -49,6 +50,8 @@ const ValiderPage = () => {
   const location = useLocation()
   const { afficher } = useMessage()
   const pageSeance = `/training/plan/${planId}/session/${sessionId}`
+  // État de la séance (son retour vers l'Historique), rendu après un replace.
+  const etatPageSeance = etatSeance(location)
 
   const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const [recherche, setRecherche] = useState({ etat: 'recherche', candidats: [], essai: 0 })
@@ -88,7 +91,7 @@ const ValiderPage = () => {
       (s) => {
         if (annule) return
         if (!VALIDABLE.includes(s.status)) {
-          navigate(`/training/plan/${planId}/session/${sessionId}`, { replace: true, direction: 'back' })
+          navigate(`/training/plan/${planId}/session/${sessionId}`, { replace: true, direction: 'back', state: etatPageSeance })
           return
         }
         setJour(jourSeanceParDefaut(s.scheduled_date, todayISO()))
@@ -100,7 +103,7 @@ const ValiderPage = () => {
       },
     )
     return () => { annule = true }
-  }, [sessionId, planId, chargement.essai, navigate])
+  }, [sessionId, planId, chargement.essai, navigate, etatPageSeance])
 
   const pret = chargement.status === 'ready'
   useEffect(() => {
@@ -153,7 +156,7 @@ const ValiderPage = () => {
 
   const retour = () => {
     if (!montee.current) return
-    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back' })
+    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back', state: etatPageSeance })
     else navigate(-1, { direction: 'back' })
   }
 

@@ -3,7 +3,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { jourLocal, libelleSemaine, phraseEnAttente, phraseSuggestion, semaineEnCours } from './accueil.js'
+import { jourLocal, libelleSemaine, ligneHistorique, phraseEnAttente, phraseSuggestion, semaineEnCours } from './accueil.js'
 
 // Horodatage d'une heure locale, quel que soit le fuseau de la machine.
 const local = (y, m, d, h = 18, min = 0) => new Date(y, m - 1, d, h, min).toISOString()
@@ -60,4 +60,17 @@ test('resumeComposition : intensité et supersets', async () => {
   const { resumeComposition } = await import('./accueil.js')
   assert.equal(resumeComposition('normale', 3), 'Normale · 3 supersets')
   assert.equal(resumeComposition('legere', 1), 'Légère · 1 superset')
+})
+
+test('ligneHistorique : séances faites du mois en cours, jour local', () => {
+  const sessions = [
+    faite(local(2026, 11, 1, 7)),
+    faite(local(2026, 11, 4, 23, 30)),
+    faite(local(2026, 10, 31, 23, 30)), // octobre, même tard le soir
+    faite(local(2025, 11, 3)), // novembre d'une autre année
+  ]
+  assert.equal(ligneHistorique(sessions, '2026-11-05'), '2 séances faites en novembre')
+  assert.equal(ligneHistorique(sessions.slice(1), '2026-11-05'), '1 séance faite en novembre')
+  assert.equal(ligneHistorique([], '2026-12-01'), 'Aucune séance en décembre')
+  assert.equal(ligneHistorique(sessions, '2026-10-12'), '1 séance faite en octobre')
 })

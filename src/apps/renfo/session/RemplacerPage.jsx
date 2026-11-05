@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { etatSeance } from '../../../lib/retour'
 import { Box, ButtonBase, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import CarteSysteme from '../../../components/CarteSysteme'
@@ -35,6 +36,8 @@ const RemplacerPage = () => {
   const navigate = useAppNavigate()
   const location = useLocation()
   const pageSeance = `/renfo/session/${sessionId}`
+  // État de la séance (son retour vers l'Historique), rendu après un replace.
+  const etat = etatSeance(location)
   const cle = `${sessionId}/${brut}/${slug}`
 
   const [chargement, setChargement] = useState({ status: 'loading', cle, essai: 0 })
@@ -60,7 +63,7 @@ const RemplacerPage = () => {
       (res) => {
         if (annule) return
         if (!modifiable(res.session)) {
-          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back' })
+          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back', state: etat })
           return
         }
         setChargement((c) => ({ ...c, status: 'ready', ...res }))
@@ -71,7 +74,7 @@ const RemplacerPage = () => {
       },
     )
     return () => { annule = true }
-  }, [sessionId, cle, chargement.essai, navigate])
+  }, [sessionId, cle, chargement.essai, navigate, etat])
 
   if (attente.visible) {
     return (
@@ -100,7 +103,7 @@ const RemplacerPage = () => {
 
   const retour = () => {
     if (!montee.current) return
-    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back' })
+    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back', state: etat })
     else navigate(-1, { direction: 'back' })
   }
 

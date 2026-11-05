@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { etatSeance } from '../../../lib/retour'
 import { Box } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import CarteSysteme from '../../../components/CarteSysteme'
@@ -32,6 +33,8 @@ const ModifierPage = () => {
   const navigate = useAppNavigate()
   const location = useLocation()
   const pageSeance = `/renfo/session/${sessionId}`
+  // État de la séance (son retour vers l'Historique), rendu après un replace.
+  const etat = etatSeance(location)
 
   const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const attente = useFinAttente(chargement.status === 'loading')
@@ -51,7 +54,7 @@ const ModifierPage = () => {
       (res) => {
         if (annule) return
         if (!modifiable(res.session)) {
-          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back' })
+          navigate(`/renfo/session/${sessionId}`, { replace: true, direction: 'back', state: etat })
           return
         }
         setChargement((c) => ({ ...c, status: 'ready', ...res }))
@@ -62,7 +65,7 @@ const ModifierPage = () => {
       },
     )
     return () => { annule = true }
-  }, [sessionId, chargement.essai, navigate])
+  }, [sessionId, chargement.essai, navigate, etat])
 
   const session = chargement.session
   const depart = useMemo(() => (session ? compositionDe(session.content) : null), [session])
@@ -91,7 +94,7 @@ const ModifierPage = () => {
   // La séance relit sa ligne au montage : retour par l'historique, sinon en replace.
   const retour = () => {
     if (!montee.current) return
-    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back' })
+    if (location.key === 'default') navigate(pageSeance, { replace: true, direction: 'back', state: etat })
     else navigate(-1, { direction: 'back' })
   }
 

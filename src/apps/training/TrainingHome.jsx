@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import {
   Box, Typography, Button, IconButton, Alert,
@@ -33,6 +33,7 @@ const TrainingHome = () => {
   const navigate = useAppNavigate()
   const { setHeaderActions } = useAppCtx()
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const historyView = searchParams.get('view') === 'history'
 
   const [activePlan, setActivePlan] = useState(undefined) // undefined = chargement
@@ -72,10 +73,12 @@ const TrainingHome = () => {
   // ── Actions du header ─────────────────────────────────────────────────────
   useEffect(() => {
     setHeaderActions([
+      { label: 'Historique des séances', onClick: () => navigate('/historique', { direction: 'forward', state: { retour: `${location.pathname}${location.search}` } }) },
+      // Jusqu'au lot Src2.
       { label: 'Réglages', onClick: () => navigate('/training/settings') },
     ], 'Training')
     return () => setHeaderActions([])
-  }, [navigate, setHeaderActions])
+  }, [navigate, setHeaderActions, location.pathname, location.search])
 
   const deleteId = suppressionCible?.id ?? null
   useEffect(() => {
@@ -134,7 +137,7 @@ const TrainingHome = () => {
 
         {error && <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
-        {/* Hero — plan actif à reprendre, ou état vide */}
+        {/* Hero : plan actif à reprendre, ou état vide */}
         {activePlan ? (
           <Box sx={{ ...cardSx, borderRadius: PLAN_CARD_RADIUS, p: 3, mt: 2, textAlign: 'center' }}>
             <Terrain sx={{ fontSize: 38, color: 'primary.main', mb: 1 }} />
