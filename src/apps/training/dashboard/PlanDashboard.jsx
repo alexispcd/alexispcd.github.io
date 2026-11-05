@@ -16,7 +16,7 @@ import { useFinAttente } from '../../../ui/useFinAttente'
 import { DUREES } from '../../../lib/durees'
 import Page from '../../../ui/Page'
 import { space } from '../../../styles/tokens'
-import CarteSysteme from '../../../components/CarteSysteme'
+import PageEchecChargement from '../../../components/PageEchecChargement'
 import BandeauChiffres from '../../../ui/BandeauChiffres'
 import HistoSemaines from '../../../ui/HistoSemaines'
 import GrilleSemaine from '../../../ui/GrilleSemaine'
@@ -46,16 +46,24 @@ const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pb: space[12] } }
 const nombreAdaptees = (n) =>
   (n > 0 ? `${n} séance${n > 1 ? 's' : ''} adaptée${n > 1 ? 's' : ''}` : 'Aucune séance à adapter')
 
-const PlanDashboard = () => {
-  const { planId } = useParams()
+/**
+ * Dashboard d'un plan Training.
+ * - Sur /training/plan/:planId : lit le plan de l'URL.
+ * - Sur /training (TrainingEntree, lot T1b) : `planInitial`, déjà lu, s'affiche sans
+ *   seconde lecture ni seconde barre ; `onPlanQuitte` relance l'entrée quand le plan
+ *   est archivé ou supprimé (naviguer vers /training ne ferait rien, l'URL y est déjà).
+ */
+const PlanDashboard = ({ planInitial, onPlanQuitte }) => {
+  const params = useParams()
+  const planId = planInitial?.id ?? params.planId
   const navigate = useAppNavigate()
   const navigateSansTransition = useNavigate()
   const location = useLocation()
   const { setHeaderActions } = useAppCtx()
   const { afficher } = useMessage()
 
-  const [plan, setPlan] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [plan, setPlan] = useState(planInitial ?? null)
+  const [loading, setLoading] = useState(!planInitial)
   const [loadError, setLoadError] = useState(null)
   // Relance du chargement (« Réessayer » de la carte d'échec).
   const [essai, setEssai] = useState(0)
@@ -134,6 +142,9 @@ const PlanDashboard = () => {
   }
 
   useEffect(() => {
+    // Plan reçu de l'entrée /training : rien à lire au premier passage ; « Réessayer »
+    // (essai) et reloadPlan relisent avec getPlan.
+    if (planInitial && planInitial.id === planId && essai === 0) return undefined
     let cancelled = false
     getPlan(planId)
       .then((p) => { if (!cancelled) { setPlan(p); setLoading(false) } })
@@ -142,7 +153,7 @@ const PlanDashboard = () => {
         if (!cancelled) { setLoadError('Les données n\'ont pas pu être chargées.'); setLoading(false) }
       })
     return () => { cancelled = true }
-  }, [planId, essai])
+  }, [planId, essai, planInitial])
 
   const reessayer = () => {
     setLoading(true)
@@ -294,7 +305,10 @@ const PlanDashboard = () => {
 
   const doArchive = async () => {
     const { ok } = await archivage.lancer(() => archivePlan(planId))
-    if (ok) navigate('/training')
+    if (ok) {
+      if (onPlanQuitte) onPlanQuitte()
+      else navigate('/training')
+    }
   }
 
   const doRetry = async () => {
@@ -319,7 +333,11 @@ const PlanDashboard = () => {
   }
 
   const doDeleteErrored = async () => {
-    try { await deletePlan(planId); navigate('/training') } catch (e) { echec(e, 'Le plan n\'a pas pu être supprimé. Réessaie.') }
+    try {
+      await deletePlan(planId)
+      if (onPlanQuitte) onPlanQuitte()
+      else navigate('/training')
+    } catch (e) { echec(e, 'Le plan n\'a pas pu être supprimé. Réessaie.') }
   }
 
   // ── États de rendu ────────────────────────────────────────────────────────────
@@ -332,16 +350,7 @@ const PlanDashboard = () => {
   }
 
   if (loadError) {
-    return (
-      <Page>
-        <CarteSysteme
-          titre="Impossible de charger ton plan"
-          phrase={loadError}
-          bouton="Réessayer"
-          onClick={reessayer}
-        />
-      </Page>
-    )
+    return <PageEchecChargement titre="Impossible de charger ton plan" onReessayer={reessayer} />
   }
 
   const generating = regenBusy || plan.generation_status === 'generating'

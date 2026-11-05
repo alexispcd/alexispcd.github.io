@@ -32,31 +32,25 @@ export const getPlans = async () => {
 }
 
 /**
- * Plan, ses semaines ordonnées et toutes ses séances, en une requête de séances.
+ * Complète un plan déjà lu avec ses semaines ordonnées et toutes ses séances, en une
+ * requête de séances.
  * - plan.sessions : chaque séance avec `steps` triés par order_index, `agg_distance_m`
  *   (km prévus, plannedMeters) et `agg_duration_sec` (durée estimée).
  * - plan.weeks : chaque semaine avec `agg_distance_m`, somme des km prévus de ses
  *   séances (target_km, cible de la génération, n'est jamais affiché).
  */
-export const getPlan = async (planId) => {
-  const { data: plan, error } = await supabase
-    .from('training_plans')
-    .select('*')
-    .eq('id', planId)
-    .single()
-  if (error) throw error
-
+const completerPlan = async (plan) => {
   const { data: weeks, error: weeksErr } = await supabase
     .from('training_weeks')
     .select('*')
-    .eq('plan_id', planId)
+    .eq('plan_id', plan.id)
     .order('week_number', { ascending: true })
   if (weeksErr) throw weeksErr
 
   const { data: sessRows, error: sessErr } = await supabase
     .from('training_sessions')
     .select('*, session_steps(distance_m, duration_sec, target_pace_sec, step_type, order_index)')
-    .eq('plan_id', planId)
+    .eq('plan_id', plan.id)
     .order('scheduled_date', { ascending: true })
   if (sessErr) throw sessErr
 
@@ -82,6 +76,26 @@ export const getPlan = async (planId) => {
     weeks: (weeks ?? []).map((w) => ({ ...w, agg_distance_m: metersByWeek[w.id] ?? 0 })),
     sessions,
   }
+}
+
+/** Plan complet (semaines et séances, voir completerPlan). */
+export const getPlan = async (planId) => {
+  const { data: plan, error } = await supabase
+    .from('training_plans')
+    .select('*')
+    .eq('id', planId)
+    .single()
+  if (error) throw error
+  return completerPlan(plan)
+}
+
+/**
+ * Plan courant de /training (lot T1b) : le plan actif complet, ou null s'il n'y en a
+ * pas. Le plan n'est lu qu'une fois.
+ */
+export const getCurrentPlan = async () => {
+  const plan = await getActivePlan()
+  return plan ? completerPlan(plan) : null
 }
 
 /** Séance + steps ordonnés + numéro, bloc et début (week_start) de la semaine parente. */

@@ -8,7 +8,7 @@ const training = {
   icon: DirectionsRun,
   path: '/training',
   routes: [
-    { path: '/training', load: () => import('./TrainingHome'), handle: { title: 'Training', backTo: '/' } },
+    { path: '/training', load: () => import('./TrainingEntree'), handle: { title: 'Training', backTo: '/' } },
     { path: '/training/wizard', load: () => import('./wizard/PlanWizard'), handle: { title: 'Nouveau plan', backTo: '/training' } },
     { path: '/training/settings', load: () => import('./SettingsPage'), handle: { title: 'Réglages', backTo: '/training' } },
     { path: '/training/plan/:planId', load: () => import('./dashboard/PlanDashboard'), handle: { title: 'Training', backTo: '/' } },

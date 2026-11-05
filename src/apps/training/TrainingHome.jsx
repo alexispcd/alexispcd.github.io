@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import {
   Box, Typography, Button, IconButton, Alert,
@@ -29,15 +29,20 @@ const PLAN_CARD_RADIUS = 4
 const formatEndDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
 
-const TrainingHome = () => {
+/**
+ * Écran Training sans dashboard : plan en cours à rouvrir (vue ?view=history) ou état
+ * vide, puis plans passés.
+ * - plansInitiaux : plans passés déjà lus par TrainingEntree quand il n'y a aucun plan
+ *   courant ; rien n'est chargé, aucune barre. Sans elle, chargement de l'écran.
+ */
+const TrainingHome = ({ plansInitiaux }) => {
   const navigate = useAppNavigate()
   const { setHeaderActions } = useAppCtx()
-  const [searchParams] = useSearchParams()
   const location = useLocation()
-  const historyView = searchParams.get('view') === 'history'
 
-  const [activePlan, setActivePlan] = useState(undefined) // undefined = chargement
-  const [plans, setPlans] = useState([])
+  // undefined = chargement
+  const [activePlan, setActivePlan] = useState(plansInitiaux ? null : undefined)
+  const [plans, setPlans] = useState(plansInitiaux ?? [])
   const [error, setError] = useState(null)
 
   const [menuAnchor, setMenuAnchor] = useState(null)
@@ -53,7 +58,9 @@ const TrainingHome = () => {
   // Séances envoyées sur la montre que la suppression du plan y laissera.
   const [deleteOnWatch, setDeleteOnWatch] = useState({ planId: null, count: 0 })
 
+  const dejaLu = Boolean(plansInitiaux)
   useEffect(() => {
+    if (dejaLu) return undefined
     let cancelled = false
     Promise.all([getActivePlan(), getPlans()])
       .then(([active, past]) => {
@@ -68,7 +75,7 @@ const TrainingHome = () => {
         setActivePlan(null)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [dejaLu])
 
   // ── Actions du header ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,11 +125,6 @@ const TrainingHome = () => {
         <BarreAttente place="page" duree={DUREES.chargementPage} {...attente} />
       </Box>
     )
-  }
-
-  // Redirection vers le dashboard si un plan actif exploitable existe.
-  if (activePlan && activePlan.generation_status !== 'error' && !historyView) {
-    return <Navigate to={`/training/plan/${activePlan.id}`} replace />
   }
 
   return (
