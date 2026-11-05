@@ -9,7 +9,7 @@ import { DUREES } from '../../../lib/durees'
 import { texteErreur } from '../../../lib/reseau'
 import { etatSousPage } from '../../../lib/retour'
 import { painAreaLabel } from '../../../lib/feedback'
-import { deleteFreeSession, getBands, getPendingSession, getSession, resetSession } from '../../../lib/renfo'
+import { deleteSession, getBands, getPendingSession, getSession, resetSession } from '../../../lib/renfo'
 import { SPACE_BAS, border, radius, size, space, textStyles } from '../../../styles/tokens'
 import { DURATION, transition } from '../../../styles/motion'
 import BarreAttente from '../../../ui/BarreAttente'
@@ -110,8 +110,7 @@ const SessionPage = () => {
   const session = chargement.status === 'ready' ? chargement.session : null
   const statut = session?.status ?? null
   const titre = session ? titreAffiche(session.title) : ''
-  const libre = session ? session.cycle_id == null : false
-  const modifiable = Boolean(session) && statut === 'planned' && libre && estNouveauFormat(session.content)
+  const modifiable = Boolean(session) && statut === 'planned' && estNouveauFormat(session.content)
   const setSession = (next) => setChargement((c) => ({ ...c, session: next }))
 
   const remplacer = ({ blockIndex, dose }) => {
@@ -142,19 +141,19 @@ const SessionPage = () => {
       )
     }
     const sousPage = (chemin) => () => navigate(chemin, { direction: 'forward', state: etatSousPage(location) })
-    const supprimer = libre ? [{ label: 'Supprimer la séance', onClick: () => confirmer('supprimer'), disabled: occupe }] : []
+    const supprimer = { label: 'Supprimer la séance', onClick: () => confirmer('supprimer'), disabled: occupe }
     const actions = statut === 'done'
-      ? [{ label: 'Réinitialiser la séance', onClick: reinitialiser, disabled: occupe }, ...supprimer]
+      ? [{ label: 'Réinitialiser la séance', onClick: reinitialiser, disabled: occupe }, supprimer]
       : [
           { label: 'Valider sans le player', onClick: sousPage(`/renfo/session/${sessionId}/valider`), disabled: occupe },
           ...(modifiable
             ? [{ label: 'Modifier la séance', onClick: sousPage(`/renfo/session/${sessionId}/modifier`), disabled: occupe }]
             : []),
-          ...supprimer,
+          supprimer,
         ]
     setHeaderActions(actions, titre)
     return () => setHeaderActions([])
-  }, [statut, libre, modifiable, occupe, titre, sessionId, navigate, location, afficher, setHeaderActions])
+  }, [statut, modifiable, occupe, titre, sessionId, navigate, location, afficher, setHeaderActions])
 
   if (attente.visible) {
     return (
@@ -223,7 +222,7 @@ const SessionPage = () => {
       setChargement((c) => ({ ...c, session: valeur, position: null }))
       return
     }
-    const { ok } = await suppression.lancer(() => deleteFreeSession(session.id))
+    const { ok } = await suppression.lancer(() => deleteSession(session.id))
     if (ok) effacerPosition(session.id)
     // Retour d'où la séance a été ouverte (l'Historique), avec son état, sinon l'accueil.
     if (ok) navigate(location.state?.retour ?? '/renfo', { replace: true, direction: 'back', state: location.state?.retourEtat ?? null })

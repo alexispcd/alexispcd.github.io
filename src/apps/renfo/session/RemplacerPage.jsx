@@ -25,8 +25,8 @@ const charger = async (sessionId) => {
   return { session, profile, bands }
 }
 
-// Seule une séance à faire, hors cycle et au nouveau format se modifie.
-const modifiable = (session) => session.status === 'planned' && session.cycle_id == null && estNouveauFormat(session.content)
+// Seule une séance à faire et au nouveau format se modifie.
+const modifiable = (session) => session.status === 'planned' && estNouveauFormat(session.content)
 
 /** Route /renfo/session/:sessionId/remplacer/:blockIndex/:slug : les remplaçants d'un exercice. */
 const RemplacerPage = () => {

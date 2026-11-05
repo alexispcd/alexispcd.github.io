@@ -98,7 +98,7 @@ const RenfoPlayer = ({ session, bands, beeps, position, onSession, onFermer, onV
   const { content } = session
   const titre = titreAffiche(session.title)
   const { steps, totalSeconds } = useMemo(() => buildSequence(content), [content])
-  const modifiable = session.status === 'planned' && session.cycle_id == null && estNouveauFormat(content)
+  const modifiable = session.status === 'planned' && estNouveauFormat(content)
 
   const [depart] = useState(() => departDe(position, steps))
   const [cursor, setCursor] = useState(depart.cursor)

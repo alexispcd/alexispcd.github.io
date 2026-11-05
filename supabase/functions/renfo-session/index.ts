@@ -8,19 +8,13 @@ import {
   ajuster, assembler, type Bases, type Choix, type Composition, doseDe, dosesDeSeance, type DoneSession,
   estNouveauFormat, groupesDe, planMiseAJour, remplacants, remplacer, sansBande, validateComposition,
 } from "../_shared/strength/compose.ts"
-import { generateSessions, loadStrengthSetup, PROFILE_MISSING, type StrengthSetup } from "../_shared/strength/generate.ts"
-import { buildFreeSessionPrompt, buildSystemPrompt, type PriorSession } from "../_shared/strength/prompt.ts"
 import {
-  DURATION_MAX_SEC, DURATION_MIN_SEC, type Dose, FREE_KINDS, REPS_MAX, REPS_MIN, type SessionContent,
-  type SessionKind,
+  DURATION_MAX_SEC, DURATION_MIN_SEC, type Dose, REPS_MAX, REPS_MIN, type SessionContent,
 } from "../_shared/strength/rules.ts"
 import { choisirExercices } from "../_shared/strength/seance.ts"
+import { loadStrengthSetup, PROFILE_MISSING, type StrengthSetup } from "../_shared/strength/setup.ts"
 import { mondayOf, todayISO } from "../_shared/training/weeks.ts"
 
-// Séance libre, synchrone : une seule séance, appel court.
-const MAX_TOKENS = 4000
-// Deux appels au plus (retry) sous la limite runtime de la requête.
-const CALL_TIMEOUT_MS = 70_000
 // Séances faites lues pour l'historique du modèle.
 const RECENT_SESSIONS = 12
 
@@ -65,11 +59,8 @@ async function handleRequest(req: Request): Promise<Response> {
     return json(400, { error: "Corps JSON invalide" })
   }
 
-  // Ancien chemin { kind } : séance libre d'un type, jusqu'au lot R6.
-  if (body?.action === undefined) return await legacyFreeSession(supabaseAdmin, user.id, body)
-
   const ctx: Ctx = { admin: supabaseAdmin, userId: user.id }
-  switch (body.action) {
+  switch (body?.action) {
     case "create":
       return await createAction(ctx, body)
     case "update":
@@ -81,66 +72,6 @@ async function handleRequest(req: Request): Promise<Response> {
     default:
       return json(400, { error: "Action inconnue" })
   }
-}
-
-// ── Ancien chemin ────────────────────────────────────────────────────────────
-
-async function legacyFreeSession(
-  supabaseAdmin: SupabaseClient,
-  userId: string,
-  body: Record<string, unknown>,
-): Promise<Response> {
-  const kind = body?.kind
-  if (typeof kind !== "string" || !(FREE_KINDS as string[]).includes(kind)) {
-    return json(400, { error: "Type de séance invalide" })
-  }
-  const sessionKind = kind as SessionKind
-
-  const setup = await loadStrengthSetup(supabaseAdmin, userId)
-  if (!setup) return json(409, PROFILE_MISSING)
-
-  const weekStart = mondayOf(todayISO())
-  const { data: weekRows, error: weekError } = await supabaseAdmin
-    .from("strength_sessions")
-    .select("week_index, kind, title, status, content")
-    .eq("user_id", userId)
-    .eq("week_start", weekStart)
-    .order("position")
-  if (weekError) return internalError(TAG, weekError.message)
-
-  const result = await generateSessions({
-    system: buildSystemPrompt(availableExercises(setup.equipment, setup.bandsKg), setup.bandsKg),
-    userPrompt: buildFreeSessionPrompt(sessionKind, (weekRows ?? []) as PriorSession[]),
-    kinds: [sessionKind],
-    setup,
-    mainSlugs: null,
-    maxTokens: MAX_TOKENS,
-    timeoutMs: CALL_TIMEOUT_MS,
-    logTag: `[${TAG}] ${userId}`,
-  })
-  if (!result.ok) {
-    console.error(`[${TAG}] ${userId} séance invalide après retry :`, result.errors.slice(0, 10))
-    return json(422, { error: "Séance générée invalide", details: result.errors.slice(0, 10) })
-  }
-
-  const { content } = result.sessions[0]
-  const { data: session, error: insertError } = await supabaseAdmin
-    .from("strength_sessions")
-    .insert({
-      user_id: userId,
-      cycle_id: null,
-      week_index: null,
-      week_start: weekStart,
-      position: weekRows?.length ?? 0,
-      kind: sessionKind,
-      title: content.title,
-      content,
-    })
-    .select("*")
-    .single()
-  if (insertError || !session) return internalError(TAG, insertError?.message ?? "insert sans ligne")
-
-  return json(200, { session })
 }
 
 // ── Séances composées (lot R1) ───────────────────────────────────────────────
@@ -183,14 +114,13 @@ async function loadRecentDone(ctx: Ctx): Promise<DoneSession[]> {
   return (data ?? []) as DoneSession[]
 }
 
-/** Séance à faire hors cycle la plus récente, ligne complète, ou null. */
+/** Séance à faire la plus récente, ligne complète, ou null. */
 async function loadPending(ctx: Ctx): Promise<Row | null> {
   const { data, error } = await ctx.admin
     .from("strength_sessions")
     .select("*")
     .eq("user_id", ctx.userId)
     .eq("status", "planned")
-    .is("cycle_id", null)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -232,7 +162,7 @@ async function requireSetup(ctx: Ctx): Promise<Setup> {
 
 type Editable = { session: Row } | { response: Response }
 
-/** Séance du compte, à faire, hors cycle et au nouveau format. */
+/** Séance du compte, à faire et au nouveau format. */
 async function loadEditable(ctx: Ctx, sessionId: unknown): Promise<Editable> {
   if (typeof sessionId !== "string" || !UUID.test(sessionId)) return { response: json(404, NOT_FOUND) }
   const { data, error } = await ctx.admin
@@ -243,7 +173,7 @@ async function loadEditable(ctx: Ctx, sessionId: unknown): Promise<Editable> {
     .maybeSingle()
   if (error) throw new Error(`strength_sessions: ${error.message}`)
   if (!data) return { response: json(404, NOT_FOUND) }
-  if (data.status !== "planned" || data.cycle_id !== null || !estNouveauFormat(data.content)) {
+  if (data.status !== "planned" || !estNouveauFormat(data.content)) {
     return { response: json(409, NOT_EDITABLE) }
   }
   return { session: data as Row }
@@ -284,7 +214,7 @@ async function createAction(ctx: Ctx, body: Record<string, unknown>): Promise<Re
   if (errors.length) return json(400, { error: "Composition invalide", code: "composition_invalide", details: errors })
   const composition = normalize(body.composition)
 
-  // Une seule séance à faire à la fois, hors cycle : on renvoie celle qui attend.
+  // Une seule séance à faire à la fois : on renvoie celle qui attend.
   const enAttente = await loadPending(ctx)
   if (enAttente) {
     return json(409, { error: "Une séance est déjà à faire", code: "seance_en_attente", session: enAttente })
@@ -326,8 +256,6 @@ async function createAction(ctx: Ctx, body: Record<string, unknown>): Promise<Re
     .from("strength_sessions")
     .insert({
       user_id: ctx.userId,
-      cycle_id: null,
-      week_index: null,
       week_start: weekStart,
       position: count ?? 0,
       kind: null,

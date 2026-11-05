@@ -9,15 +9,30 @@ import {
   bandeDemandee, type Choix, type ChoixContexte, type Demande, type DoneSession, exercicesRecents,
   exigencesDuSuperset, validerChoix,
 } from "./compose.ts"
-import { MODEL } from "./generate.ts"
-import { barHeightsSummary } from "./prompt.ts"
 import {
   COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, effectiveTrisetRules, type Group, GROUP_LABELS,
   TRISET_FOCUS_LABELS, WARMUP_EXTRAS, WARMUP_ITEMS_MAX, WARMUP_ITEMS_MIN,
 } from "./rules.ts"
 
+/** Même modèle que generate-plan. */
+export const MODEL = "claude-sonnet-4-6"
+
 const MAX_TOKENS = 2000
 const CALL_TIMEOUT_MS = 70_000
+
+/** Exercices à barre disponibles regroupés par hauteur, pour composer des supersets à une seule hauteur. */
+export const barHeightsSummary = (available: Exercise[]): string[] => {
+  const onBar = available.filter((e) => e.equipment.includes("bar") && e.anchor)
+  if (!onBar.length) return []
+  return [
+    "",
+    "Exercices à barre par hauteur (un triset ne mélange jamais deux de ces lignes) :",
+    ...(["high", "mid", "low"] as const)
+      .map((anchor) => [anchor, onBar.filter((e) => e.anchor === anchor).map((e) => e.slug)] as const)
+      .filter(([, slugs]) => slugs.length)
+      .map(([anchor, slugs]) => `- ${anchor} : ${slugs.join(", ")}`),
+  ]
+}
 
 /** Prompt système : règles, catalogue disponible, bandes, hauteurs de barre, exercices avec base. */
 export function buildChoixSystemPrompt(available: Exercise[], bandsKg: number[], avecBase: string[]): string {

@@ -19,7 +19,7 @@ const spaFallback = () => ({
 // compte (fetchAccess). Aucune Edge Function, aucun appel d'auth, aucune autre table.
 const OFFLINE_TABLES = [
   'training_plans', 'training_weeks', 'training_sessions',
-  'strength_profiles', 'strength_bands', 'strength_cycles', 'strength_sessions',
+  'strength_profiles', 'strength_bands', 'strength_sessions',
   'profiles', 'user_modules',
 ]
 

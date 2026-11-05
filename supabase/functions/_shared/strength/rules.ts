@@ -1,41 +1,15 @@
-// Règles du module Renfo : types de séance, trisets et leurs catégories,
-// phases du cycle, bornes de dosage et schéma du contenu d'une séance.
+// Règles du module Renfo : thèmes des supersets et leurs catégories, groupes,
+// bornes de dosage et schéma du contenu d'une séance.
 // Module pur, sans import Deno ni npm : il est aussi importé par le front.
 
 import type { Category, Exercise } from "./catalog.ts"
-
-export type SessionKind = "full" | "lower_core" | "upper_core" | "legs" | "upper" | "core_runner"
-
-export const KIND_LABELS: Record<SessionKind, string> = {
-  full: "Corps complet",
-  lower_core: "Bas du corps et tronc",
-  upper_core: "Haut du corps et tronc",
-  legs: "Jambes",
-  upper: "Haut du corps",
-  core_runner: "Tronc et coureur",
-}
-
-export const SESSION_KINDS = Object.keys(KIND_LABELS) as SessionKind[]
-
-export const isSessionKind = (value: unknown): value is SessionKind =>
-  typeof value === "string" && (SESSION_KINDS as string[]).includes(value)
-
-/** Types de séance d'une semaine de cycle, dans l'ordre de position. */
-export const KINDS_BY_FREQUENCY: Record<1 | 2 | 3, SessionKind[]> = {
-  1: ["full"],
-  2: ["lower_core", "upper_core"],
-  3: ["legs", "upper", "core_runner"],
-}
-
-/** Types proposés pour une séance libre. */
-export const FREE_KINDS: SessionKind[] = ["full", "legs", "upper", "core_runner"]
 
 /** Autorisés en échauffement en plus de la catégorie warmup. */
 export const WARMUP_EXTRAS: string[] = [
   "marche_laterale", "rotation_externe", "releves_pointes", "flexion_hanche_elastique",
 ]
 
-/** Thème d'un triset. */
+/** Thème d'un superset (anciens thèmes de triset compris, lus sur les séances déjà en base). */
 export type TrisetFocus =
   | "legs" | "upper" | "core_runner"
   | "lower_legs" | "posterior_calves" | "trunk"
@@ -96,16 +70,6 @@ export const TRISET_RULES: Record<TrisetFocus, TrisetRules> = {
   runner_hips: { categories: ["posterior_chain", "core"], requires: [req(["posterior_chain"], 1)] },
 }
 
-/** Trisets de chaque type de séance, dans l'ordre : le triset n vaut TRISETS_BY_KIND[kind][n - 1]. */
-export const TRISETS_BY_KIND: Record<SessionKind, TrisetFocus[]> = {
-  full: ["legs", "upper", "core_runner"],
-  lower_core: ["lower_legs", "posterior_calves", "trunk"],
-  upper_core: ["pull", "push", "trunk"],
-  legs: ["quads", "posterior", "foot_calf"],
-  upper: ["pull", "push", "shoulders_arms"],
-  core_runner: ["core_stability", "balance_foot", "runner_hips"],
-}
-
 /**
  * Règles d'un focus adaptées au catalogue disponible (matériel du compte) :
  * catégories sans exercice disponible retirées, chaque minimum ramené au nombre
@@ -122,44 +86,11 @@ export function effectiveTrisetRules(focus: TrisetFocus, available: Exercise[]):
   }
 }
 
-export type WeekPhase = "base" | "progression" | "pic" | "decharge"
-
-export interface WeekPhaseRule {
-  phase: WeekPhase
-  instruction: string
-}
-
-/** Phases des semaines 1 à 4 d'un cycle (index 0 = semaine 1). */
-export const WEEK_PHASES: WeekPhaseRule[] = [
-  { phase: "base", instruction: "Dosage prudent, proche des références du catalogue." },
-  {
-    phase: "progression",
-    instruction: "Une ou deux répétitions, ou un tour de plus, sur les trisets par rapport à la semaine 1.",
-  },
-  { phase: "pic", instruction: "Volume maximal du cycle ou bande plus exigeante." },
-  {
-    phase: "decharge",
-    instruction: "Un tour de moins et environ 30 % de volume en moins, mêmes exercices.",
-  },
-]
-
-/** Libellés d'affichage des phases. */
-export const PHASE_LABELS: Record<WeekPhase, string> = {
-  base: "Base",
-  progression: "Progression",
-  pic: "Pic",
-  decharge: "Décharge",
-}
-
 // ── Bornes de dosage ─────────────────────────────────────────────────────────
 export const REPS_MIN = 3
 export const REPS_MAX = 30
 export const DURATION_MIN_SEC = 10
 export const DURATION_MAX_SEC = 90
-export const SUPERSET_ROUNDS_MIN = 2
-export const SUPERSET_ROUNDS_MAX = 4
-export const SUPERSET_REST_MIN_SEC = 45
-export const SUPERSET_REST_MAX_SEC = 120
 
 // ── Structure d'une séance ───────────────────────────────────────────────────
 export const WARMUP_ITEMS_MIN = 1
@@ -208,11 +139,6 @@ export type SessionBlock = WarmupBlock | MainBlock | SupersetBlock | CooldownBlo
 
 export type BlockType = SessionBlock["type"]
 
-const TRISET_ORDER: BlockType[] = ["warmup", "superset", "superset", "superset", "cooldown"]
-
-/** Ordre exact des blocs d'une séance générée : identique pour tous les types. */
-export const blockOrder = (_kind: SessionKind): BlockType[] => TRISET_ORDER
-
 export interface SessionContent {
   title: string
   /** Posé par le code (estimateSessionMinutes), jamais par le modèle. */
@@ -222,28 +148,7 @@ export interface SessionContent {
   blocks: SessionBlock[]
 }
 
-const slugOf = (dose: unknown): string | null => {
-  const slug = (dose as { slug?: unknown } | null | undefined)?.slug
-  return typeof slug === "string" ? slug : null
-}
-
-/**
- * Exercices figés sur un cycle : les 9 slugs des trisets à plat (triset 1 A, B, C,
- * puis triset 2, puis triset 3), pour tous les types de séance.
- */
-export function lockedSlugs(_kind: SessionKind, content: unknown): string[] {
-  const blocks = (content as { blocks?: unknown } | null)?.blocks
-  if (!Array.isArray(blocks)) return []
-  const slugs: (string | null)[] = []
-  for (const block of blocks) {
-    if (block?.type === "superset") slugs.push(slugOf(block.a), slugOf(block.b), slugOf(block.c))
-  }
-  return slugs.filter((s): s is string => s !== null)
-}
-
 // ── Séances composées (lot R1) ───────────────────────────────────────────────
-// Ajouts du nouveau modèle, sans cycle. Tout ce qui précède sert encore à
-// renfo-cycle et à l'ancien chemin de renfo-session jusqu'au lot R6.
 
 export type Group = "jambes" | "haut" | "tronc"
 

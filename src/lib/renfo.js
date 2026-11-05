@@ -48,11 +48,11 @@ export const enregistrerReglages = async ({ frequency, equipment, bands, report 
     p_report: report,
   }))
 
-// ── Cycles et séances ────────────────────────────────────────────────────────
+// ── Séances ──────────────────────────────────────────────────────────────────
 
-const SESSION_COLUMNS = 'id, cycle_id, week_index, week_start, position, kind, title, content, status, completed_at, bands_used, rpe, pain_areas, feedback_note, created_at'
+const SESSION_COLUMNS = 'id, week_start, position, kind, title, content, status, completed_at, bands_used, rpe, pain_areas, feedback_note, created_at'
 
-/** Séances faites, de cycle comprises, de la plus récente à la plus ancienne (60 au plus). */
+/** Séances faites, de la plus récente à la plus ancienne (60 au plus). */
 export const getDoneSessions = async () =>
   unwrap(await supabase
     .from('strength_sessions')
@@ -61,22 +61,21 @@ export const getDoneSessions = async () =>
     .order('completed_at', { ascending: false })
     .limit(60))
 
-/** Séance à faire hors cycle la plus récente, ou null. */
+/** Séance à faire la plus récente, ou null. */
 export const getPendingSession = async () =>
   unwrap(await supabase
     .from('strength_sessions')
     .select(SESSION_COLUMNS)
     .eq('status', 'planned')
-    .is('cycle_id', null)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle())
 
-/** Une séance, avec son cycle (numéro) s'il y en a un. */
+/** Une séance. */
 export const getSession = async (sessionId) =>
   unwrap(await supabase
     .from('strength_sessions')
-    .select(`${SESSION_COLUMNS}, cycle:strength_cycles(number)`)
+    .select(SESSION_COLUMNS)
     .eq('id', sessionId)
     .single())
 
@@ -111,9 +110,9 @@ export const resetSession = async (sessionId) =>
     .select(SESSION_COLUMNS)
     .single())
 
-/** Supprime une séance libre (la RLS refuse une séance de cycle). */
-export const deleteFreeSession = async (sessionId) =>
-  unwrap(await supabase.from('strength_sessions').delete().eq('id', sessionId).is('cycle_id', null))
+/** Supprime une séance. */
+export const deleteSession = async (sessionId) =>
+  unwrap(await supabase.from('strength_sessions').delete().eq('id', sessionId))
 
 // ── Séances composées ────────────────────────────────────────────────────────
 // Chaque action renvoie { session }. createSession : l'accueil et la composition ;
@@ -129,7 +128,7 @@ export const getExerciseBases = async () => {
 
 /**
  * Crée une séance depuis une composition { intensity, supersets: [{ focus, exercise_count, rounds }] }.
- * 409 seance_en_attente (err.body.session) si une séance hors cycle est déjà à faire.
+ * 409 seance_en_attente (err.body.session) si une séance est déjà à faire.
  */
 export const createSession = (composition) => callFunction('renfo-session', { action: 'create', composition })
 

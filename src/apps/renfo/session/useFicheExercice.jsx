@@ -20,7 +20,7 @@ const reglageDe = (dose, bandsUsed) => ({
  * adjustExercise sous une carte d'attente (`action.barre`). L'échec part en Message,
  * rien n'est gardé. Renvoie { ouvrir(dose, block, blockIndex), ouverte, action, feuilles }.
  * - session, bands : la séance affichée et les élastiques du compte.
- * - modifiable : la séance accepte Ajuster (à faire, hors cycle, nouveau format).
+ * - modifiable : la séance accepte Ajuster (à faire, nouveau format).
  * - sansRemplacer, onRemplacer(cible) : la ligne « Remplacer l'exercice » de la fiche.
  * - onSession(session) : la séance renvoyée par le serveur après un réglage.
  * La fiche reste sur son exercice : sa dose est relue dans la séance à chaque rendu.

@@ -21,8 +21,8 @@ const charger = async (sessionId) => {
   return { session, donnees }
 }
 
-// Seule une séance à faire, hors cycle et au nouveau format se modifie.
-const modifiable = (session) => session.status === 'planned' && session.cycle_id == null && estNouveauFormat(session.content)
+// Seule une séance à faire et au nouveau format se modifie.
+const modifiable = (session) => session.status === 'planned' && estNouveauFormat(session.content)
 
 // Sans exercice à faire choisir, l'enregistrement est rapide : pas de « Préparation ».
 const ENREGISTREMENT = { titre: 'Enregistrement de ta séance', detail: null, duree: DUREES.enregistrement }
