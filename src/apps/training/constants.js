@@ -12,13 +12,7 @@ export const ZONE_STYLE = {
   C:     { main: 'var(--zone-longue)', bg: 'var(--zone-longue-tint)' },
 }
 
-// Statut, bloc et résultat ne portent pas de couleur : neutres.
-export const NEUTRAL_STYLE = { main: 'var(--ink)', bg: 'var(--chip)' }
-
-// Pastille "adaptée" de la vue séance.
-export const ADAPTED_STYLE = NEUTRAL_STYLE
-
-// Verdict d'analyse post-séance : label + couleur (icônes côté vue séance).
+// Verdict d'analyse post-séance : label (texte seul sur la page séance, sans symbole).
 export const VERDICT = {
   reussie:        { label: 'Séance réussie', color: 'var(--ink)' },
   partiellement:  { label: 'Séance partiellement réussie', color: 'var(--ink)' },
@@ -26,30 +20,10 @@ export const VERDICT = {
 }
 
 // ── Labels FR ────────────────────────────────────────────────────────────────
-export const ZONE_LABEL = {
-  A: 'Zone A',
-  B: 'Zone B',
-  C: 'Zone C',
-}
-
 export const BLOCK_LABEL = {
   construction: 'Construction',
   intensification: 'Intensification',
   affutage: 'Affûtage',
-}
-
-export const STATUS_LABEL = {
-  planned: 'À venir',
-  done: 'Faite',
-  skipped: 'Sautée',
-  adapted: 'Adaptée',
-}
-
-export const TYPE_LABEL = {
-  facile: 'Footing facile',
-  fractionne: 'Fractionné',
-  tempo: 'Tempo',
-  sortie_longue: 'Sortie longue',
 }
 
 export const PLAN_STATUS_LABEL = {
@@ -254,15 +228,6 @@ export const plageRecherche = ({ debut, fin }) => {
 export const jourSeanceParDefaut = (scheduledDate, aujourdhui) => {
   const prevue = scheduledDate?.slice(0, 10)
   return prevue && prevue < aujourdhui ? prevue : aujourdhui
-}
-
-/** yyyy-MM-dd → "jeudi 8 octobre". */
-export const formatLongDay = (iso) => {
-  if (!iso) return ''
-  const [y, m, d] = iso.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('fr-FR', {
-    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
-  })
 }
 
 /** Jours calendaires jusqu'à la course (peut être négatif si passée). */

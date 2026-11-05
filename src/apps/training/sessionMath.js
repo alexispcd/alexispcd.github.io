@@ -1,12 +1,12 @@
-// Helpers partagés entre SessionPage (totaux, structure) et PaceChart (échelles).
+// Helpers partagés de Training : durées, distances, allure clé et groupes d'étapes.
 // Toute l'estimation est faite en code, sans dépendance.
 import { formatDistance, formatDuration } from './constants.js'
 
 // Allure souple par défaut quand un step n'a pas de cible (récup libre) mais
 // qu'on doit tout de même estimer sa durée / distance.
-export const FALLBACK_PACE_SEC = 360
+const FALLBACK_PACE_SEC = 360
 
-export const stepPace = (step) => step.target_pace_sec ?? FALLBACK_PACE_SEC
+const stepPace = (step) => step.target_pace_sec ?? FALLBACK_PACE_SEC
 
 /** Durée estimée d'un step en secondes (largeur graphe + durée totale). */
 export const estimateStepSeconds = (step) => {
@@ -71,14 +71,3 @@ export const groupSteps = (steps) => {
 /** "400 m" / "3 min" : dimension primaire d'un step. */
 export const stepSizeLabel = (step) =>
   formatDistance(step.distance_m) ?? formatDuration(step.duration_sec) ?? ''
-
-/** Label court pour un step isolé (tip du graphe, axe X). */
-export const stepShortLabel = (step) => {
-  switch (step.step_type) {
-    case 'warmup': return 'Éch.'
-    case 'cooldown': return 'RAC'
-    case 'recovery': return 'Récup'
-    case 'interval': return step.repeat_index != null ? `Rép ${step.repeat_index}` : 'Répétition'
-    default: return 'Course'
-  }
-}

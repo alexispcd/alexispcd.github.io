@@ -1,92 +1,79 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useEffectEvent, useCallback } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
+import { Box, ButtonBase, Typography } from '@mui/material'
 import { etatSousPage } from '../../../lib/retour'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useAppCtx } from '../../../lib/context'
 import { texteErreur } from '../../../lib/reseau'
-import { useMessage } from '../../../ui/useMessage'
-import { Box, Typography, Button, Alert, Menu, MenuItem } from '@mui/material'
-import LocalFireDepartment from '@mui/icons-material/LocalFireDepartmentOutlined'
-import Bolt from '@mui/icons-material/BoltOutlined'
-import DirectionsRun from '@mui/icons-material/DirectionsRunOutlined'
-import PauseCircle from '@mui/icons-material/PauseCircleOutlined'
-import Bedtime from '@mui/icons-material/BedtimeOutlined'
-import AutoAwesome from '@mui/icons-material/AutoAwesome'
-import ExpandMore from '@mui/icons-material/ExpandMore'
-import Redo from '@mui/icons-material/Redo'
-import CheckCircle from '@mui/icons-material/CheckCircle'
-import ErrorOutline from '@mui/icons-material/ErrorOutlineOutlined'
-import ReportProblem from '@mui/icons-material/ReportProblemOutlined'
-import Watch from '@mui/icons-material/WatchOutlined'
+import { DUREES } from '../../../lib/durees'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
-import { glassSx, cardSx } from '../../../styles/glass'
-import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import CarteSysteme from '../../../components/CarteSysteme'
+import { border, radius, space, textStyles } from '../../../styles/tokens'
+import { DURATION, transition } from '../../../styles/motion'
 import BarreAttente from '../../../ui/BarreAttente'
 import BarreBas from '../../../ui/BarreBas'
+import BarreProgression from '../../../ui/BarreProgression'
+import BarreStructure from '../../../ui/BarreStructure'
 import Bouton from '../../../ui/Bouton'
+import Carte from '../../../ui/Carte'
+import FeuilleFlottante from '../../../ui/FeuilleFlottante'
+import MarqueSeance from '../../../ui/MarqueSeance'
+import Page from '../../../ui/Page'
+import Pastille from '../../../ui/Pastille'
+import { ChevronBas, Montre } from '../../../ui/Icones'
+import { sansMouvement } from '../../../ui/appui'
 import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
-import { DUREES } from '../../../lib/durees'
-import { space } from '../../../styles/tokens'
+import { useMessage } from '../../../ui/useMessage'
 import {
-  getSession, skipSession, unskipSession,
-  completeSession, resetSession, updateOnCoros,
+  getSession, skipSession, unskipSession, resetSession, updateOnCoros,
 } from '../../../lib/training'
-import {
-  ZONE_STYLE, NEUTRAL_STYLE, ZONE_LABEL, TYPE_LABEL, STATUS_LABEL, ADAPTED_STYLE, VERDICT,
-  intensityOf, formatKm, formatPace, formatDistance, formatDuration, formatMin,
-  cleanText, shortDayLabel, formatLongDay, isCorosCopyUpcoming,
-} from '../constants'
-import {
-  groupSteps, plannedMeters, totalSeconds, keyPaceSec, stepSizeLabel,
-} from '../sessionMath'
+import { cleanText } from '../constants'
+import Depli from '../../renfo/compose/Depli'
 import PaceChart from './PaceChart'
 import { useEnvoiMontre } from './useEnvoiMontre'
 import SkipSheet from './SkipSheet'
+import {
+  analyseSeance, chiffresSeance, erreurMontre, estAFaire, estSurMontre, etatSeance,
+  libelleIntensite, lignesStructure, ressentiSeance, segmentsStructure, sousLigneSeance, zoneSeance,
+} from './vueSeance'
 
-// ── Styles de chips de statut ────────────────────────────────────────────────
-// Le statut ne porte pas de couleur : chips neutres, la sautée en muted.
-const STATUS_CHIP = {
-  planned: NEUTRAL_STYLE,
-  done:    NEUTRAL_STYLE,
-  adapted: ADAPTED_STYLE,
-  skipped: { main: 'var(--muted)', bg: 'var(--chip)' },
-}
+// Cartes d'attente en tête de page : l'écart du bas s'ouvre et se replie avec elles.
+const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pb: space[12] } }
+const filet = { borderTop: `${border.filet} solid`, borderColor: 'line' }
+const RECHARGEMENT = 'Les données n\'ont pas pu être rechargées. Réessaie.'
 
-const STEP_ICON = {
-  warmup: LocalFireDepartment,
-  interval: Bolt,
-  run: DirectionsRun,
-  recovery: PauseCircle,
-  cooldown: Bedtime,
-}
-
-// Carte d'attente en tête de page : l'écart du haut s'ouvre et se replie avec elle.
-const CARTE_ATTENTE_SX = { '& .MuiCollapse-wrapperInner': { pt: 1.5 } }
-
-// Icônes de verdict (labels + couleurs partagés via constants).
-const VERDICT_ICON = {
-  reussie: CheckCircle,
-  partiellement: ErrorOutline,
-  a_retravailler: ReportProblem,
-}
-
+/**
+ * Page d'une séance Training (lot T2a) : carte de la séance, Analyse et Ressenti,
+ * Structure, Allure et « Pourquoi ces allures ». Actions dans le menu des trois
+ * points selon l'état ; « Valider la séance » seul en bas pour une séance à faire.
+ * Plan qui n'est plus actif : ni menu ni barre du bas.
+ */
 const SessionPage = () => {
   const { planId, sessionId } = useParams()
   const navigate = useAppNavigate()
   const location = useLocation()
-
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState(null)
+  const { setHeaderActions } = useAppCtx()
   const { afficher } = useMessage()
-  const attente = useFinAttente(loading)
 
+  const [chargement, setChargement] = useState({ status: 'loading', sessionId, essai: 0 })
   const [sautOuvert, setSautOuvert] = useState(false)
   const [reinitOuverte, setReinitOuverte] = useState(false)
-  const [watchAnchor, setWatchAnchor] = useState(null) // menu "Sur la montre"
+  const [pourquoiOuvert, setPourquoiOuvert] = useState(false)
+  const attente = useFinAttente(chargement.status === 'loading')
+
+  // Changement de séance : tout repart au rendu, l'effet ne fait que charger.
+  if (chargement.sessionId !== sessionId) {
+    setChargement({ status: 'loading', sessionId, essai: 0 })
+    setPourquoiOuvert(false)
+  }
+
+  const session = chargement.status === 'ready' ? chargement.session : null
+  const setSession = useCallback((next) => setChargement((c) => ({
+    ...c, session: typeof next === 'function' ? next(c.session) : next,
+  })), [])
 
   const echec = (e, phrase) => afficher(texteErreur(e, phrase))
-  const RECHARGEMENT = 'Les données n\'ont pas pu être rechargées. Réessaie.'
 
   // Actions réseau : chacune a sa carte d'attente en tête de page.
   const saut = useAction({
@@ -96,10 +83,6 @@ const SessionPage = () => {
   const reinit = useAction({
     attente: 'Réinitialisation de la séance', duree: DUREES.actionCourte,
     echec: 'La séance n\'a pas pu être réinitialisée. Réessaie.',
-  })
-  const delier = useAction({
-    attente: 'Réinitialisation de la séance', duree: DUREES.validation,
-    echec: 'La séance n\'a pas pu être déliée. Réessaie.',
   })
   // Phrase figée au lancement : le statut change à la réponse, pendant le repli de la carte.
   const [restaurerPhrase, setRestaurerPhrase] = useState('')
@@ -122,33 +105,26 @@ const SessionPage = () => {
     const s = await getSession(sessionId)
     setSession(s)
     return s
-  }, [sessionId])
+  }, [sessionId, setSession])
 
   const envoi = useEnvoiMontre({ onEnvoye: reload })
 
-  const actions = [saut, reinit, delier, restaurer, montre, envoi.action]
+  const actions = [saut, reinit, restaurer, montre, envoi.action]
   const locked = actions.some((a) => a.enCours)
   // Action en cours : le toucher est ignoré, la carte d'attente est déjà en tête de page.
   const siLibre = (fn) => () => { if (!locked) fn() }
 
-  // Changement de séance : état de chargement remis au rendu, l'effet ne fait que charger.
-  const [prevSessionId, setPrevSessionId] = useState(sessionId)
-  if (sessionId !== prevSessionId) {
-    setPrevSessionId(sessionId)
-    setLoading(true)
-    setLoadError(null)
-  }
-
   useEffect(() => {
-    let cancelled = false
-    getSession(sessionId)
-      .then((s) => { if (!cancelled) { setSession(s); setLoading(false) } })
-      .catch((e) => {
+    let annule = false
+    getSession(sessionId).then(
+      (s) => { if (!annule) setChargement((c) => ({ ...c, status: 'ready', session: s })) },
+      (e) => {
         console.error('[training séance] chargement :', e)
-        if (!cancelled) { setLoadError('Les données n\'ont pas pu être chargées.'); setLoading(false) }
-      })
-    return () => { cancelled = true }
-  }, [sessionId])
+        if (!annule) setChargement((c) => ({ ...c, status: 'error' }))
+      },
+    )
+    return () => { annule = true }
+  }, [sessionId, chargement.essai])
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   // Rien n'est écrit avant le choix dans la feuille. « Sauter et adapter » : le
@@ -170,13 +146,6 @@ const SessionPage = () => {
     await reload()
   })
 
-  // « Délier Coros » garde le ressenti, jusqu'à son retrait en T2.
-  const doDelink = () => delier.lancer(async () => {
-    await resetSession(sessionId, { garderRessenti: true })
-    await completeSession(sessionId)
-    await reload()
-  })
-
   const doRestore = () => {
     setRestaurerPhrase(session.status === 'skipped' ? 'Reprise de la séance' : 'Restauration de la séance')
     restaurer.lancer(async () => {
@@ -191,13 +160,52 @@ const SessionPage = () => {
 
   // Remplace le contenu de la copie Coros par la version actuelle de la séance.
   const doUpdateCoros = () => {
-    setWatchAnchor(null)
     montre.lancer(async () => {
       const res = await updateOnCoros(sessionId)
       await reload().catch((e) => echec(e, RECHARGEMENT))
       return res
     })
   }
+
+  // Lignes du menu : lues au toucher, avec l'état du moment.
+  const agir = useEffectEvent((quoi) => {
+    if (locked || !session) return
+    if (quoi === 'envoyer') envoi.ouvrir(session)
+    else if (quoi === 'montre') doUpdateCoros()
+    else if (quoi === 'restaurer' || quoi === 'reprendre') doRestore()
+    else if (quoi === 'sauter') setSautOuvert(true)
+    else if (quoi === 'reinitialiser') setReinitOuverte(true)
+  })
+
+  // ── Barre du haut : « Semaine 4 », trois points selon l'état ─────────────────
+  const statut = session?.status ?? null
+  const surMontre = session ? estSurMontre(session) : false
+  const planActif = session?.plan?.status === 'active'
+  const titre = session ? cleanText(session.title) : ''
+  const semaine = session?.week_number != null ? `Semaine ${session.week_number}` : null
+
+  useEffect(() => {
+    if (!statut) {
+      setHeaderActions([])
+      return undefined
+    }
+    let lignes = []
+    if (planActif) {
+      const montreLignes = surMontre
+        ? [['Mettre à jour la montre', 'montre'], ['Envoyer à une autre date', 'envoyer']]
+        : [['Envoyer sur la montre', 'envoyer']]
+      if (statut === 'done') lignes = [['Réinitialiser la séance', 'reinitialiser']]
+      else if (statut === 'skipped') lignes = [['Reprendre la séance', 'reprendre']]
+      else if (statut === 'adapted') lignes = [...montreLignes, ["Restaurer l'original", 'restaurer'], ['Sauter la séance', 'sauter']]
+      else lignes = [...montreLignes, ['Sauter la séance', 'sauter']]
+    }
+    setHeaderActions(
+      lignes.map(([label, quoi]) => ({ label, onClick: () => agir(quoi) })),
+      titre,
+      { titreBarre: semaine },
+    )
+    return () => setHeaderActions([])
+  }, [statut, surMontre, planActif, titre, semaine, setHeaderActions])
 
   // ── États de rendu ────────────────────────────────────────────────────────
   if (attente.visible) {
@@ -207,224 +215,247 @@ const SessionPage = () => {
       </Box>
     )
   }
-  if (loadError) {
+  if (chargement.status === 'error') {
     return (
-      <Box sx={{ px: 2, pt: `${HEADER_HEIGHT + 16}px` }}>
-        <Alert severity="error">{loadError}</Alert>
-      </Box>
+      <Page>
+        <CarteSysteme
+          titre="Séance introuvable"
+          phrase="Elle n'a pas pu être chargée."
+          bouton="Réessayer"
+          onClick={() => setChargement((c) => ({ ...c, status: 'loading', essai: c.essai + 1 }))}
+        />
+      </Page>
     )
   }
+  if (!session) return null
 
-  const { zone, type, status, steps } = session
-  const isDone = status === 'done'
-  const isSkipped = status === 'skipped'
-  const isAdapted = status === 'adapted'
-  const canComplete = status === 'planned' || status === 'adapted'
-  const canPush = canComplete
-  const isPushed = Boolean(session.coros_workout_id)
+  const zone = zoneSeance(session.type)
+  const etat = etatSeance(statut)
+  const erreur = erreurMontre(session)
+  const chiffres = chiffresSeance(session)
+  const lignes = lignesStructure(session)
+  const analyse = analyseSeance(session)
+  const ressenti = ressentiSeance(session)
+  const faite = statut === 'done'
+  const libelleStructure = lignes.map((l) => [l.nom, l.detail].filter(Boolean).join(' ')).join(', ')
 
-  // Couleur dérivée de l'intensité du type ; le chip garde ZONE_LABEL[zone] :
-  // la lettre reste le repère temporel, seule la couleur suit l'intensité.
-  const zoneStyle = ZONE_STYLE[intensityOf(type)] ?? ZONE_STYLE.A
-  const statusStyle = STATUS_CHIP[status] ?? STATUS_CHIP.planned
-
-  // Séance à venir : la date n'est plus affichée (placement par zone, date indicative).
-  // Une fois faite, on montre le jour réel ; sautée, on l'indique.
-  const weekLabel = session.week_number != null ? `Semaine ${session.week_number}` : ''
-  const metaLine = isDone
-    ? [shortDayLabel(session.completed_at) ? `Fait ${shortDayLabel(session.completed_at)}` : 'Faite', weekLabel].filter(Boolean).join(' · ')
-    : isSkipped
-      ? ['Sautée', weekLabel].filter(Boolean).join(' · ')
-      : weekLabel
-
-  const analysis = session.analysis
-  const laps = session.actual_laps
-  const hasHr = [...(laps ?? []), ...(session.km_laps ?? [])].some((l) => l?.avg_hr != null)
+  const bas = planActif && estAFaire(session) ? (
+    <BarreBas>
+      <Bouton
+        variante="ink"
+        onClick={siLibre(() => navigate(`/training/plan/${planId}/session/${sessionId}/valider`, { direction: 'forward', state: etatSousPage(location) }))}
+        sx={{ flex: 1, minWidth: 0 }}
+      >
+        Valider la séance
+      </Bouton>
+    </BarreBas>
+  ) : null
 
   return (
-    <Box sx={{ height: '100%', overflowY: 'auto', pt: `${HEADER_HEIGHT}px`, display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ flex: '1 0 auto', width: '100%', maxWidth: 640, mx: 'auto', px: 2, pb: (canComplete || isDone) ? space[24] : 6 }}>
+    <Page gap={0} bas={bas}>
+      {actions.map((a, i) => (
+        <BarreAttente key={i} place="carte" {...a.barre} sx={CARTE_ATTENTE_SX} />
+      ))}
 
-        {/* ── Cartes d'attente ────────────────────────────────────── */}
-        {actions.map((a, i) => (
-          <BarreAttente key={i} place="carte" {...a.barre} sx={CARTE_ATTENTE_SX} />
-        ))}
-
-        {/* ── En-tête ─────────────────────────────────────────────── */}
-        <Box sx={{ ...cardSx, borderRadius: '20px', p: 2.25, mt: 1.5 }}>
-          <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
-            <StatusChip label={ZONE_LABEL[zone]} main={zoneStyle.main} bg={zoneStyle.bg} />
-            <StatusChip label={TYPE_LABEL[type]} />
-            <StatusChip label={STATUS_LABEL[status]} main={statusStyle.main} bg={statusStyle.bg} />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
+        {/* ── Carte de la séance ─────────────────────────────────── */}
+        <Carte sx={{ p: space[16], gap: space[12] }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space[8] }}>
+            <Typography
+              variant="legende"
+              component="span"
+              sx={{ display: 'flex', alignItems: 'center', gap: space[8], fontWeight: 600, color: `zone-${zone}`, minWidth: 0 }}
+            >
+              <Box component="span" sx={{ width: '8px', height: '8px', borderRadius: radius.pill, bgcolor: `zone-${zone}`, flexShrink: 0 }} />
+              {libelleIntensite(session, session.plan)}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: space[8], flexShrink: 0 }}>
+              {surMontre && <Box component="span" sx={{ display: 'flex', color: 'ink' }}><Montre taille={18} titre="Sur la montre" /></Box>}
+              <Pastille>
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: space[4] }}>
+                  <MarqueSeance etat={etat.marque} zone={zone} />
+                  {etat.texte}
+                </Box>
+              </Pastille>
+            </Box>
           </Box>
 
-          <Typography variant="h6" fontWeight={750} sx={{ letterSpacing: '-0.02em' }}>
-            {cleanText(session.title)}
-          </Typography>
-          {metaLine && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-              {metaLine}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4] }}>
+            <Typography variant="titre-section" component="h1">{titre}</Typography>
+            <Typography variant="secondaire" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>
+              {sousLigneSeance(session)}
             </Typography>
+            {erreur && <Typography variant="secondaire" sx={{ color: 'muted' }}>{erreur}</Typography>}
+          </Box>
+
+          {session.steps.length > 0 && (
+            <BarreStructure segments={segmentsStructure(session.steps)} zone={zone} label={`Structure : ${libelleStructure}`} />
           )}
 
-          <Box sx={{ display: 'flex', gap: 2.5, mt: 1.5, flexWrap: 'wrap' }}>
-            {plannedMeters(steps) > 0 && <Metric value={`${formatKm(plannedMeters(steps))} km`} label="distance" />}
-            {totalSeconds(steps) > 0 && <Metric value={`~${formatMin(Math.round(totalSeconds(steps) / 60))}`} label="durée" />}
-            {keyPaceSec(steps) != null && <Metric value={`${formatPace(keyPaceSec(steps))} /km`} label="allure clé" />}
-          </Box>
-        </Box>
-
-        {/* ── Bandeau séance adaptée ──────────────────────────────── */}
-        {isAdapted && (
-          <Banner
-            icon={<AutoAwesome sx={{ fontSize: 18, color: 'ink' }} />}
-            text="Séance adaptée suite à une séance sautée."
-            action="Restaurer la version d'origine"
-            onAction={doRestore}
-            disabled={locked}
-          />
-        )}
-
-        {/* ── Bandeau séance sautée ───────────────────────────────── */}
-        {isSkipped && (
-          <Banner
-            icon={<Redo sx={{ fontSize: 18, color: 'text.disabled' }} />}
-            text="Séance sautée."
-            action="Reprendre la séance"
-            onAction={doRestore}
-            disabled={locked}
-          />
-        )}
-        {isSkipped && isCorosCopyUpcoming(session) && (
-          <Typography variant="caption" color="warning.main" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
-            Toujours sur ta montre : supprime-la dans l'app Coros.
-          </Typography>
-        )}
-
-        {/* ── Corps ───────────────────────────────────────────────── */}
-          {/* Graphique */}
-          <SectionLabel>Allure</SectionLabel>
-          <Box sx={{ ...cardSx, borderRadius: '20px', p: 1.5, pb: 1 }}>
-            <ChartLegend synced={Boolean(laps?.length)} hasHr={hasHr} />
-            <PaceChart steps={steps} actualLaps={laps} kmLaps={session.km_laps} comparisons={analysis?.comparisons ?? []} />
-          </Box>
-
-          {/* Structure */}
-          <SectionLabel>Structure</SectionLabel>
-          <Box sx={{ ...cardSx, borderRadius: '20px', py: 0.5 }}>
-            <StepsList steps={steps} type={type} />
-          </Box>
-
-          {/* Envoi vers la montre (MCP Coros) */}
-          {canPush && (
-            <Box sx={{ mt: 2 }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<Watch />}
-                endIcon={isPushed ? <ExpandMore /> : undefined}
-                onClick={isPushed ? (e) => setWatchAnchor(e.currentTarget) : () => envoi.ouvrir(session)}
-                disabled={locked}
-                sx={{
-                  height: 48, borderRadius: '24px', textTransform: 'none', fontWeight: 600,
-                  boxShadow: 'none', borderColor: 'divider', color: 'text.primary',
-                }}
-              >
-                {isPushed ? 'Sur la montre' : 'Envoyer vers la montre'}
-              </Button>
-              {isPushed && session.coros_workout_date && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 0.75 }}>
-                  {`Prévue le ${formatLongDay(session.coros_workout_date)} sur Coros`}
-                </Typography>
-              )}
-              {isPushed && session.coros_sync_error && (
-                <Typography variant="caption" color="warning.main" sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
-                  {session.coros_sync_error}{' '}
-                  <Box
-                    component="button"
-                    onClick={doUpdateCoros}
-                    disabled={locked}
-                    sx={{
-                      p: 0, border: 0, bgcolor: 'transparent', font: 'inherit', fontWeight: 700,
-                      color: 'primary.main', cursor: 'pointer', textDecoration: 'underline',
-                    }}
-                  >
-                    Réessayer
-                  </Box>
-                </Typography>
-              )}
-              <Menu
-                anchorEl={watchAnchor}
-                open={Boolean(watchAnchor)}
-                onClose={() => setWatchAnchor(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                slotProps={{ paper: { sx: { ...glassSx, borderRadius: '16px', minWidth: 220, mt: 0.5 } } }}
-              >
-                <MenuItem onClick={doUpdateCoros}>Mettre à jour</MenuItem>
-                <MenuItem onClick={() => { setWatchAnchor(null); envoi.ouvrir(session) }}>
-                  Envoyer à une autre date
-                </MenuItem>
-              </Menu>
+          {chiffres.length > 0 && (
+            <Box sx={{ ...filet, display: 'grid', gridTemplateColumns: `repeat(${chiffres.length}, minmax(0, 1fr))`, gap: space[8], pt: space[12] }}>
+              {chiffres.map((c) => (
+                <Box key={c.etiquette} sx={{ display: 'flex', flexDirection: 'column', gap: space[4], minWidth: 0 }}>
+                  <Typography variant="etiquette" sx={{ color: 'muted' }}>{c.etiquette}</Typography>
+                  <Typography component="span" sx={{ ...textStyles.chiffre, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    {c.valeur}
+                    {c.unite && <Box component="span" sx={{ ...textStyles.secondaire, fontWeight: 600, color: 'muted', letterSpacing: 0 }}>{c.unite}</Box>}
+                  </Typography>
+                  {c.prevu && (
+                    <Typography variant="legende" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>{c.prevu}</Typography>
+                  )}
+                </Box>
+              ))}
             </Box>
           )}
+        </Carte>
 
-          {/* Justification */}
-          {session.rationale && (
-            <>
-              <SectionLabel>Pourquoi ces allures</SectionLabel>
-              <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                  {cleanText(session.rationale)}
-                </Typography>
+        {/* ── Analyse et Ressenti ─────────────────────────────────── */}
+        {(analyse || ressenti) && (
+          <Carte sx={{ gap: space[12] }}>
+            {analyse && (
+              <>
+                <Typography variant="etiquette" component="h2" sx={{ color: 'muted' }}>Analyse</Typography>
+                {analyse.verdict && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[2] }}>
+                    <Typography variant="titre-barre">{analyse.verdict}</Typography>
+                    {analyse.cible && (
+                      <Typography variant="secondaire" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>{analyse.cible}</Typography>
+                    )}
+                  </Box>
+                )}
+                {analyse.repli && (
+                  <Typography variant="secondaire" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>{analyse.repli}</Typography>
+                )}
+                {analyse.conseil && (
+                  <Typography variant="secondaire" sx={{ color: 'muted', lineHeight: '19px' }}>{analyse.conseil}</Typography>
+                )}
+              </>
+            )}
+            {ressenti && (
+              <Box sx={{ ...(analyse ? { ...filet, pt: space[12] } : {}), display: 'flex', flexDirection: 'column', gap: space[8] }}>
+                <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <Typography variant="etiquette" component="h2" sx={{ color: 'muted' }}>Ressenti</Typography>
+                  {ressenti.rpe != null && (
+                    <Typography component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      <Box component="span" sx={{ ...textStyles['corps-fort'], fontWeight: 700 }}>{ressenti.rpe}</Box>
+                      <Box component="span" sx={{ ...textStyles.secondaire, fontWeight: 600, color: 'muted' }}> / 10</Box>
+                    </Typography>
+                  )}
+                </Box>
+                {ressenti.rpe != null && (
+                  <BarreProgression valeur={ressenti.rpe} max={10} widget label={`Effort ${ressenti.rpe} sur 10`} />
+                )}
+                {ressenti.note && (
+                  <Typography variant="secondaire" sx={{ whiteSpace: 'pre-line' }}>{`« ${ressenti.note} »`}</Typography>
+                )}
+                {ressenti.douleurs.length > 0 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: space[8], pt: space[2] }}>
+                    <Typography variant="etiquette" sx={{ color: 'muted' }}>Douleurs</Typography>
+                    {ressenti.douleurs.map((d) => <Pastille key={d}>{d}</Pastille>)}
+                  </Box>
+                )}
               </Box>
-            </>
-          )}
+            )}
+          </Carte>
+        )}
 
-          {/* Analyse */}
-          {analysis && (
-            <>
-              <SectionLabel>Analyse</SectionLabel>
-              <Box sx={{ ...cardSx, borderRadius: '20px', p: 2 }}>
-                <AnalysisBlock analysis={analysis} />
-              </Box>
-            </>
-          )}
-
-
-      </Box>
-
-      {/* ── Barre du bas ─────────────────────────────────────────── */}
-      {(canComplete || isDone) && (
-        <BarreBas>
-          {canComplete && (
-            <>
-              <Bouton variante="chip" onClick={siLibre(() => setSautOuvert(true))} sx={{ flex: 1, minWidth: 0 }}>
-                Sauter
-              </Bouton>
-              <Bouton
-                variante="ink"
-                onClick={siLibre(() => navigate(`/training/plan/${planId}/session/${sessionId}/valider`, { direction: 'forward', state: etatSousPage(location) }))}
-                sx={{ flex: 2, minWidth: 0 }}
-              >
-                Valider la séance
-              </Bouton>
-            </>
-          )}
-          {isDone && (
-            <>
-              <Bouton variante="chip" onClick={siLibre(() => setReinitOuverte(true))} sx={{ flex: 1, minWidth: 0 }}>
-                Réinitialiser
-              </Bouton>
-              {session.coros_activity_id && (
-                <Bouton variante="chip" onClick={siLibre(doDelink)} sx={{ flex: 1, minWidth: 0 }}>
-                  Délier Coros
-                </Bouton>
+        {/* ── Structure ───────────────────────────────────────────── */}
+        {lignes.length > 0 && (
+          <Carte sx={{ py: space[4], px: space[14], gap: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: space[12], pb: space[8] }}>
+              <Typography variant="etiquette" component="h2" sx={{ color: 'muted' }}>Structure</Typography>
+              {faite && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: space[8] }}>
+                  <Colonne largeur="40px" etiquette>Cible</Colonne>
+                  <Colonne largeur="48px" etiquette>Réalisé</Colonne>
+                  <Colonne largeur="40px" etiquette>Écart</Colonne>
+                </Box>
               )}
-            </>
-          )}
-        </BarreBas>
-      )}
+            </Box>
+            {lignes.map((l, i) => (
+              <Box key={i} sx={{ py: space[12], ...(i > 0 ? filet : {}) }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: space[12] }}>
+                  <Box sx={{ width: '4px', height: '32px', borderRadius: radius.segment, flexShrink: 0, bgcolor: l.marqueur === 'calme' ? 'warm' : `zone-${zone}` }} />
+                  <Box sx={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: space[2] }}>
+                    <Typography variant="corps-fort">{l.nom}</Typography>
+                    {l.detail && <Typography variant="secondaire" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>{l.detail}</Typography>}
+                  </Box>
+                  {!faite && l.allure && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+                      <Typography component="span" sx={{ ...textStyles['corps-fort'], fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                        {l.allure}
+                        <Box component="span" sx={{ ...textStyles.legende, fontWeight: 600, color: 'muted' }}> /km</Box>
+                      </Typography>
+                      <Typography variant="legende" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>{l.tolerance}</Typography>
+                    </Box>
+                  )}
+                  {faite && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: space[8], flexShrink: 0 }}>
+                      <Colonne largeur="40px">{l.cible}</Colonne>
+                      {l.repetitions.length > 0 ? (
+                        <Box sx={{ width: '96px' }} />
+                      ) : (
+                        <>
+                          <Colonne largeur="48px" fort>{l.realise}</Colonne>
+                          <Colonne largeur="40px">{l.ecart}</Colonne>
+                        </>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+                {l.repetitions.length > 0 && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', mt: space[8], ml: space[14], borderLeft: `${border.filet} solid`, borderColor: 'line' }}>
+                    {l.repetitions.map((r) => (
+                      <Box key={r.libelle} sx={{ display: 'flex', alignItems: 'center', gap: space[8], py: space[4], pl: space[12] }}>
+                        <Typography variant="secondaire" sx={{ flex: '1 1 0', color: 'muted', fontVariantNumeric: 'tabular-nums' }}>
+                          {r.libelle}{r.extra}
+                        </Typography>
+                        <Colonne largeur="48px" fort>{r.realise}</Colonne>
+                        <Colonne largeur="40px">{r.ecart}</Colonne>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            ))}
+            <Box sx={{ height: space[4] }} />
+          </Carte>
+        )}
+
+        {/* ── Allure ──────────────────────────────────────────────── */}
+        <PaceChart key={session.id} session={session} />
+
+        {/* ── Pourquoi ces allures ────────────────────────────────── */}
+        {session.rationale && (
+          <Carte sx={{ py: 0, px: space[14], gap: 0 }}>
+            <ButtonBase
+              aria-expanded={pourquoiOuvert}
+              onClick={() => setPourquoiOuvert((o) => !o)}
+              sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '52px', width: '100%', textAlign: 'left', borderRadius: radius.inner }}
+            >
+              <Typography variant="corps-fort" component="span">Pourquoi ces allures</Typography>
+              <Box
+                component="span"
+                sx={{
+                  display: 'flex',
+                  color: 'muted',
+                  transform: pourquoiOuvert ? 'rotate(180deg)' : 'none',
+                  transition: transition('transform', pourquoiOuvert ? DURATION.open : DURATION.close),
+                  ...sansMouvement(),
+                }}
+              >
+                <ChevronBas taille={18} />
+              </Box>
+            </ButtonBase>
+            <Depli ouvert={pourquoiOuvert}>
+              <Typography variant="secondaire" sx={{ display: 'block', color: 'muted', lineHeight: '19px', pb: space[14] }}>
+                {cleanText(session.rationale)}
+              </Typography>
+            </Depli>
+          </Carte>
+        )}
+      </Box>
 
       {/* ── Feuilles ─────────────────────────────────────────────── */}
       {envoi.feuilles}
@@ -440,213 +471,29 @@ const SessionPage = () => {
       <FeuilleFlottante
         ouverte={reinitOuverte}
         onFermer={() => setReinitOuverte(false)}
-        titre={`${cleanText(session.title)} repassera à faire. Les activités liées, l'analyse et ton ressenti seront effacés.`}
+        titre={`${titre} repassera à faire. Les activités liées, l'analyse et ton ressenti seront effacés.`}
         lignes={[{ libelle: 'Réinitialiser la séance', onClick: doReset }]}
         fermerLibelle="Annuler"
       />
-
-    </Box>
+    </Page>
   )
 }
 
-// ── Sous-composants ──────────────────────────────────────────────────────────
-
-const StatusChip = ({ label, main, bg }) => (
-  <Box sx={{
-    px: 1.25, py: 0.5, borderRadius: '999px', fontSize: '0.6rem', fontWeight: 700,
-    letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-    color: main ?? 'text.secondary',
-    bgcolor: bg ?? 'action.hover',
-    border: main ? '1px solid' : 'none',
-    borderColor: main ? main : 'transparent',
-  }}>
-    {label}
-  </Box>
-)
-
-const Metric = ({ value, label }) => (
-  <Box>
-    <Typography sx={{ fontSize: '1rem', fontWeight: 700, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-      {value}
-    </Typography>
-    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.68rem' }}>{label}</Typography>
-  </Box>
-)
-
-const SectionLabel = ({ children }) => (
+// Colonne de la Structure d'une séance faite : cible, réalisé (fort) ou écart.
+const Colonne = ({ largeur, fort = false, etiquette = false, children }) => (
   <Typography
-    variant="overline"
-    sx={{ display: 'block', color: 'text.disabled', letterSpacing: '0.12em', fontSize: '0.62rem', fontWeight: 600, mt: 2.5, mb: 1, px: 0.5 }}
+    component="span"
+    variant={etiquette ? 'etiquette' : undefined}
+    sx={{
+      width: largeur,
+      textAlign: 'right',
+      flexShrink: 0,
+      fontVariantNumeric: 'tabular-nums',
+      ...(etiquette ? { color: 'muted' } : fort ? { ...textStyles['corps-fort'], fontWeight: 700 } : { ...textStyles.secondaire, color: 'muted' }),
+    }}
   >
     {children}
   </Typography>
 )
-
-const Banner = ({ icon, text, action, onAction, disabled }) => (
-  <Box sx={{
-    display: 'flex', alignItems: 'center', gap: 1.25, mt: 1.5, px: 1.75, py: 1.25,
-    borderRadius: '14px', border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover',
-  }}>
-    {icon}
-    <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0 }}>{text}</Typography>
-    <Button size="small" onClick={onAction} disabled={disabled} sx={{ flexShrink: 0, fontSize: '0.68rem' }}>
-      {action}
-    </Button>
-  </Box>
-)
-
-const ChartLegend = ({ synced, hasHr }) => (
-  <Box sx={{ display: 'flex', gap: 1.5, px: 1, pb: 1, flexWrap: 'wrap' }}>
-    <LegendItem color="rgba(96,165,250,0.5)" label="Cible ± tolérance" />
-    {synced && <LegendItem color="text.secondary" label="Réalisé" />}
-    {hasHr && <LegendItem color="rgba(244,63,94,0.55)" label="FC" />}
-    {synced && (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Dot color="primary.main" />
-        <Dot color="#eab308" />
-        <Dot color="#ef4444" />
-        <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>ok / proche / écart</Typography>
-      </Box>
-    )}
-  </Box>
-)
-const LegendItem = ({ color, label }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-    <Dot color={color} />
-    <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>{label}</Typography>
-  </Box>
-)
-const Dot = ({ color }) => (
-  <Box sx={{ width: 9, height: 9, borderRadius: '3px', bgcolor: color }} />
-)
-
-// ── Liste des steps (structure) ──────────────────────────────────────────────
-
-const recoveryLabel = (steps) => {
-  const rec = steps.find((s) => s.step_type === 'recovery')
-  if (!rec) return null
-  const size = formatDuration(rec.duration_sec) ?? formatDistance(rec.distance_m)
-  return size ? `récup ${size} entre chaque` : null
-}
-
-const StepsList = ({ steps, type }) => {
-  const groups = groupSteps(steps)
-  return groups.map((g, i) => {
-    if (g.kind === 'repeat') {
-      const reps = g.steps.filter((s) => s.step_type === 'interval')
-      const base = reps[0] ?? g.steps[0]
-      return (
-        <StepRow
-          key={i}
-          first={i === 0}
-          stepType="interval"
-          name={`${reps.length} × ${stepSizeLabel(base)}`}
-          detail={recoveryLabel(g.steps)}
-          pace={base.target_pace_sec}
-          tol={base.pace_tolerance_sec}
-        />
-      )
-    }
-    const s = g.steps[0]
-    const name = {
-      warmup: 'Échauffement',
-      cooldown: 'Retour au calme',
-      recovery: 'Récupération',
-      run: TYPE_LABEL[type] ?? 'Course',
-    }[s.step_type] ?? 'Course'
-    return (
-      <StepRow
-        key={i}
-        first={i === 0}
-        stepType={s.step_type}
-        name={name}
-        detail={stepSizeLabel(s)}
-        pace={s.target_pace_sec}
-      />
-    )
-  })
-}
-
-const StepRow = ({ first, stepType, name, detail, pace, tol, }) => {
-  const Icon = STEP_ICON[stepType] ?? DirectionsRun
-  return (
-    <Box sx={{
-      display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1.5,
-      borderTop: first ? 'none' : '1px solid', borderColor: 'divider',
-    }}>
-      <Box sx={{
-        width: 34, height: 34, borderRadius: '10px', flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'action.hover',
-      }}>
-        <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" fontWeight={600}>{name}</Typography>
-        {detail && (
-          <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-            {detail}
-          </Typography>
-        )}
-      </Box>
-      {pace != null && (
-        <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-            {formatPace(pace)}
-          </Typography>
-          <Typography sx={{ fontSize: '0.6rem', color: 'text.disabled' }}>
-            {tol != null ? `±${tol}s /km` : '/km'}
-          </Typography>
-        </Box>
-      )}
-    </Box>
-  )
-}
-
-// ── Analyse ──────────────────────────────────────────────────────────────────
-
-const AnalysisBlock = ({ analysis }) => {
-  const { verdict, advice, comparisons } = analysis
-  const graded = (comparisons ?? []).filter((c) => c.status !== 'free')
-  const nOk = graded.filter((c) => c.status === 'ok').length
-  const v = verdict ? VERDICT[verdict] : null
-
-  if (!v) {
-    return (
-      <Box>
-        <Typography variant="body2" color="text.secondary">
-          {graded.length > 0
-            ? `${nOk} lap${nOk > 1 ? 's' : ''} sur ${graded.length} dans la cible. Analyse détaillée indisponible.`
-            : 'Analyse indisponible.'}
-        </Typography>
-      </Box>
-    )
-  }
-
-  const { color, label } = v
-  const Icon = VERDICT_ICON[verdict] ?? CheckCircle
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5 }}>
-        <Box sx={{
-          width: 38, height: 38, borderRadius: '12px', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'chip',
-        }}>
-          <Icon sx={{ fontSize: 20, color }} />
-        </Box>
-        <Box>
-          <Typography variant="body2" fontWeight={700} sx={{ color }}>{label}</Typography>
-          {graded.length > 0 && (
-            <Typography variant="caption" color="text.secondary">
-              {nOk} lap{nOk > 1 ? 's' : ''} sur {graded.length} dans la cible
-            </Typography>
-          )}
-        </Box>
-      </Box>
-      {advice && (
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{cleanText(advice)}</Typography>
-      )}
-    </Box>
-  )
-}
 
 export default SessionPage

@@ -98,16 +98,19 @@ export const getCurrentPlan = async () => {
   return plan ? completerPlan(plan) : null
 }
 
-/** Séance + steps ordonnés + numéro, bloc et début (week_start) de la semaine parente. */
+/**
+ * Séance + steps ordonnés + numéro, bloc et début (week_start) de la semaine parente,
+ * et `plan` : statut, date et distance de la course du plan (page séance, lot T2a).
+ */
 export const getSession = async (sessionId) => {
   const { data, error } = await supabase
     .from('training_sessions')
-    .select('*, session_steps(*), week:training_weeks(week_number, block, start_date)')
+    .select('*, session_steps(*), week:training_weeks(week_number, block, start_date), plan:training_plans(status, race_date, race_distance_m)')
     .eq('id', sessionId)
     .single()
   if (error) throw error
 
-  const { session_steps, week, ...session } = data
+  const { session_steps, week, plan, ...session } = data
   const steps = (session_steps ?? [])
     .slice()
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
@@ -117,6 +120,7 @@ export const getSession = async (sessionId) => {
     week_number: week?.week_number ?? null,
     block: week?.block ?? null,
     week_start: week?.start_date ?? null,
+    plan: plan ?? null,
   }
 }
 
@@ -249,10 +253,9 @@ export const unskipSession = async (sessionId) => {
 
 /**
  * Réinitialise une séance complétée à l'état "planned" : activités liées, laps,
- * analyse et ressenti (rpe, pain_areas, feedback_note) effacés. garderRessenti
- * laisse le ressenti en place (« Délier Coros », jusqu'à son retrait en T2).
+ * analyse et ressenti (rpe, pain_areas, feedback_note) effacés.
  */
-export const resetSession = async (sessionId, { garderRessenti = false } = {}) => {
+export const resetSession = async (sessionId) => {
   const { data, error } = await supabase
     .from('training_sessions')
     .update({
@@ -263,7 +266,9 @@ export const resetSession = async (sessionId, { garderRessenti = false } = {}) =
       actual_laps: null,
       km_laps: null,
       analysis: null,
-      ...(garderRessenti ? {} : { rpe: null, pain_areas: null, feedback_note: null }),
+      rpe: null,
+      pain_areas: null,
+      feedback_note: null,
     })
     .eq('id', sessionId)
     .select()
@@ -292,7 +297,7 @@ export const corosMatch = (sessionId) => callFunction('coros-match', { session_i
 /**
  * Complète une séance (avec ou sans activité Coros). → { session }
  * corosActivities = liste d'activités Coros [{ id, start_timestamp }] (1 à 3), ou
- * null si aucune activité (validation manuelle, délier). Le serveur les trie par start_timestamp
+ * null si aucune activité (validation manuelle). Le serveur les trie par start_timestamp
  * croissant puis concatène leurs laps. feedback = { rpe, pain_areas,
  * feedback_note } ou null (ressenti post-séance). completedDate = date réelle de
  * la séance (yyyy-MM-dd), transmise seulement sur le chemin manuel sans Coros ;
