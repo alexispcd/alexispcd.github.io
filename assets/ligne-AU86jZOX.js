@@ -1,1 +1,0 @@
-import{I as e,R as t,X as n}from"./index-Cj_PAS3k.js";var r={display:`flex`,alignItems:`center`,gap:n[12],width:`100%`,textAlign:`left`,justifyContent:`flex-start`,color:`ink`,...e,...t};export{r as t};
