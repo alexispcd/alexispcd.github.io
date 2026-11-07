@@ -1,0 +1,1 @@
+import{c as e,d as t,f as n,l as r,u as i}from"./estimate-DY556IS3.js";var a=async()=>{let[a,o,s,c,l]=await Promise.all([n(),e(),r(),t(),i()]);return{profile:a,bands:o,done:s,pending:c,bases:l}};export{a as t};

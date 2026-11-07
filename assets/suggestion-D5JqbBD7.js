@@ -1,0 +1,1 @@
+import{d as e}from"./rules-BTfL_biQ.js";import{l as t}from"./compose-Ded-1i8N.js";var n=({profile:n,bands:r,done:i})=>{if(!n)return null;let a=e(n.equipment??[],(r??[]).map(e=>e.kg));return t({intensity:`normale`,sessions:i??[],available:a})};export{n as t};
