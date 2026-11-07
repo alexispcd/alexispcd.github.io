@@ -10,14 +10,14 @@ import BarreAttente from '../../ui/BarreAttente'
 import Bouton from '../../ui/Bouton'
 import Page from '../../ui/Page'
 import { useFinAttente } from '../../ui/useFinAttente'
-import { availableExercises } from '../../../supabase/functions/_shared/strength/catalog.ts'
-import { compositionDe, preremplir, titreSeance } from '../../../supabase/functions/_shared/strength/compose.ts'
+import { compositionDe, titreSeance } from '../../../supabase/functions/_shared/strength/compose.ts'
 import { ligneHistorique, phraseEnAttente, phraseSuggestion, semaineEnCours } from './accueil'
 import { chargerDonnees } from './compose/donnees'
 import { todayISO } from './dates'
 import LigneHistorique from './home/LigneHistorique'
 import ProchaineSeance from './home/ProchaineSeance'
 import SemaineCarte from './home/SemaineCarte'
+import { suggestionDe } from './suggestion'
 
 /** Accueil Renfo : la semaine en cours et la prochaine séance. */
 const RenfoHome = () => {
@@ -47,11 +47,7 @@ const RenfoHome = () => {
 
   const donnees = chargement.donnees
   const today = todayISO()
-  const suggestion = useMemo(() => {
-    if (!donnees?.profile) return null
-    const available = availableExercises(donnees.profile.equipment ?? [], donnees.bands.map((b) => b.kg))
-    return preremplir({ intensity: 'normale', sessions: donnees.done, available })
-  }, [donnees])
+  const suggestion = useMemo(() => (donnees ? suggestionDe(donnees) : null), [donnees])
 
   if (attente.visible) {
     return (

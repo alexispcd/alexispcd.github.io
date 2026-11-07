@@ -1,7 +1,9 @@
+import { Suspense, lazy } from 'react'
 import { Box, Typography } from '@mui/material'
 import InstallBanner from '../../components/InstallBanner'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import { useAppCtx } from '../../lib/context'
+import { hasModule } from '../../lib/access'
 import { space } from '../../styles/tokens'
 import { homeModules } from '../registry'
 import Page from '../../ui/Page'
@@ -9,14 +11,30 @@ import Carte from '../../ui/Carte'
 import Bouton from '../../ui/Bouton'
 import BoutonIcone from '../../ui/BoutonIcone'
 import LigneModule from '../../ui/LigneModule'
+import EnTeteAujourdhui from './EnTeteAujourdhui'
+import { todayISO } from '../training/constants'
 
-// Accueil sans barre du haut : l'en-tête et le bouton compte défilent avec la page.
+// Bloc chargé à part : ses calculs (Training et Renfo) restent hors du chunk d'entrée.
+const BlocAujourdhui = lazy(() => import('./BlocAujourdhui'))
+
+// Pendant le chargement du bloc : le titre et la place des widgets, sans saut.
+const PlaceAujourdhui = () => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
+    <EnTeteAujourdhui aujourdhui={todayISO()} />
+    <Box sx={{ height: '170px' }} />
+  </Box>
+)
+
+// Accueil sans barre du haut : l'en-tête et le bouton compte défilent avec la page,
+// puis le bloc « Aujourd'hui » (lot A2) et la liste des modules, affichée tout de suite.
 const Home = () => {
   const { access, user } = useAppCtx()
   const navigate = useAppNavigate()
   const liste = access ? homeModules(access) : []
   const admin = access?.role === 'admin'
   const initiale = user?.email?.[0]?.toUpperCase() ?? '?'
+  const training = Boolean(access) && hasModule(access, 'training')
+  const renfo = Boolean(access) && hasModule(access, 'renfo')
 
   return (
     <Page sansBarre gap={space[24]}>
@@ -31,6 +49,12 @@ const Home = () => {
       </Box>
 
       <InstallBanner />
+
+      {(training || renfo) && (
+        <Suspense fallback={training ? <PlaceAujourdhui /> : null}>
+          <BlocAujourdhui userId={user?.id} training={training} renfo={renfo} />
+        </Suspense>
+      )}
 
       {liste.length > 0 ? (
         <Box component="section" sx={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>

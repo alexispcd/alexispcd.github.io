@@ -1,6 +1,7 @@
 import supabase from './supabase'
 import { callFunction } from './functions'
 import { plannedMeters, totalSeconds } from '../apps/training/sessionMath'
+import { currentWeekNumber } from '../apps/training/constants'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LECTURES
@@ -31,6 +32,19 @@ export const getPlans = async () => {
   }))
 }
 
+// Séance lue avec ses étapes : étapes triées, km prévus et durée estimée.
+const completerSeance = ({ session_steps, ...s }) => {
+  const steps = (session_steps ?? [])
+    .slice()
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+  return {
+    ...s,
+    steps,
+    agg_distance_m: plannedMeters(steps) || null,
+    agg_duration_sec: totalSeconds(steps) || null,
+  }
+}
+
 /**
  * Complète un plan déjà lu avec ses semaines ordonnées et toutes ses séances, en une
  * requête de séances.
@@ -54,17 +68,7 @@ const completerPlan = async (plan) => {
     .order('scheduled_date', { ascending: true })
   if (sessErr) throw sessErr
 
-  const sessions = (sessRows ?? []).map(({ session_steps, ...s }) => {
-    const steps = (session_steps ?? [])
-      .slice()
-      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-    return {
-      ...s,
-      steps,
-      agg_distance_m: plannedMeters(steps) || null,
-      agg_duration_sec: totalSeconds(steps) || null,
-    }
-  })
+  const sessions = (sessRows ?? []).map(completerSeance)
 
   const metersByWeek = {}
   for (const s of sessions) {
@@ -76,6 +80,39 @@ const completerPlan = async (plan) => {
     weeks: (weeks ?? []).map((w) => ({ ...w, agg_distance_m: metersByWeek[w.id] ?? 0 })),
     sessions,
   }
+}
+
+/**
+ * Lecture légère du bloc « Aujourd'hui » de l'Accueil (lot A2) : le plan actif, ses
+ * semaines, et les séances de la semaine en cours (`currentWeekNumber`) et de la
+ * suivante, complétées comme dans completerPlan. → { plan, weeks, sessions }, ou
+ * { plan: null } sans plan actif.
+ */
+export const getAujourdhui = async () => {
+  const plan = await getActivePlan()
+  if (!plan) return { plan: null, weeks: [], sessions: [] }
+
+  const { data: weeks, error: weeksErr } = await supabase
+    .from('training_weeks')
+    .select('*')
+    .eq('plan_id', plan.id)
+    .order('week_number', { ascending: true })
+  if (weeksErr) throw weeksErr
+
+  const numero = currentWeekNumber(weeks ?? [])
+  const ids = (weeks ?? [])
+    .filter((w) => w.week_number === numero || w.week_number === numero + 1)
+    .map((w) => w.id)
+  if (!ids.length) return { plan, weeks: weeks ?? [], sessions: [] }
+
+  const { data: rows, error: sessErr } = await supabase
+    .from('training_sessions')
+    .select('*, session_steps(distance_m, duration_sec, target_pace_sec, step_type, order_index)')
+    .in('week_id', ids)
+    .order('scheduled_date', { ascending: true })
+  if (sessErr) throw sessErr
+
+  return { plan, weeks: weeks ?? [], sessions: (rows ?? []).map(completerSeance) }
 }
 
 /** Plan complet (semaines et séances, voir completerPlan). */
