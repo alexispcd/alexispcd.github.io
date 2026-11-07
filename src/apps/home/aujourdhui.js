@@ -228,9 +228,11 @@ export const vueCourse = ({ plan, weeks, sessions, aujourdhui }) => {
 }
 
 /**
- * Bande Renfo, ou null : séance créée pas encore faite (elle ouvre la séance), sinon
- * objectif de la semaine pas atteint (la suggestion, elle ouvre /renfo), sinon rien.
- * Sans profil : rien.
+ * Bande Renfo, toujours là avec un profil (lot A2b), premier cas qui s'applique :
+ * séance créée pas encore faite (elle ouvre la séance) ; objectif de la semaine pas
+ * atteint (la suggestion, elle ouvre /renfo) ; objectif atteint (« Objectif atteint »,
+ * « Prochaine : » et la suggestion, elle ouvre /renfo). Sans suggestion possible :
+ * « Objectif atteint » ou « Crée ta prochaine séance », sans détail. Sans profil : null.
  * → { ligne, titre, detail, cible, label }.
  */
 export const bandeRenfo = ({ profile, done, pending, suggestion, aujourdhui }) => {
@@ -248,13 +250,32 @@ export const bandeRenfo = ({ profile, done, pending, suggestion, aujourdhui }) =
   }
   const objectif = profile.frequency ?? 1
   const semaine = semaineEnCours(done, aujourdhui, objectif)
-  if (semaine.atteint || !suggestion?.supersets?.length) return null
-  const titre = titreSeance(suggestion.supersets.map((s) => s.focus))
+  const compte = `${semaine.compte} sur ${objectif} cette semaine`
+  const suggere = suggestion?.supersets?.length ? titreSeance(suggestion.supersets.map((s) => s.focus)) : null
+
+  if (semaine.atteint) {
+    return {
+      ligne: `Renfo · ${compte}`,
+      titre: 'Objectif atteint',
+      detail: suggere ? `Prochaine : ${suggere}` : null,
+      cible: '/renfo',
+      label: `Renfo, ${compte}, objectif atteint${suggere ? `, prochaine : ${suggere}` : ''}`,
+    }
+  }
+  if (!suggere) {
+    return {
+      ligne: `Renfo · ${compte}`,
+      titre: 'Crée ta prochaine séance',
+      detail: null,
+      cible: '/renfo',
+      label: `Renfo, ${compte}, crée ta prochaine séance`,
+    }
+  }
   return {
-    ligne: `Renfo · ${semaine.compte} sur ${objectif} cette semaine`,
-    titre,
+    ligne: `Renfo · ${compte}`,
+    titre: suggere,
     detail: phraseSuggestion(suggestion, done),
     cible: '/renfo',
-    label: `Renfo, ${semaine.compte} sur ${objectif} cette semaine, suggestion : ${titre}`,
+    label: `Renfo, ${compte}, suggestion : ${suggere}`,
   }
 }

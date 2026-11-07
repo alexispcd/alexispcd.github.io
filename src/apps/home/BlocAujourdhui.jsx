@@ -43,8 +43,8 @@ const charger = ({ training, renfo }) => Promise.all([
 /**
  * Bloc « Aujourd'hui » de l'Accueil (lot A2), chargé en différé par Home (hors du
  * chunk d'entrée) : widgets Séance et Semaine pour un compte
- * avec Training, puis la bande Renfo s'il y a lieu. Compte avec Renfo seul : le bloc
- * n'apparaît qu'avec une bande. Attente à la hauteur des widgets, échec en carte.
+ * avec Training, puis la bande Renfo dès qu'il y a un profil Renfo. Compte avec Renfo
+ * seul : le bloc n'apparaît qu'avec la bande. Attente à la hauteur des widgets, échec en carte.
  */
 const BlocAujourdhui = ({ userId, training, renfo }) => {
   const navigate = useAppNavigate()
@@ -75,7 +75,7 @@ const BlocAujourdhui = ({ userId, training, renfo }) => {
   const donnees = etat.status === 'ready' ? etat.donnees : null
   const bande = donnees?.renfo ? bandeRenfo({ ...donnees.renfo, aujourdhui }) : null
 
-  // Renfo seul : pas de bloc tant qu'il n'y a pas de bande à montrer.
+  // Renfo seul : le bloc apparaît avec la bande, dès qu'il y a un profil Renfo.
   if (!training && !bande) return null
 
   let contenu

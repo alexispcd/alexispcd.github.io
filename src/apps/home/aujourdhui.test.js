@@ -190,6 +190,27 @@ test('bande Renfo : objectif manquant, puis atteint', () => {
   assert.equal(b.detail, 'Jambes et tronc : rien depuis mar 20 oct')
   assert.equal(b.cible, '/renfo')
   const atteint = [{ completed_at: '2026-11-03T10:00:00', content }]
-  assert.equal(bandeRenfo({ profile: { frequency: 1 }, done: atteint, pending: null, suggestion, aujourdhui: '2026-11-07' }), null)
+  const a = bandeRenfo({ profile: { frequency: 1 }, done: atteint, pending: null, suggestion, aujourdhui: '2026-11-07' })
+  assert.equal(a.ligne, 'Renfo · 1 sur 1 cette semaine')
+  assert.equal(a.titre, 'Objectif atteint')
+  assert.equal(a.detail, 'Prochaine : Jambes et tronc')
+  assert.equal(a.cible, '/renfo')
+  assert.equal(a.label, 'Renfo, 1 sur 1 cette semaine, objectif atteint, prochaine : Jambes et tronc')
   assert.equal(bandeRenfo({ profile: null, done, pending: null, suggestion, aujourdhui: '2026-11-07' }), null)
+})
+
+test('bande Renfo : plus de séances que l\'objectif', () => {
+  const deux = [{ completed_at: '2026-11-03T10:00:00', content }, { completed_at: '2026-11-05T10:00:00', content }]
+  const b = bandeRenfo({ profile: { frequency: 1 }, done: deux, pending: null, suggestion, aujourdhui: '2026-11-07' })
+  assert.equal(b.ligne, 'Renfo · 2 sur 1 cette semaine')
+  assert.equal(b.titre, 'Objectif atteint')
+})
+
+test('bande Renfo : sans suggestion possible, objectif atteint puis manquant', () => {
+  const vide = { intensity: 'normale', supersets: [] }
+  const atteint = [{ completed_at: '2026-11-03T10:00:00', content }]
+  const a = bandeRenfo({ profile: { frequency: 1 }, done: atteint, pending: null, suggestion: vide, aujourdhui: '2026-11-07' })
+  assert.deepEqual([a.titre, a.detail, a.cible], ['Objectif atteint', null, '/renfo'])
+  const m = bandeRenfo({ profile: { frequency: 1 }, done: [], pending: null, suggestion: null, aujourdhui: '2026-11-07' })
+  assert.deepEqual([m.ligne, m.titre, m.detail], ['Renfo · 0 sur 1 cette semaine', 'Crée ta prochaine séance', null])
 })
