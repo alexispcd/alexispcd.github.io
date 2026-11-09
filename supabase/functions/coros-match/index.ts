@@ -4,6 +4,7 @@ import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
 import { errorMessage, internalError } from "../_shared/http.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
+import { nomSource } from "../_shared/sources/catalog.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { parseSportRecords } from "../_shared/coros-parse.ts"
 import { dayTs, mondayOf, sundayOf, todayISO } from "../_shared/training/weeks.ts"
@@ -70,7 +71,7 @@ async function handleRequest(req: Request): Promise<Response> {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
     console.error("[coros-match] token Coros:", errorMessage(err))
-    return json(503, { error: "Coros authentication required", detail: "Reconnecte ton compte Coros dans les réglages." })
+    return json(503, { error: "Coros authentication required", detail: `Reconnecte ${nomSource("coros")} dans Sources de données.` })
   }
 
   // 4. Fenêtre de candidats = la semaine de la séance (lundi→dimanche de sa

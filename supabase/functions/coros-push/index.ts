@@ -3,6 +3,8 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
+import { aUneConnexion } from "../_shared/sources/connexions.ts"
+import { nomSource } from "../_shared/sources/catalog.ts"
 import { buildCorosCourse, CorosCourseError } from "../_shared/training/coros-course.ts"
 import {
   corosTokenProvider,
@@ -27,16 +29,14 @@ const PUSH_WINDOW_DAYS = 90
 const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pace_sec, pace_tolerance_sec, distance_m, duration_sec"
 const NOT_CONNECTED = {
   error: "Coros non connecté",
-  detail: "Connecte ton compte Coros dans les réglages pour envoyer des séances sur ta montre.",
+  detail: `Connecte ${nomSource("coros")} dans Sources de données pour envoyer des séances sur ta montre.`,
   code: "coros_not_connected",
 }
 
 const json = (status: number, body: unknown) => Response.json(body, { status })
 
-const hasCorosToken = async (admin: SupabaseClient, userId: string): Promise<boolean> => {
-  const { data } = await admin.from("coros_tokens").select("user_id").eq("user_id", userId).maybeSingle()
-  return Boolean(data)
-}
+const hasCorosToken = (admin: SupabaseClient, userId: string): Promise<boolean> =>
+  aUneConnexion(admin, userId, "coros")
 
 async function handlePush(admin: SupabaseClient, userId: string, sessionId: string, date: unknown): Promise<Response> {
   if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(dayTs(date))) {

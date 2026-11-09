@@ -4,6 +4,7 @@ import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
 import { errorMessage } from "../_shared/http.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
+import { nomSource } from "../_shared/sources/catalog.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { type FitnessOverview, parseFitnessOverview } from "../_shared/coros-parse.ts"
 
@@ -31,7 +32,7 @@ Deno.serve(withCors(async (req) => {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
     console.error("[coros-fitness] token Coros:", errorMessage(err))
-    return Response.json({ error: "Coros authentication required", detail: "Reconnecte ton compte Coros dans les réglages." }, { status: 503 })
+    return Response.json({ error: "Coros authentication required", detail: `Reconnecte ${nomSource("coros")} dans Sources de données.` }, { status: 503 })
   }
 
   // Appel MCP direct : queryFitnessAssessmentOverview ne prend aucun parametre.

@@ -103,15 +103,18 @@ async function handleList(admin: SupabaseClient): Promise<Response> {
   const { data: { users }, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
   if (error) throw new Error(`listUsers: ${error.message}`)
 
-  const [profiles, modules, coros] = await Promise.all([
+  const [profiles, modules, connexions] = await Promise.all([
     admin.from("profiles").select("id, role"),
     admin.from("user_modules").select("user_id, module_id"),
-    admin.from("coros_tokens").select("user_id"),
+    admin.from("source_connections").select("user_id, provider"),
   ])
-  for (const r of [profiles, modules, coros]) if (r.error) throw new Error(r.error.message)
+  for (const r of [profiles, modules, connexions]) if (r.error) throw new Error(r.error.message)
 
   const roleOf = new Map((profiles.data ?? []).map((p: { id: string; role: string }) => [p.id, p.role]))
-  const corosUsers = new Set((coros.data ?? []).map((c: { user_id: string }) => c.user_id))
+  const sourcesOf = new Map<string, string[]>()
+  for (const c of (connexions.data ?? []) as { user_id: string; provider: string }[]) {
+    sourcesOf.set(c.user_id, [...(sourcesOf.get(c.user_id) ?? []), c.provider])
+  }
   const modulesOf = new Map<string, string[]>()
   for (const m of (modules.data ?? []) as { user_id: string; module_id: string }[]) {
     modulesOf.set(m.user_id, [...(modulesOf.get(m.user_id) ?? []), m.module_id])
@@ -125,7 +128,9 @@ async function handleList(admin: SupabaseClient): Promise<Response> {
     created_at: u.created_at,
     last_sign_in_at: u.last_sign_in_at ?? null,
     disabled: Boolean(u.banned_until && new Date(u.banned_until).getTime() > now),
-    coros_connected: corosUsers.has(u.id),
+    // coros_connected reste pour l'ancienne page Administration jusqu'au lot A1.
+    coros_connected: (sourcesOf.get(u.id) ?? []).includes("coros"),
+    sources: sourcesOf.get(u.id) ?? [],
     modules: modulesOf.get(u.id) ?? [],
   }))
   result.sort((a, b) => (a.email ?? "").localeCompare(b.email ?? ""))

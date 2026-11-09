@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@^2"
 import { callCorosTool } from "../coros-mcp.ts"
 import { getValidCorosToken } from "../coros-token.ts"
+import { nomSource } from "../sources/catalog.ts"
 import { buildCorosCourse, CorosCourseError } from "./coros-course.ts"
 import { dayTs, todayISO } from "./weeks.ts"
 import type { PlanStep } from "./types.ts"
@@ -16,7 +17,7 @@ const STEP_COLS = "order_index, step_type, repeat_group, repeat_index, target_pa
 
 // Messages courts écrits dans coros_sync_error, jamais le texte brut de Coros.
 export const SYNC_ERROR = {
-  notConnected: "Coros n'est plus connecté : reconnecte-le dans les réglages.",
+  notConnected: `${nomSource("coros")} n'est plus connecté : reconnecte-le dans Sources de données.`,
   notEditable: "La copie sur la montre n'est plus modifiable (faite ou passée).",
   invalidCourse: "Séance impossible à convertir pour la montre.",
   failed: "Mise à jour de la montre impossible pour le moment.",

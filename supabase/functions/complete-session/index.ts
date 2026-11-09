@@ -4,6 +4,7 @@ import { requireModule } from "../_shared/access.ts"
 import { withCors } from "../_shared/cors.ts"
 import { errorMessage, internalError } from "../_shared/http.ts"
 import { getValidCorosToken } from "../_shared/coros-token.ts"
+import { nomSource } from "../_shared/sources/catalog.ts"
 import { anthropicSimple } from "../_shared/anthropic.ts"
 import { callCorosTool } from "../_shared/coros-mcp.ts"
 import { extractJson } from "../_shared/extract-json.ts"
@@ -283,9 +284,9 @@ async function handleRequest(req: Request): Promise<Response> {
   try {
     corosToken = await getValidCorosToken(supabaseAdmin, user.id)
   } catch (err) {
-    // Le texte exact de error est testé par CompleteDialog.jsx.
+    // Le texte exact de error est testé par session/ValiderPage.jsx.
     console.error("[complete-session] token Coros:", errorMessage(err))
-    return json(503, { error: "Coros authentication required", detail: "Reconnecte ton compte Coros dans les réglages." })
+    return json(503, { error: "Coros authentication required", detail: `Reconnecte ${nomSource("coros")} dans Sources de données.` })
   }
 
   // 7. Un appel MCP (queryActivityLapData) PAR activité, en SÉQUENTIEL pour rester

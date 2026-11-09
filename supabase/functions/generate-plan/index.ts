@@ -17,6 +17,7 @@ import { validatePlan } from "../_shared/training/validate.ts"
 import { persistPlan } from "../_shared/training/persist.ts"
 import { expandPlan } from "../_shared/training/expand.ts"
 import { computeWeekBounds, dayTs, todayISO, type WeekBounds } from "../_shared/training/weeks.ts"
+import { aUneConnexion } from "../_shared/sources/connexions.ts"
 import type { GeneratedPlan, GenerateInput } from "./types.ts"
 
 const MODEL = "claude-sonnet-4-6"
@@ -308,8 +309,12 @@ async function handleRequest(req: Request): Promise<Response> {
     .maybeSingle()
   if (active) return json(409, { error: "Un plan actif existe déjà", plan_id: active.id })
 
+  // Source de données du plan : Coros si le compte y est connecté, sinon aucune.
+  const source = (await aUneConnexion(supabaseAdmin, user.id, "coros")) ? "coros" : null
+
   const planRow = {
     user_id: user.id,
+    source,
     status: "active",
     generation_status: "generating",
     start_date: planStartDate(input, todayISO()),
