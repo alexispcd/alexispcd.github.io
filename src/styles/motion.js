@@ -9,8 +9,9 @@ export const DURATION = {
   close: 180, // fermer, replier, retirer, revenir à l'état d'avant
   fill: 400, // barre et chiffre qui se remplissent
   fade: 150, // fondu d'un texte ou d'une forme, bascule d'état
-  press: 100, // appui
-  release: 200, // relâchement
+  press: 150, // appui : apparition du calque, agrandissement
+  release: 200, // retour en place de la taille (réglage « Agrandit », sobre)
+  effacement: 300, // disparition du calque d'appui
   page: 300, // transition de page (src/index.css)
   ressort: 390, // relâchement avec le petit ressort du réglage Animations
 }

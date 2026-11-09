@@ -34,7 +34,7 @@ export const radius = scale('radius', 'radius-')
 export const size = scale('size', 'hauteur-')
 /** Traits : border.filet === '1px', border.contour, border.selection. */
 export const border = scale('border', 'trait-')
-/** Calques, en fraction : opacity.appui === 0.14, opacity.ligne === 0.06. */
+/** Calques, en fraction : opacity.appui === 0.08, opacity.ligne === 0.04. */
 export const opacity = Object.fromEntries(
   tokens.opacity.tokens.map((t) => [shortKey(t.name, 'calque-'), parseFloat(t.value) / 100]),
 )

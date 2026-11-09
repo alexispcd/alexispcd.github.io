@@ -3,7 +3,7 @@
 // les trois essais de la section Réseau (lecture seule, ou écriture qui ne vise aucune ligne).
 // Page temporaire, retirée avec sa ligne de la page Compte à la fin de la refonte (F1).
 import { useEffect, useRef, useState } from 'react'
-import { Box, ButtonBase, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { HEADER_HEIGHT } from '../../components/AppHeader'
 import { SPACE_BAS, border, radius, space, textStyles } from '../../styles/tokens'
 import { PAIN_CHIPS } from '../../lib/feedback'
@@ -46,8 +46,6 @@ import { formatShortDay, formatShortDayAnnee } from '../../lib/dates'
 import { addDaysISO, joursCreneau, todayISO } from '../training/constants'
 import CarteSysteme from '../../components/CarteSysteme'
 import InstallBanner from '../../components/InstallBanner'
-import { WIDGET_SX } from '../../ui/widget'
-import { VARIANTES, appliquerVariante, libelleVariante, lireVarianteStockee } from '../../lib/appui'
 
 const Section = ({ titre, children }) => (
   <Box component="section" sx={{ display: 'flex', flexDirection: 'column', gap: space[8] }}>
@@ -538,36 +536,6 @@ const DemoBandeCote = () => {
   )
 }
 
-// Lot P1 : variantes du calque d'appui, appliquées tout de suite à toute l'app.
-const LIGNES_APPUI = Array.from({ length: 12 }, (_, i) => `Ligne ${i + 1}`)
-
-const SectionAppui = () => {
-  const [variante, setVariante] = useState(lireVarianteStockee)
-  const choisir = (v) => setVariante(appliquerVariante(v))
-  return (
-    <Section titre="Appui">
-      <ControleSegmente label="Variante d'appui" valeur={variante} onChange={choisir} options={Object.keys(VARIANTES)} />
-      <Typography variant="corps-fort">{libelleVariante(variante)}</Typography>
-      <Note>Fais défiler en posant le doigt sur une ligne, puis touche lignes, boutons et widgets.</Note>
-      <Carte sansMarge>
-        {LIGNES_APPUI.map((l) => <LigneSaisie key={l} libelle={l} valeur="Valeur" />)}
-      </Carte>
-      <Box sx={{ display: 'flex', gap: space[12] }}>
-        <Bouton niveau="page" pleineLargeur>Bouton ink</Bouton>
-        <Bouton niveau="page" variante="chip" pleineLargeur>Bouton chip</Bouton>
-      </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: space[12] }}>
-        {['Widget 1', 'Widget 2'].map((w) => (
-          <ButtonBase key={w} aria-label={w} sx={WIDGET_SX}>
-            <Typography variant="legende" component="span" sx={{ fontWeight: 600, color: 'muted' }}>Démonstration</Typography>
-            <Typography variant="chiffre-widget" component="span">{w}</Typography>
-          </ButtonBase>
-        ))}
-      </Box>
-    </Section>
-  )
-}
-
 const AtelierPage = () => {
   const [intensite, setIntensite] = useState('normale')
   const [exercices, setExercices] = useState(3)
@@ -599,8 +567,6 @@ const AtelierPage = () => {
         <Typography variant="secondaire" sx={{ color: 'muted' }}>
           Composants du Design System, avec des exemples fictifs : rien n'est chargé ni enregistré, sauf les essais de la section Réseau.
         </Typography>
-
-        <SectionAppui />
 
         <Section titre="Icônes">
           <Carte>

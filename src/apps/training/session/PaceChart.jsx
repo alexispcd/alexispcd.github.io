@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Box, Typography } from '@mui/material'
-import { opacity, radius, space, border } from '../../../styles/tokens'
+import { radius, space, border } from '../../../styles/tokens'
 import Carte from '../../../ui/Carte'
 import ControleSegmente from '../../../ui/ControleSegmente'
 import { GRAPHE, etapesGraphe, etapesKm, graphe, ligneKm, zoneSeance } from './vueSeance'
+
+// Fond du km touché : une sélection, pas un appui. Garde 6 % et ne suit pas calque-ligne.
+const OPACITE_KM = 0.06
 
 const TEXTE_AXE = {
   fill: 'var(--muted)',
@@ -73,7 +76,7 @@ const PaceChart = ({ session }) => {
             y={GRAPHE.y0}
             width={g.zones[sel].w}
             height={GRAPHE.y1 - GRAPHE.y0}
-            style={{ fill: 'var(--ink)', fillOpacity: opacity.ligne }}
+            style={{ fill: 'var(--ink)', fillOpacity: OPACITE_KM }}
           />
         )}
 

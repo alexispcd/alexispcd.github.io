@@ -1,17 +1,17 @@
 // Styles d'appui et de focus partagés par les composants de src/ui.
-// Le calque d'un objet touchable en entier (couleur du texte, à --appui-objet) est déjà
-// posé par le thème sur toute ButtonBase (src/styles/theme.js, MuiButtonBase).
-import { border } from '../styles/tokens'
+// Le calque d'un objet touchable en entier (8 % de la couleur du texte) est déjà posé
+// par le thème sur toute ButtonBase (src/styles/theme.js, MuiButtonBase).
+import { border, opacity } from '../styles/tokens'
 
 /**
  * Appui d'une ligne (liste, LigneSaisie, LigneModule, lignes d'une feuille) : calque
- * ink à --appui-ligne (6 % en variante A) sur toute la largeur, sans changement de
- * taille, même avec le réglage « Agrandit ». Remplace le calque de la ButtonBase ; durées,
- * délai et réduction des animations restent ceux du thème (variables --appui-*).
+ * ink à 4 % sur toute la largeur, sans changement de taille, même avec le réglage
+ * « Agrandit ». Remplace le calque de la ButtonBase ; les durées (150 ms, 300 ms) et
+ * la réduction des animations restent celles du thème.
  */
 export const appuiLigne = {
   '&::after': { backgroundColor: 'var(--ink)' },
-  '&:active::after': { opacity: 'var(--appui-ligne)' },
+  '&:active::after': { opacity: opacity.ligne },
   'html[data-pression="agrandit"] &:active': { transform: 'none' },
 }
 

@@ -1,7 +1,6 @@
 import { createTheme } from '@mui/material/styles'
-import { colors, cssVars, radius, fontFamily, textStyles, veil } from './tokens'
+import { colors, cssVars, radius, opacity, fontFamily, textStyles, veil } from './tokens'
 import { EASE, DURATION, RESSORT, AGRANDISSEMENT, transition, avecRetour } from './motion'
-import { VARIANTES, VARIANTE_DEFAUT, variablesAppui } from '../lib/appui'
 
 // Thème MUI du Design System (src/styles/tokens.json). `shape` et `spacing` restent
 // ceux d'avant : les anciens écrans en dépendent (borderRadius et marges numériques).
@@ -82,10 +81,7 @@ const theme = (dark) => {
             // Retour en place après l'agrandissement, ajouté à chaque transition d'un
             // objet touchable (avecRetour de motion.js). Sobre par défaut.
             '--retour-transition': transition('transform', DURATION.release),
-            // Calque d'appui (lot P1) : variante A par défaut, les autres par data-appui.
-            ...variablesAppui(VARIANTE_DEFAUT),
           },
-          ...Object.fromEntries(Object.keys(VARIANTES).map((n) => [`html[data-appui="${n}"]`, variablesAppui(n)])),
           // Ressort : courbe linear(), seulement là où elle est prise en charge.
           '@supports (transition-timing-function: linear(0, 1))': {
             'html[data-retour="ressort"]': {
@@ -123,9 +119,8 @@ const theme = (dark) => {
           },
         },
       },
-      // Appui : calque de la couleur du texte pendant le toucher, sans ondulation. Opacité,
-      // durées et délai d'apparition lus dans les variables --appui-* (variantes du lot P1) ;
-      // le délai ne vaut qu'à l'apparition, jamais au relâchement ni pour l'agrandissement.
+      // Appui : calque de la couleur du texte à 8 % pendant le toucher, sans ondulation ni
+      // délai : 150 ms à l'apparition, 300 ms à la disparition (lot P2).
       // :active ne réagit sur iPhone qu'avec l'écouteur touchstart de src/main.jsx.
       MuiButtonBase: {
         defaultProps: { disableRipple: true },
@@ -146,11 +141,11 @@ const theme = (dark) => {
               backgroundColor: 'currentColor',
               opacity: 0,
               pointerEvents: 'none',
-              transition: `opacity var(--appui-sortie) ${EASE}`,
+              transition: transition('opacity', DURATION.effacement),
             },
             '&:active::after': {
-              opacity: 'var(--appui-objet)',
-              transition: `opacity var(--appui-entree) ${EASE} var(--appui-delai)`,
+              opacity: opacity.appui,
+              transition: transition('opacity', DURATION.press),
             },
             '@media (prefers-reduced-motion: reduce)': {
               '&, &::after, &:active::after': { transition: 'none' },

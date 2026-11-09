@@ -5,6 +5,7 @@ import { DURATION } from '../styles/motion'
 import { appuiLigne, focusContourInterieur } from './appui'
 import { useReduireAnimations } from './useReduireAnimations'
 import { fermerFeuille, ouvrirFeuille } from '../lib/barreEtat'
+import { HAUTEUR_BARRE_HAUT } from './barreHaut'
 
 const bloc = {
   bgcolor: 'surface',
@@ -39,7 +40,7 @@ const ligne = {
  * - children : contenu libre en haut du premier bloc (usages fiche, réglage et date).
  * - libelleAria : nom de la feuille pour le lecteur d'écran quand elle n'a pas de
  *   `titre` (usage Date : le titre est dans children) ; sinon le titre la nomme.
- * - ancree : usage Plan, la feuille tient de 60 px sous le haut jusqu'en bas même si
+ * - ancree : usage Plan, la feuille tient du bas de la barre du haut (48 px) jusqu'en bas même si
  *   son contenu est court ; le premier bloc défile.
  * Le premier bloc défile s'il dépasse l'écran, le second reste visible. Aucune
  * couleur, même pour une action qui défait : sa place en dernier suffit.
@@ -70,9 +71,9 @@ const FeuilleFlottante = ({
   }
 
   const enTete = Boolean(titre || children)
-  // S'arrête à 60 px du haut de la page, sous la bande de la barre d'état
-  // (src/lib/barreEtat.js, 8 px).
-  const haut = `calc(env(safe-area-inset-top, 0px) + ${size.cible} + ${space[16]})`
+  // S'arrête juste sous la barre du haut (48 px), donc sous la bande de la barre
+  // d'état (src/lib/barreEtat.js, 8 px).
+  const haut = `calc(env(safe-area-inset-top, 0px) + ${HAUTEUR_BARRE_HAUT}px)`
 
   return (
     <Modal

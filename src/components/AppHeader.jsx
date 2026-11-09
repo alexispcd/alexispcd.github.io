@@ -6,10 +6,11 @@ import FeuilleFlottante from '../ui/FeuilleFlottante'
 import Pastille from '../ui/Pastille'
 import { ChevronRetour, TroisPoints } from '../ui/Icones'
 import { space } from '../styles/tokens'
+import { HAUTEUR_BARRE_HAUT } from '../ui/barreHaut'
 
-// Hauteur de la barre du haut, sous l'inset haut de l'iPhone. Lue par les pages
-// pour leur marge haute.
-export const HEADER_HEIGHT = 60
+// Hauteur de la barre du haut (48 px), sous l'inset haut de l'iPhone. Lue par les pages
+// pour leur marge haute ; les boutons de 44 px y sont centrés.
+export const HEADER_HEIGHT = HAUTEUR_BARRE_HAUT
 
 // Bord des boutons de 44 px : l'icône de 22 px tombe à 16 px du bord, comme la marge
 // de -10 px des planches (16 - 10 = 6).

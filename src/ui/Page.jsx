@@ -5,7 +5,7 @@ import { SPACE_BAS, space } from '../styles/tokens'
 /**
  * Page qui défile dans son propre conteneur, sans rebond : gouttière space-16,
  * colonne espacée de `gap` (12 par défaut), marge basse SPACE_BAS.
- * - Haut : sous la barre du haut (60 px) plus 8 px ; `sansBarre` (Accueil) : 16 px.
+ * - Haut : sous la barre du haut (48 px) plus 8 px ; `sansBarre` (Accueil) : 16 px.
  * - children : les groupes frères de la page, écartés par `gap`.
  * - bas : facultatif, la BarreBas de la page, posée en dernier enfant du conteneur
  *   qui défile (sticky) ; le contenu garde alors 24 px sous lui au lieu de SPACE_BAS.

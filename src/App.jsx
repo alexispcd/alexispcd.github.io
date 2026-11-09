@@ -81,7 +81,7 @@ const AppLayout = () => {
             titreActions={headerTitre}
             onBack={handleBack}
             // zIndex 1200 : sous les Dialog MUI (1300) pour que le backdrop recouvre le header.
-            // pt : la barre porte l'inset haut et ne passe pas sous l'heure ; ses 60 px suivent.
+            // pt : la barre porte l'inset haut et ne passe pas sous l'heure ; ses 48 px suivent.
             // viewTransitionName : capturé à part, il reste immobile pendant les transitions de page.
             sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pt: 'env(safe-area-inset-top, 0px)', viewTransitionName: 'app-header' }}
           />
