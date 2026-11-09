@@ -1,1 +1,0 @@
-import{It as e,Pt as t,yt as n}from"./index-Q08Tfc3f.js";var r={display:`flex`,flexDirection:`column`,alignItems:`stretch`,justifyContent:`flex-start`,gap:e[8],height:`170px`,minWidth:0,p:e[16],boxSizing:`border-box`,bgcolor:`surface`,color:`ink`,borderRadius:t.card,textAlign:`left`,...n};export{r as t};

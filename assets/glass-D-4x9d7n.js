@@ -1,0 +1,1 @@
+import{Pt as e}from"./index-uFzwvR1s.js";var t={background:e=>e.palette.background.paper,boxShadow:`none`,border:`none`},n=t,r=t,i={sx:{bgcolor:t=>e(t.palette.mode)}};export{r as n,n as r,i as t};

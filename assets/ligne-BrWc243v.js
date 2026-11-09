@@ -1,1 +1,0 @@
-import{It as e,bt as t,vt as n}from"./index-Q08Tfc3f.js";var r={display:`flex`,alignItems:`center`,gap:e[12],width:`100%`,textAlign:`left`,justifyContent:`flex-start`,color:`ink`,...n,...t};export{r as t};
