@@ -1,0 +1,1 @@
+import{i as e,ir as t,q as n}from"./index-DZrC1sfg.js";var r=t(),i=({titre:t,onReessayer:i})=>(0,r.jsx)(n,{children:(0,r.jsx)(e,{titre:t,phrase:`Les données n'ont pas pu être chargées.`,bouton:`Réessayer`,onClick:i})});export{i as t};
