@@ -4,6 +4,7 @@ import { getSource, NOM_SOURCE_INCONNUE, nomSource, SOURCES } from "./catalog.ts
 Deno.test("catalogue : Coros seul, toutes capacités", () => {
   assertEquals(SOURCES.map((s) => s.id), ["coros"])
   assertEquals(getSource("coros")?.capacites, { forme: true, activites: true, envoi: true })
+  assertEquals(getSource("coros")?.logo, "/sources/coros.png")
 })
 
 Deno.test("nomSource : nom connu", () => {

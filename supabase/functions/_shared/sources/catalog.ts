@@ -16,11 +16,13 @@ export interface Capacites {
 export interface Source {
   id: string
   nom: string
+  /** Logo officiel de la marque, chemin public du front (public/sources, précaché). */
+  logo: string
   capacites: Capacites
 }
 
 export const SOURCES: readonly Source[] = [
-  { id: "coros", nom: "Coros", capacites: { forme: true, activites: true, envoi: true } },
+  { id: "coros", nom: "Coros", logo: "/sources/coros.png", capacites: { forme: true, activites: true, envoi: true } },
 ]
 
 /** Texte affiché à la place du nom quand la source est inconnue ou absente. */
