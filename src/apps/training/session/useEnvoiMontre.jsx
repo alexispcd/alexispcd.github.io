@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useLocation } from 'react-router-dom'
+import { useConnexionSource } from '../../../hooks/useConnexionSource'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
 import FeuilleDate from '../../../ui/FeuilleDate'
 import { moisDe } from '../../../ui/calendrier'
@@ -26,15 +27,19 @@ const dateProposee = (session, aujourdhui, max) => {
 /**
  * Envoi d'une séance sur la montre, partagé par la page séance et le dashboard.
  * - onEnvoye : recharge la page après l'envoi ; son échec dit RECHARGEMENT.
- * Renvoie { ouvrir(session), action, feuilles } :
+ * Renvoie { ouvrir(session), action, connexion, feuilles } :
  * - ouvrir : ouvre la feuille Date (Calendrier, bornes d'aujourd'hui à J+90) ;
  * - action : le useAction de l'envoi, dont la page montre la carte d'attente ;
+ * - connexion : lancement de la connexion Coros depuis la feuille « pas connecté »
+ *   (retour sur la page courante), dont la page montre aussi la carte d'attente ;
  * - feuilles : la feuille Date et la feuille « Coros n'est pas connecté », à monter.
  * Aucune lecture du statut Coros avant l'envoi : le serveur rafraîchit le jeton, et
  * répond 409 coros_not_connected s'il n'y en a pas.
  */
 export const useEnvoiMontre = ({ onEnvoye } = {}) => {
-  const navigate = useAppNavigate()
+  const location = useLocation()
+  // Training ne lit encore que Coros (plan.source n'est pas encore lu ni appliqué).
+  const connexion = useConnexionSource()
   const [feuille, setFeuille] = useState(null) // 'date' | 'connexion' | null
   // Gardé après la fermeture : la feuille garde son contenu pendant qu'elle descend.
   const [envoi, setEnvoi] = useState(null) // { session, aujourdhui, max, date, mois, creneau }
@@ -132,11 +137,11 @@ export const useEnvoiMontre = ({ onEnvoye } = {}) => {
         titre={NON_CONNECTE}
         lignes={[{
           libelle: 'Connecter Coros',
-          onClick: () => navigate('/training/settings', { direction: 'forward' }),
+          onClick: () => connexion.lancer('coros', `${location.pathname}${location.search}`),
         }]}
       />
     </>
   )
 
-  return { ouvrir, action, feuilles }
+  return { ouvrir, action, connexion, feuilles }
 }

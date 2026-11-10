@@ -2,7 +2,7 @@ import { assertEquals } from "jsr:@std/assert"
 import { CHEMIN_RETOUR_DEFAUT, cheminRetour, estCheminInterne, urlRetour } from "./retour.ts"
 
 Deno.test("estCheminInterne : chemins acceptés", () => {
-  for (const c of ["/", "/compte", "/training/settings", "/compte/sources?onglet=1", "/a-b_c.d~e", "/x#fin", "/" + "a".repeat(199)]) {
+  for (const c of ["/", "/compte", "/compte/sources", "/compte/sources?onglet=1", "/a-b_c.d~e", "/x#fin", "/" + "a".repeat(199)]) {
     assertEquals(estCheminInterne(c), true, c)
   }
 })
@@ -18,26 +18,33 @@ Deno.test("estCheminInterne : chemins refusés", () => {
   for (const c of refuses) assertEquals(estCheminInterne(c), false, String(c))
 })
 
-Deno.test("cheminRetour : défaut et repli", () => {
-  assertEquals(cheminRetour(undefined), CHEMIN_RETOUR_DEFAUT)
-  assertEquals(cheminRetour("//evil.com"), CHEMIN_RETOUR_DEFAUT)
-  assertEquals(cheminRetour("/compte"), "/compte")
+Deno.test("cheminRetour : défaut /compte/sources et repli", () => {
+  assertEquals(CHEMIN_RETOUR_DEFAUT, "/compte/sources")
+  assertEquals(cheminRetour(undefined), "/compte/sources")
+  assertEquals(cheminRetour("//evil.com"), "/compte/sources")
+  assertEquals(cheminRetour("/training"), "/training")
 })
 
 Deno.test("urlRetour : sans query existante", () => {
-  assertEquals(urlRetour("/compte", "ok"), "https://alexispcd.github.io/compte?coros=ok")
-  assertEquals(urlRetour(null, "error"), "https://alexispcd.github.io/training/settings?coros=error")
+  assertEquals(urlRetour("/compte", "coros", "ok"), "https://alexispcd.github.io/compte?source=coros&connexion=ok")
+  assertEquals(urlRetour(null, "coros", "echec"), "https://alexispcd.github.io/compte/sources?source=coros&connexion=echec")
 })
 
 Deno.test("urlRetour : avec query existante", () => {
-  assertEquals(urlRetour("/compte?onglet=sources", "ok"), "https://alexispcd.github.io/compte?onglet=sources&coros=ok")
-  assertEquals(urlRetour("/compte?coros=error", "ok"), "https://alexispcd.github.io/compte?coros=ok")
+  assertEquals(
+    urlRetour("/training?view=history", "coros", "ok"),
+    "https://alexispcd.github.io/training?view=history&source=coros&connexion=ok",
+  )
+  assertEquals(
+    urlRetour("/compte/sources?connexion=echec&source=coros", "coros", "ok"),
+    "https://alexispcd.github.io/compte/sources?connexion=ok&source=coros",
+  )
 })
 
 Deno.test("urlRetour : fragment gardé après la query", () => {
-  assertEquals(urlRetour("/compte#bas", "ok"), "https://alexispcd.github.io/compte?coros=ok#bas")
+  assertEquals(urlRetour("/compte#bas", "coros", "ok"), "https://alexispcd.github.io/compte?source=coros&connexion=ok#bas")
 })
 
 Deno.test("urlRetour : chemin refusé, retour par défaut", () => {
-  assertEquals(urlRetour("//evil.com/x", "ok"), "https://alexispcd.github.io/training/settings?coros=ok")
+  assertEquals(urlRetour("//evil.com/x", "coros", "ok"), "https://alexispcd.github.io/compte/sources?source=coros&connexion=ok")
 })

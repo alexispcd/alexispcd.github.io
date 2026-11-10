@@ -363,15 +363,6 @@ export const updateOnCoros = (sessionId) =>
 /** Bilan de forme Coros pour le wizard. */
 export const getCorosFitness = () => callFunction('coros-fitness', undefined)
 
-/** Etat de la connexion OAuth Coros. -> { connected } */
-export const getCorosStatus = () => callFunction('coros-oauth', { action: 'status' })
-
-/** Prepare une connexion OAuth Coros. -> { url } vers l'ecran d'autorisation. */
-export const startCorosOauth = () => callFunction('coros-oauth', { action: 'start' })
-
-/** Deconnecte Coros (suppression locale des tokens). -> { connected: false } */
-export const disconnectCoros = () => callFunction('coros-oauth', { action: 'disconnect' })
-
 // ─────────────────────────────────────────────────────────────────────────────
 // REALTIME / POLLING : suivi du statut de génération
 // ─────────────────────────────────────────────────────────────────────────────

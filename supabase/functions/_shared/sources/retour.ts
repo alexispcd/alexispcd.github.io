@@ -3,7 +3,7 @@
 // le retour ne puisse jamais rediriger ailleurs (open redirect).
 
 export const APP_ORIGIN = "https://alexispcd.github.io"
-export const CHEMIN_RETOUR_DEFAUT = "/training/settings"
+export const CHEMIN_RETOUR_DEFAUT = "/compte/sources"
 export const CHEMIN_RETOUR_MAX = 200
 
 const SCHEMA = /^[a-z][a-z0-9+.-]*:/i
@@ -34,14 +34,18 @@ export const estCheminInterne = (valeur: unknown): valeur is string =>
 export const cheminRetour = (valeur: unknown): string =>
   estCheminInterne(valeur) ? valeur : CHEMIN_RETOUR_DEFAUT
 
+export type ResultatConnexion = "ok" | "echec"
+
 /**
- * URL complète de retour vers l'app, avec coros=ok ou coros=error ajouté à la
- * query existante (séparateur ? ou &, fragment gardé à la fin).
+ * URL complète de retour vers l'app, avec source=<id> et connexion=ok ou
+ * connexion=echec ajoutés à la query existante (séparateur ? ou &, fragment gardé
+ * à la fin). Le front les lit puis les retire de l'URL.
  */
-export const urlRetour = (chemin: unknown, resultat: "ok" | "error"): string => {
+export const urlRetour = (chemin: unknown, source: string, resultat: ResultatConnexion): string => {
   const url = new URL(cheminRetour(chemin), APP_ORIGIN)
   // Ceinture : un chemin validé reste sur l'origine de l'app.
-  if (url.origin !== APP_ORIGIN) return urlRetour(CHEMIN_RETOUR_DEFAUT, resultat)
-  url.searchParams.set("coros", resultat)
+  if (url.origin !== APP_ORIGIN) return urlRetour(CHEMIN_RETOUR_DEFAUT, source, resultat)
+  url.searchParams.set("source", source)
+  url.searchParams.set("connexion", resultat)
   return url.toString()
 }

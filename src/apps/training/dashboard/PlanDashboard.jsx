@@ -206,7 +206,6 @@ const PlanDashboard = ({ planInitial, onPlanQuitte }) => {
     }
     actions.push({ label: 'Historique des séances', onClick: () => navigate('/historique', { direction: 'forward', state: { retour: `${location.pathname}${location.search}` } }) })
     actions.push({ label: 'Historique des plans', onClick: () => navigate('/training?view=history', { direction: 'forward' }) })
-    actions.push({ label: 'Réglages', onClick: () => navigate('/training/settings', { direction: 'forward' }) })
     // Plan en cours : pastille de la semaine sélectionnée ; plan passé : titre au nom du plan.
     setHeaderActions(actions, plan.race_name, readOnly
       ? { titreBarre: plan.race_name }
@@ -449,6 +448,7 @@ const PlanDashboard = ({ planInitial, onPlanQuitte }) => {
         <BarreAttente place="carte" {...saut.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...archivage.barre} sx={CARTE_ATTENTE_SX} />
         <BarreAttente place="carte" {...envoi.action.barre} sx={CARTE_ATTENTE_SX} />
+        <BarreAttente place="carte" {...envoi.connexion.barre} sx={CARTE_ATTENTE_SX} />
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12] }}>
           {bandeau}

@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material'
-import { space } from '../../../styles/tokens'
+import { size, space } from '../../../styles/tokens'
 import Carte from '../../../ui/Carte'
 import LigneSaisie from '../../../ui/LigneSaisie'
 import BarreAttente from '../../../ui/BarreAttente'
@@ -32,9 +32,11 @@ const phraseVide = (plage) => (plage
  * - jour (yyyy-MM-dd), onJour : ligne « Jour de la séance », qui ouvre la feuille Date.
  * - plage : texte de la fenêtre de recherche (« entre le lun 2 et le mer 4 nov »).
  * - onReconnecter, onReessayer : lignes de la connexion expirée et de l'échec.
+ * - reconnexion : props de la BarreAttente du lancement de la connexion ; tant
+ *   qu'elle est visible, elle prend la place de la ligne « Reconnecter Coros ».
  */
 const BlocActivite = ({
-  etat, attente, candidats, selection, onActivite, onSans, jour, onJour, plage, onReconnecter, onReessayer,
+  etat, attente, candidats, selection, onActivite, onSans, jour, onJour, plage, onReconnecter, onReessayer, reconnexion,
 }) => {
   const ligneJour = (
     <LigneSaisie type="choix" libelle="Jour de la séance" valeur={formatShortDay(jour)} onClick={onJour} />
@@ -79,7 +81,13 @@ const BlocActivite = ({
     phrase = PHRASE_EXPIREE
     contenu = (
       <>
-        <LigneSaisie type="choix" libelle="Reconnecter Coros" onClick={onReconnecter} />
+        {reconnexion?.visible
+          ? (
+            <Box sx={{ minHeight: size.ligne, px: space[16], display: 'flex', alignItems: 'center' }}>
+              <BarreAttente place="barre" {...reconnexion} sx={{ flex: 1, minWidth: 0 }} />
+            </Box>
+          )
+          : <LigneSaisie type="choix" libelle="Reconnecter Coros" onClick={onReconnecter} />}
         {ligneJour}
       </>
     )

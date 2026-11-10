@@ -33,7 +33,7 @@ import { useMessage, useBarreBasMessage } from '../../ui/useMessage'
 import { useAction } from '../../ui/useAction'
 import { PAS_DE_CONNEXION, estErreurReseau } from '../../lib/reseau'
 import { DUREES } from '../../lib/durees'
-import { getCorosStatus } from '../../lib/training'
+import { getStatutSources } from '../../lib/sources'
 import supabase from '../../lib/supabase'
 import { useAppNavigate } from '../../hooks/useAppNavigate'
 import CasesCode from '../../ui/CasesCode'
@@ -325,7 +325,7 @@ const DemoReseau = () => {
   return (
     <Section titre="Réseau">
       <Rangee>
-        <Bouton petit variante="chip" onClick={() => essayer('callFunction', () => getCorosStatus().then(() => ({})))}>callFunction</Bouton>
+        <Bouton petit variante="chip" onClick={() => essayer('callFunction', () => getStatutSources().then(() => ({})))}>callFunction</Bouton>
         <Bouton petit variante="chip" onClick={() => essayer('lecture', () => supabase.from('user_preferences').select('key').limit(1))}>Lecture</Bouton>
         <Bouton petit variante="chip" onClick={() => essayer('écriture', () => supabase.from('user_preferences').update({ value: '__atelier__' }).eq('key', '__atelier__'))}>Écriture</Bouton>
       </Rangee>

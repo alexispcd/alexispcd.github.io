@@ -63,8 +63,7 @@ const ComptePage = () => {
   const ouvrir = (chemin) => navigate(chemin, { direction: 'forward', state: { retour: '/compte' } })
 
   const lignes = [
-    // Ancienne page des réglages Training, en attendant Sources de données (lot Src2).
-    sources && { id: 'sources', libelle: 'Sources de données', chemin: '/training/settings' },
+    sources && { id: 'sources', libelle: 'Sources de données', chemin: '/compte/sources' },
     admin && { id: 'admin', libelle: 'Administration', chemin: '/admin' },
     // Atelier : page temporaire de la refonte, retirée avec cette ligne au lot F1.
     admin && { id: 'atelier', libelle: 'Atelier', chemin: '/atelier' },

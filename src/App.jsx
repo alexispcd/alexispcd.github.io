@@ -18,6 +18,7 @@ import { AppCtx, useAppCtx } from './lib/context'
 import { fetchAccess, publishAccess, clearAccess } from './lib/access'
 import { clearDataCache } from './lib/pwa'
 import { useAppNavigate } from './hooks/useAppNavigate'
+import { useRetourConnexion } from './hooks/useRetourConnexion'
 
 const AppLayout = () => {
   const { headerActions, headerTitre, headerPastille, headerTitreBarre, overlay } = useAppCtx()
@@ -26,6 +27,8 @@ const AppLayout = () => {
   const handle = lastMatch?.handle ?? {}
   const location = useLocation()
   const navigate = useAppNavigate()
+  // Retour d'une connexion OAuth (?source=&connexion=), sur n'importe quelle page.
+  useRetourConnexion()
 
   // backTo peut être une string ou une fonction (params) => string (route dynamique).
   const backTo = typeof handle.backTo === 'function'

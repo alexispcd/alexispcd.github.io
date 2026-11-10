@@ -109,7 +109,7 @@ const SessionPage = () => {
 
   const envoi = useEnvoiMontre({ onEnvoye: reload })
 
-  const actions = [saut, reinit, restaurer, montre, envoi.action]
+  const actions = [saut, reinit, restaurer, montre, envoi.action, envoi.connexion]
   const locked = actions.some((a) => a.enCours)
   // Action en cours : le toucher est ignoré, la carte d'attente est déjà en tête de page.
   const siLibre = (fn) => () => { if (!locked) fn() }

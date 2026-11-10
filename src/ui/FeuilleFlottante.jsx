@@ -31,7 +31,8 @@ const ligne = {
  * Feuille d'actions ou de choix posée en bas de l'écran, sur la page voilée.
  * - ouverte, onFermer : toucher le voile ou le second bloc appelle onFermer.
  * - titre : en muted, 13 px, centré ; pour une confirmation, la phrase qui explique.
- * - lignes : [{ libelle, onClick, disabled, sansFermer }] ; toucher une ligne appelle
+ * - lignes : [{ libelle, onClick, disabled, sansFermer, icone }] ; `icone` : élément posé
+ *   avant le libellé, le tout centré (logo d'une source dans l'ajout). Toucher une ligne appelle
  *   onFermer puis onClick tout de suite, sans attendre la fin de l'animation. Avec
  *   sansFermer, seulement onClick : c'est lui qui ferme la feuille (player Renfo).
  * Une action réseau lancée par une ligne passe par useAction : la feuille se ferme
@@ -117,8 +118,10 @@ const FeuilleFlottante = ({
                   color: l.disabled ? 'muted' : 'ink',
                   borderTop: i > 0 || enTete ? `${border.filet} solid` : 'none',
                   borderColor: 'line',
+                  gap: space[12],
                 }}
               >
+                {l.icone}
                 {l.libelle}
               </ButtonBase>
             ))}

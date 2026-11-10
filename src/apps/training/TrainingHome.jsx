@@ -81,8 +81,6 @@ const TrainingHome = ({ plansInitiaux }) => {
   useEffect(() => {
     setHeaderActions([
       { label: 'Historique des séances', onClick: () => navigate('/historique', { direction: 'forward', state: { retour: `${location.pathname}${location.search}` } }) },
-      // Jusqu'au lot Src2.
-      { label: 'Réglages', onClick: () => navigate('/training/settings') },
     ], 'Training')
     return () => setHeaderActions([])
   }, [navigate, setHeaderActions, location.pathname, location.search])

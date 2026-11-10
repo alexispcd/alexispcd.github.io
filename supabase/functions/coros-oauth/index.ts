@@ -17,10 +17,11 @@ const json = (status: number, body: unknown) => Response.json(body, { status })
 
 /**
  * Redirection navigateur vers la PWA, sur le chemin de retour demandé au start
- * (chemin par défaut s'il est absent ou illisible), avec coros=ok ou coros=error.
+ * (chemin par défaut s'il est absent ou illisible), avec source=coros et
+ * connexion=ok ou connexion=echec.
  */
-const redirectToApp = (result: "ok" | "error", returnPath?: string | null) =>
-  new Response(null, { status: 302, headers: { Location: urlRetour(returnPath, result) } })
+const redirectToApp = (result: "ok" | "echec", returnPath?: string | null) =>
+  new Response(null, { status: 302, headers: { Location: urlRetour(returnPath, "coros", result) } })
 
 // PKCE : helpers bases sur le crypto natif de Deno, sans dependance.
 
@@ -73,7 +74,7 @@ Deno.serve(withCors(async (req) => {
       return await handleCallback(req)
     } catch (err) {
       console.error("[coros-oauth] callback uncaught:", err instanceof Error ? err.message : err)
-      return redirectToApp("error")
+      return redirectToApp("echec")
     }
   }
 
@@ -116,7 +117,7 @@ async function handleAction(req: Request): Promise<Response> {
 /**
  * Etat des connexions du compte, sans jamais renvoyer les tokens. Un jeton expire
  * est rafraichi avant de conclure : « expiree » seulement si le rafraichissement
- * echoue. connected (Coros connecte) reste pour l'ancienne page jusqu'au lot Src2.
+ * echoue.
  */
 async function handleStatus(userId: string): Promise<Response> {
   let sources
@@ -126,8 +127,7 @@ async function handleStatus(userId: string): Promise<Response> {
     console.error("[coros-oauth] status:", errorMessage(err))
     return json(500, { error: "L'état de tes sources n'a pas pu être lu." })
   }
-  const connected = sources.some((s) => s.id === "coros" && s.etat === "connectee")
-  return json(200, { connected, sources })
+  return json(200, { sources })
 }
 
 /**
@@ -157,7 +157,7 @@ async function handleDisconnect(userId: string): Promise<Response> {
   if (stateError) console.error("[coros-oauth] disconnect state cleanup error:", stateError.message)
 
   // Une suppression qui ne touche aucune ligne n'est pas une erreur.
-  return json(200, { connected: false })
+  return json(200, { deconnectee: true })
 }
 
 /**
@@ -217,11 +217,11 @@ async function handleCallback(req: Request): Promise<Response> {
 
   if (oauthError) {
     console.error("[coros-oauth] callback error param:", oauthError)
-    return redirectToApp("error")
+    return redirectToApp("echec")
   }
   if (!code || !state) {
     console.error("[coros-oauth] callback: code ou state manquant")
-    return redirectToApp("error")
+    return redirectToApp("echec")
   }
 
   const supabaseAdmin = adminClient()
@@ -237,21 +237,21 @@ async function handleCallback(req: Request): Promise<Response> {
 
   if (stateError) {
     console.error("[coros-oauth] state query error:", stateError.message)
-    return redirectToApp("error")
+    return redirectToApp("echec")
   }
   if (!stateRow) {
     console.error("[coros-oauth] state inconnu")
-    return redirectToApp("error")
+    return redirectToApp("echec")
   }
   if (Date.now() - new Date(stateRow.created_at).getTime() > STATE_TTL_MS) {
     console.error("[coros-oauth] state expire")
-    return redirectToApp("error", stateRow.return_path)
+    return redirectToApp("echec", stateRow.return_path)
   }
 
   const clientId = Deno.env.get("COROS_CLIENT_ID")
   if (!clientId) {
     console.error("[coros-oauth] COROS_CLIENT_ID manquant")
-    return redirectToApp("error", stateRow.return_path)
+    return redirectToApp("echec", stateRow.return_path)
   }
 
   const tokenRes = await fetch(COROS_TOKEN, {
@@ -273,7 +273,7 @@ async function handleCallback(req: Request): Promise<Response> {
   if (!tokenRes.ok) {
     const detail = await tokenRes.text().catch(() => "")
     console.error("[coros-oauth] token exchange failed:", tokenRes.status, detail)
-    return redirectToApp("error", stateRow.return_path)
+    return redirectToApp("echec", stateRow.return_path)
   }
 
   const tokens = await tokenRes.json().catch(() => null) as
@@ -282,7 +282,7 @@ async function handleCallback(req: Request): Promise<Response> {
 
   if (!tokens?.access_token || !tokens.refresh_token) {
     console.error("[coros-oauth] reponse token incomplete")
-    return redirectToApp("error", stateRow.return_path)
+    return redirectToApp("echec", stateRow.return_path)
   }
 
   const expiresIn = typeof tokens.expires_in === "number" ? tokens.expires_in : 0
@@ -302,7 +302,7 @@ async function handleCallback(req: Request): Promise<Response> {
 
   if (upsertError) {
     console.error("[coros-oauth] token upsert error:", upsertError.message)
-    return redirectToApp("error", stateRow.return_path)
+    return redirectToApp("echec", stateRow.return_path)
   }
 
   return redirectToApp("ok", stateRow.return_path)

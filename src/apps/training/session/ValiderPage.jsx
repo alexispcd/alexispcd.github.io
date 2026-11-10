@@ -3,6 +3,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { etatSeance } from '../../../lib/retour'
 import { Box } from '@mui/material'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
+import { useConnexionSource } from '../../../hooks/useConnexionSource'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import CarteSysteme from '../../../components/CarteSysteme'
 import BarreAttente from '../../../ui/BarreAttente'
@@ -48,6 +49,8 @@ const ValiderPage = () => {
   const { planId, sessionId } = useParams()
   const navigate = useAppNavigate()
   const location = useLocation()
+  // Training ne lit encore que Coros (plan.source n'est pas encore lu ni appliqué).
+  const connexion = useConnexionSource()
   const { afficher } = useMessage()
   const pageSeance = `/training/plan/${planId}/session/${sessionId}`
   // État de la séance (son retour vers l'Historique), rendu après un replace.
@@ -183,7 +186,8 @@ const ValiderPage = () => {
             jour={jour}
             onJour={ouvrirJour}
             plage={fenetre ? plageRecherche(fenetre) : null}
-            onReconnecter={() => navigate('/training/settings', { direction: 'forward' })}
+            onReconnecter={() => connexion.lancer('coros', `${location.pathname}${location.search}`)}
+            reconnexion={connexion.barre}
             onReessayer={reessayer}
           />
         )}
