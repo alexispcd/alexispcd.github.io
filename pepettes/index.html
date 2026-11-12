@@ -52,7 +52,7 @@ button{font:inherit;color:inherit}
 .view{grid-area:1/1;align-self:start;min-width:0;width:100%;transition:opacity .28s ease-out,transform .38s var(--ease),visibility 0s linear .38s}
 .view.off{opacity:0;visibility:hidden;pointer-events:none}
 .view.on{opacity:1;visibility:visible;transform:none;transition:opacity .28s ease-out .06s,transform .38s var(--ease),visibility 0s}
-#dayv.off{transform:translateX(-24px)} #stepv.off{transform:translateX(24px)}
+#dayv.off{transform:translateX(-24px)} #stepv.off{transform:translateX(24px)} #stepv.off.left{transform:translateX(-24px)} #srchv.off{transform:translateX(24px)}
 .dayin{padding:var(--s6) var(--s6) calc(var(--safeB) + 4px);display:flex;flex-direction:column;gap:var(--s4)}
 .kick{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .dayin h1{font-size:24px;line-height:1.15;font-weight:600;letter-spacing:-0.02em;text-wrap:balance;margin-top:2px}
@@ -71,7 +71,7 @@ button{font:inherit;color:inherit}
 .tap:active .dot{transform:scale(.88)}
 .tap .lab{position:absolute;top:42px;left:50%;transform:translateX(-50%);width:var(--lw,56px);text-align:center;font-size:11px;line-height:1.2;font-weight:500;hyphens:manual;letter-spacing:-0.01em}
 /* step carousel */
-.car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
+.car{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
 .car::-webkit-scrollbar{display:none}
 .slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:14px;min-width:0}
 .bars-row{display:flex;align-items:center;gap:var(--s2);padding:22px var(--s6) 0 var(--s6)}
@@ -82,19 +82,25 @@ button{font:inherit;color:inherit}
 .slide h2{font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-0.02em;text-wrap:balance}
 .slide .leg{font-size:15px;color:var(--muted);margin-top:var(--s1);font-variant-numeric:tabular-nums}
 .slide p.desc{font-size:16px;line-height:1.5;text-wrap:pretty;max-width:65ch}
-.goRow{display:flex;gap:var(--s2)}
+.goRow{display:flex;flex-direction:column;gap:var(--s2)}
 .go{flex:1 1 auto;min-height:56px;border-radius:var(--btnR);background:var(--blue);color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;transition:transform .15s ease-out}
 .go:active{transform:scale(.98)}
-.park{flex:0 0 auto;min-height:56px;padding:0 var(--s4);border-radius:var(--btnR);background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:var(--s2);font-size:15px;font-weight:600;transition:transform .15s ease-out}
-.park:active{transform:scale(.97)}
-.pIcon{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
-.food{display:flex;gap:var(--s2)}
-.food a{flex:1 1 0;min-width:0;min-height:44px;padding:0 var(--s3);border-radius:var(--btnR);background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:var(--s2);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .15s ease-out}
-.food a:active{transform:scale(.97)}
+/* recherche */
+.rech{min-height:52px;border:0;border-radius:var(--btnR);background:var(--tint);color:var(--ink);font:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:var(--s2);cursor:pointer;transition:transform .15s ease-out}
+.rech:active{transform:scale(.98)}
+.srin{padding:14px var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:var(--s4)}
+.srhd{display:flex;align-items:center;gap:var(--s1);height:44px}
+.srhd h2{font-size:22px;font-weight:700;letter-spacing:-0.02em;flex:1}
+.back{flex:0 0 auto;width:44px;height:44px;margin-left:-12px;border:0;border-radius:50%;background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.srgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:18px;padding:2px 0 4px}
+.srgrid a{display:flex;flex-direction:column;align-items:center;gap:var(--s2);color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;min-width:0}
+.srgrid .ic{width:60px;height:60px;border-radius:50%;background:var(--tint);display:grid;place-items:center;transition:transform .15s ease-out}
+.srgrid a:active .ic{transform:scale(.94)}
+.srgrid a.p .ic{background:var(--blue);color:#fff;font-size:22px;font-weight:700}
 .go{white-space:nowrap}
-@media (max-width:380px){.go{font-size:16px;gap:8px;padding:0 var(--s2)}.park{padding:0 var(--s3);gap:6px}}
 /* pins */
 .pin{display:flex;align-items:center;gap:var(--s1);cursor:pointer}
+.me{width:18px;height:18px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 8px rgba(26,115,232,.18);pointer-events:none}
 .pin .c{width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:600 12px/1 Inter,sans-serif;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
 .pin.sel .c{transform:scale(1.3)}
 .pin .l{font:600 12px/1.2 Inter,sans-serif;color:var(--ink);background:rgba(255,255,255,.92);padding:2px 6px;border-radius:6px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -125,6 +131,7 @@ button{font:inherit;color:inherit}
 <section class="card glass" id="card" aria-live="polite">
   <div class="view on" id="dayv"></div>
   <div class="view off" id="stepv" aria-hidden="true"></div>
+  <div class="view off" id="srchv" aria-hidden="true"></div>
 </section>
 <script src="lib/maplibre-gl.js"></script>
 <script src="lib/pmtiles.js"></script>
@@ -210,14 +217,23 @@ const $=id=>document.getElementById(id);
 const ICON={
   x:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   nav:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
+  search:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>',
+  resto:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 1-3 4-3 7h3v11"/></svg>',
+  cafe:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h12v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2"/></svg>',
+  pain:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 15c0-5 4-9 8-9s8 4 8 9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z"/><path d="m9 9 1 4M14 9l-1 4"/></svg>',
+  bar:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l-6 8z"/><path d="M12 11v9M8 20h8"/></svg>',
+  courses:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2 11h11l2-8H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>',
   home:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>'
 };
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+String(m%60).padStart(2,'0'):'');
-const dayStops=d=>STOPS.map((s,i)=>[s,i]).filter(([s])=>s.day===d);
+// Chaque jour commence au logement de la veille (sauf le jour du depart, qui part de Vannes).
+const startHome=d=>{ if(d<=0) return -1; return STOPS.findIndex(s=>s.day===d-1&&s.home); };
+const dayStops=d=>{ const l=STOPS.map((s,i)=>[s,i]).filter(([s])=>s.day===d); const h=startHome(d); return h<0?l:[[{...STOPS[h],time:'Départ'},h],...l]; };
 const totals=d=>{const l=ROUTES[d].legs;return [l.reduce((a,x)=>a+x[0],0),l.reduce((a,x)=>a+x[1],0)];};
-const legBefore=(d,k)=>{const o=d===0?0:1;const li=k-1+o;return li>=0?ROUTES[d].legs[li]:null;};
-const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le logement':(SHORT[p.name]||p.name);} return d===0?null:'le logement'; };
+const legBefore=(d,k)=>k>0?ROUTES[d].legs[k-1]:null;
+const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le logement':(SHORT[p.name]||p.name);} return null; };
 const numOf=i=>{const s=STOPS[i]; if(s.home) return null; let n=0; for(let j=0;j<=i;j++) if(STOPS[j].day===s.day&&!STOPS[j].home) n++; return n;};
 const badge=i=>STOPS[i].home?ICON.home:numOf(i);
 const waze=s=>s.addr?`https://waze.com/ul?q=${encodeURIComponent(s.addr)}&navigate=yes`:`https://waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes`;
@@ -322,21 +338,21 @@ function renderSteps(){
   <div class="car" id="car">${list.map(([s,i],k)=>{
     const lg=legBefore(curDay,k), from=fromName(curDay,k);
     return `<article class="slide" aria-label="${esc(s.name)}">
-      <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+(k+1)+' sur '+n}</span></div>
+      <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+numOf(i)+' sur '+list.filter(([x])=>!x.home).length}</span></div>
       <div><h2>${esc(s.name)}</h2>${lg&&from?`<div class="leg">${fmt(lg[0])} depuis ${esc(from)} · ${lg[1]} km</div>`:''}</div>
       <p class="desc">${esc(s.desc)}</p>
-      <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a>${s.home?'':`<a class="park" href="${gsearch('parking',s).replace(',15z',',16z')}" target="_blank" rel="noopener" aria-label="Voir les parkings autour dans Google Maps"><span class="pIcon" aria-hidden="true">P</span>Parkings</a>`}</div>
-      <div class="food">${s.food.slice(0,3).map(f=>`<a href="${gsearch(f[1],s)}" target="_blank" rel="noopener">${esc(f[0])}</a>`).join('')}</div>
+      <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a><button class="rech" data-k="${k}">${ICON.search}Rechercher</button></div>
     </article>`;}).join('')}</div>`;
   $('closeStep').onclick=closeStep;
+  v.querySelectorAll('.rech').forEach(b=>b.onclick=()=>openSearch(+b.dataset.k));
   const car=$('car'); let t=null;
   // Des que le doigt engage le slide, la carte part vers l'etape visee ; retour arriere, elle revient.
   car.addEventListener('scroll',()=>{
     const w=car.clientWidth; if(!w) return; const n=dayStops(curDay).length;
     const d=car.scrollLeft/w-cur; let k=cur;
     if(d>0.08) k=Math.min(n-1,cur+Math.ceil(d-0.08)); else if(d<-0.08) k=Math.max(0,cur-Math.ceil(-d-0.08));
-    if(k!==aimed){ aimed=k; paintBars(k); focusStop(k,true); }
-    clearTimeout(t); t=setTimeout(()=>{ const r=Math.round(car.scrollLeft/w); cur=r; if(r!==aimed){ aimed=r; paintBars(r); focusStop(r,true); } },120);
+    if(k!==aimed){ aimed=k; paintBars(k); sizeCard(); focusStop(k,true); }
+    clearTimeout(t); t=setTimeout(()=>{ const r=Math.round(car.scrollLeft/w); cur=r; if(r!==aimed){ aimed=r; paintBars(r); sizeCard(); focusStop(r,true); } },120);
   },{passive:true});
 }
 function paintBars(k){ const b=$('bars'); if(!b) return; const c=DAYS[curDay].css; [...b.children].forEach((el,j)=>el.style.background=j<=k?c:''); }
@@ -347,12 +363,15 @@ function showView(step,after){
   requestAnimationFrame(()=>{ sizeCard(); after&&after(); });
 }
 function sizeCard(){
-  const el=sel===null?$('dayv'):$('stepv'); const h=el.scrollHeight;
+  let h;
+  if(!searching&&sel!==null){ const sl=$('stepv').querySelectorAll('.slide')[aimed<0?cur:aimed], br=$('stepv').querySelector('.bars-row'); h=(br?br.offsetHeight:0)+(sl?sl.offsetHeight:0); }
+  else h=(searching?$('srchv'):sel===null?$('dayv'):$('stepv')).scrollHeight;
   document.documentElement.style.setProperty('--cardH',h+'px');
 }
 function pad(h){ h=h||parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cardH'))||280; const top=$('seg').getBoundingClientRect().bottom+12; const mb=$('map').getBoundingClientRect().bottom, cb=$('card').getBoundingClientRect().bottom; return {top, left:24, right:72, bottom:h+(mb-cb)+24}; }
 
 function setDay(id){
+  closeSearch(true);
   curDay=id; sel=null; cur=0;
   renderSeg(); renderDay(); renderSteps(); updateLayers(); showView(false,fitDay);
 }
@@ -360,6 +379,25 @@ function openStep(k){
   sel=k; cur=k; aimed=k;
   paintBars(k);
   showView(true,()=>{ const car=$('car'); if(car){ car.style.scrollBehavior='auto'; car.scrollLeft=k*car.clientWidth; car.style.scrollBehavior=''; } focusStop(); });
+}
+let searching=false;
+const RECH=[['Parkings','parking','P',true],['Restaurants','restaurants','resto'],['Cafés','café','cafe'],['Boulangeries','boulangerie','pain'],['Bars','bar','bar'],['Supermarchés','supermarché','courses']];
+function openSearch(k){
+  const [s]=dayStops(curDay)[k]; searching=true;
+  const v=$('srchv');
+  v.innerHTML=`<div class="srin"><div class="srhd"><button class="back" id="srBack" aria-label="Revenir à ${esc(s.name)}">${ICON.back}</button><h2>Rechercher</h2><button class="x" id="srClose" aria-label="Revenir à la journée">${ICON.x}</button></div>
+  <div class="srgrid">${RECH.map(([l,q,ic,p])=>`<a class="${p?'p':''}" href="${gsearch(q,s).replace(',15z',p?',16z':',15z')}" target="_blank" rel="noopener"><span class="ic" aria-hidden="true">${p?ic:ICON[ic]}</span>${l}</a>`).join('')}</div></div>`;
+  $('srBack').onclick=closeSearch; $('srClose').onclick=()=>{ closeSearch(true); closeStep(); };
+  $('stepv').className='view off left'; $('stepv').setAttribute('aria-hidden',true);
+  v.className='view on'; v.setAttribute('aria-hidden',false);
+  requestAnimationFrame(sizeCard);
+}
+function closeSearch(silent){
+  if(!searching) return; searching=false;
+  $('srchv').className='view off'; $('srchv').setAttribute('aria-hidden',true);
+  if(silent===true) return;
+  $('stepv').className='view on'; $('stepv').setAttribute('aria-hidden',false);
+  requestAnimationFrame(sizeCard);
 }
 function closeStep(){ sel=null; drawPins(); showView(false,fitDay); }
 let aimed=-1;
@@ -371,20 +409,20 @@ function focusStop(k=cur,fast=false){
 }
 
 /* ---------- map ---------- */
-function routeGeo(){ return {type:'FeatureCollection',features:DAYS.map(d=>({type:'Feature',properties:{color:d.hex,on:(curDay===-1||curDay===d.id)?1:0},geometry:{type:'LineString',coordinates:ROUTES[d.id].coords}})).sort((a,b)=>a.properties.on-b.properties.on)}; }
+function routeGeo(){ return {type:'FeatureCollection',features:DAYS.map(d=>({type:'Feature',properties:{id:d.id,color:d.hex,on:(curDay===-1||curDay===d.id)?1:0},geometry:{type:'LineString',coordinates:ROUTES[d.id].coords}})).sort((a,b)=>a.properties.on-b.properties.on)}; }
 function boundsFor(day){ const b=new maplibregl.LngLatBounds(); if(day===-1) STOPS.filter(s=>s.name!=='Vannes').forEach(s=>b.extend([s.lon,s.lat])); else ROUTES[day].coords.forEach(c=>b.extend(c)); return b; }
 function fitDay(){ if(map) map.fitBounds(boundsFor(curDay),{padding:pad(),maxZoom:12.5,duration:DUR}); }
 function drawPins(selI){
   if(!map) return; markers.forEach(m=>m.remove()); markers=[];
   const seen=new Set();
   STOPS.forEach((s,i)=>{
-    if(curDay!==-1&&s.day!==curDay) return;
+    if(curDay!==-1&&s.day!==curDay&&i!==startHome(curDay)) return;
     if(curDay===-1){ if(seen.has(s.name)) return; seen.add(s.name); }
-    const d=DAYS[s.day]; const n=s.home?ICON.home:(curDay===-1?'':numOf(i));
+    const d=DAYS[curDay===-1?s.day:curDay]; const n=s.home?ICON.home:(curDay===-1?'':numOf(i));
     const label=(curDay!==-1&&!s.home)||['Granville','Honfleur','Étretat','Coutances','Deauville','Pointe du Hoc','Vannes'].includes(s.name);
     const el=document.createElement('div'); el.className='pin'+(selI===i?' sel':'');
     el.innerHTML=`<span class="c" style="background:${d.hex}">${n}</span>${label?`<span class="l">${esc(short(s.name))}</span>`:''}`;
-    el.addEventListener('click',e=>{e.stopPropagation(); if(curDay!==s.day) setDay(s.day); const k=dayStops(s.day).findIndex(([,j])=>j===i); openStep(k);});
+    el.addEventListener('click',e=>{e.stopPropagation(); const dd=(curDay!==-1&&dayStops(curDay).some(([,j])=>j===i))?curDay:s.day; if(curDay!==dd) setDay(dd); const k=dayStops(dd).findIndex(([,j])=>j===i); openStep(k);});
     markers.push(new maplibregl.Marker({element:el,anchor:'left',offset:[-14,0]}).setLngLat([s.lon,s.lat]).addTo(map));
     el.setAttribute('aria-label',s.name);
   });
@@ -416,7 +454,14 @@ async function initMap(){
       map.addSource('routes',{type:'geojson',data:routeGeo()});
       map.addLayer({id:'route-casing',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':['case',['==',['get','on'],1],8,4],'line-opacity':['case',['==',['get','on'],1],0.95,0.3]}});
       map.addLayer({id:'route',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['case',['==',['get','on'],1],4.5,2.5],'line-opacity':['case',['==',['get','on'],1],1,0.3]}});
+      // Sens du trajet : pastilles de la couleur du jour avec un chevron blanc.
+      DAYS.forEach(d=>{ const c=document.createElement('canvas'); c.width=c.height=28; const x=c.getContext('2d'); x.scale(2,2);
+        x.fillStyle=d.hex; x.beginPath(); x.arc(7,7,7,0,Math.PI*2); x.fill();
+        x.strokeStyle='#fff'; x.lineWidth=2.2; x.lineCap='round'; x.lineJoin='round'; x.beginPath(); x.moveTo(5,3.8); x.lineTo(8.6,7); x.lineTo(5,10.2); x.stroke();
+        map.addImage('sens'+d.id,x.getImageData(0,0,28,28),{pixelRatio:2}); });
+      map.addLayer({id:'sens',type:'symbol',source:'routes',filter:['==',['get','on'],1],layout:{'symbol-placement':'line','symbol-spacing':90,'icon-image':['concat','sens',['to-string',['get','id']]],'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map'}});
       drawPins(sel===null?undefined:dayStops(curDay)[cur][1]);
+      suivrePosition();
     });
   }catch(e){ clearTimeout(t); skel.classList.remove('show'); err.classList.add('show'); }
 }
@@ -434,7 +479,22 @@ function fixAppHeight(){
 }
 fixAppHeight(); window.addEventListener('resize', fixAppHeight); window.addEventListener('orientationchange', fixAppHeight);
 window.addEventListener('scroll',()=>{ if(window.scrollY||window.scrollX) window.scrollTo(0,0); },{passive:true});
-setDay(-1); initMap();
+let meMarker=null, meWatch=null;
+function suivrePosition(){
+  if(!('geolocation' in navigator) || meWatch!==null) return;
+  meWatch=navigator.geolocation.watchPosition(pos=>{
+    const ll=[pos.coords.longitude,pos.coords.latitude];
+    if(!map) return;
+    if(!meMarker){ const el=document.createElement('div'); el.className='me'; el.setAttribute('aria-label','Ta position'); meMarker=new maplibregl.Marker({element:el}).setLngLat(ll).addTo(map); }
+    else meMarker.setLngLat(ll);
+  },e=>console.warn('[pepettes] position',e.message),{enableHighAccuracy:true,maximumAge:15000,timeout:30000});
+}
+// A l'ouverture : le jour du roadtrip si on est dedans, sinon la vue d'ensemble.
+function jourDuJour(){
+  const n=new Date(); if(n.getFullYear()!==2026||n.getMonth()!==10) return -1;
+  const id=n.getDate()-12; return DAYS.some(d=>d.id===id)?id:-1;
+}
+setDay(jourDuJour()); initMap();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.error('[pepettes] sw',e)); }); }
 </script>
 
