@@ -98,8 +98,8 @@ export default defineConfig(({ mode }) => {
           // Valeur par défaut de workbox-build (**/*.{js,wasm,css,html}), la police, et
           // les logos des sources de données (public/sources) : seulement ce dossier.
           globPatterns: ['**/*.{js,wasm,css,html,woff2}', 'sources/*.{svg,png}'],
-          navigateFallbackDenylist: [/^\/labo\//],
-          globIgnores: ['labo/**'],
+          navigateFallbackDenylist: [/^\/labo\//, /^\/pepettes\//],
+          globIgnores: ['labo/**', 'pepettes/**'],
           runtimeCaching: [...dataCacheRule(env.VITE_SUPABASE_URL), renfoImagesRule],
         },
       }),

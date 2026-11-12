@@ -509,6 +509,7 @@ Les 10 thèmes du grand oral MAALSI (affichés comme "thèmes" dans l'UI, sans m
 - `vite-plugin-pwa` en `registerType: 'prompt'` : `Message` fixe « Nouvelle version disponible » avec « Recharger » (`components/UpdatePrompt.jsx`), retiré pendant un overlay plein écran (player Renfo) et rendu à sa fermeture ; vérification au retour au premier plan.
 - Cache des lectures Supabase (`workbox.runtimeCaching` dans `vite.config.js`) : NetworkFirst, cache `cairn-data`, GET uniquement sur `/rest/v1/<table>` pour les tables de `OFFLINE_TABLES` : `training_plans`, `training_weeks`, `training_sessions`, `strength_profiles`, `strength_bands`, `strength_sessions`, `profiles`, `user_modules`. Aucune Edge Function, aucun appel d'auth. Cache vidé à la déconnexion et au changement de compte (`lib/pwa.js`).
 - Photos Renfo : CacheFirst, `cairn-renfo-images`.
+- `public/pepettes/` : site statique indépendant, sans lien avec l'app (PWA « Pepettes », son propre manifeste et son service worker limités à `/pepettes/`, `alexispcd.github.io/pepettes/`). Exclu du précache (`globIgnores`), du `navigateFallback` (`navigateFallbackDenylist`) et d'ESLint (`globalIgnores`) : ne jamais le retirer de ces exclusions, sinon le service worker du Cairn sert l'app à la place de la page.
 - Pas de mode hors ligne affiché (lot S3b) : aucune pastille ni bandeau, aucun bouton désactivé faute de réseau. On tente l'action ; un échec réseau affiche « Pas de connexion, réessaie. » et ce qui était en attente le reste. `navigator.onLine` ne sert qu'au raccourci de `callFunction` et `useAction`.
 
 ---
