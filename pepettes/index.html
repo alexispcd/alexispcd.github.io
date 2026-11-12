@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#eef0f2">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Pepettes">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -30,7 +31,9 @@ button,a{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 body{font-family:Inter,system-ui,sans-serif;font-kerning:normal;color:var(--ink);-webkit-font-smoothing:antialiased;background:#eef0f2;line-height:1.4}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-#map{position:fixed;inset:0;height:100dvh}
+#map{position:fixed;inset:0;height:100lvh}
+.statusfade{position:fixed;left:0;right:0;top:0;height:calc(env(safe-area-inset-top) + 24px);background:linear-gradient(rgba(20,25,35,.38),rgba(20,25,35,0));pointer-events:none;z-index:3;display:none}
+@media (display-mode: standalone){.statusfade{display:block}}
 .glass{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 /* top segmented */
 .seg{position:fixed;top:var(--top);left:var(--s4);right:var(--s4);max-width:520px;margin:0 auto;height:44px;padding:var(--s1);border-radius:999px;box-shadow:0 4px 20px rgba(20,30,50,.12);display:flex;gap:2px;z-index:6}
@@ -43,13 +46,13 @@ button{font:inherit;color:inherit}
 .fab{position:fixed;right:var(--s4);bottom:calc(var(--bot) + var(--cardH) + var(--s3));width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:0 4px 16px rgba(20,30,50,.16);cursor:pointer;z-index:5;transition:bottom .38s var(--ease)}
 .fab:active{transform:scale(.94)}
 /* card */
-.cardshadow{position:fixed;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:28px 28px var(--innerR) var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
-.card{position:fixed;left:var(--edge);right:var(--edge);bottom:var(--edge);max-width:560px;margin:0 auto;height:var(--cardH);border-radius:28px 28px var(--innerR) var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
+.cardshadow{position:fixed;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
+.card{position:fixed;left:var(--edge);right:var(--edge);bottom:var(--edge);max-width:560px;margin:0 auto;height:var(--cardH);border-radius:var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
 .view{grid-area:1/1;align-self:start;min-width:0;width:100%;transition:opacity .28s ease-out,transform .38s var(--ease),visibility 0s linear .38s}
 .view.off{opacity:0;visibility:hidden;pointer-events:none}
 .view.on{opacity:1;visibility:visible;transform:none;transition:opacity .28s ease-out .06s,transform .38s var(--ease),visibility 0s}
 #dayv.off{transform:translateX(-24px)} #stepv.off{transform:translateX(24px)}
-.dayin{padding:var(--s5) var(--s5) calc(var(--safeB) + 4px);display:flex;flex-direction:column;gap:var(--s4)}
+.dayin{padding:var(--s6) var(--s6) calc(var(--safeB) + 4px);display:flex;flex-direction:column;gap:var(--s4)}
 .kick{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .dayin h1{font-size:24px;line-height:1.15;font-weight:600;letter-spacing:-0.02em;text-wrap:balance;margin-top:2px}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
@@ -69,8 +72,8 @@ button{font:inherit;color:inherit}
 /* step carousel */
 .car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
 .car::-webkit-scrollbar{display:none}
-.slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s5) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:14px;min-width:0}
-.bars-row{display:flex;align-items:center;gap:var(--s2);padding:var(--s4) var(--s5) 0}
+.slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:14px;min-width:0}
+.bars-row{display:flex;align-items:center;gap:var(--s2);padding:22px var(--s6) 0 var(--s6)}
 .bars{flex:1 1 auto;display:grid;gap:var(--s1)}
 .bars i{height:4px;border-radius:2px;background:var(--tint2);transition:background-color .3s ease-out}
 .x{flex:0 0 auto;width:44px;height:44px;margin:-8px -10px -8px 0;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;cursor:pointer}
@@ -107,6 +110,7 @@ button{font:inherit;color:inherit}
 </head>
 <body>
 <div id="map" role="region" aria-label="Carte du roadtrip"></div>
+<div class="statusfade" aria-hidden="true"></div>
 <div class="ov" id="skel"><div class="msg">Chargement de la carte<div class="progress"><i id="bar"></i></div></div></div>
 <div class="ov" id="err"><div><p>La carte n'a pas pu se charger. Vérifie ta connexion, les étapes restent consultables.</p><button id="retry">Réessayer</button></div></div>
 <nav class="seg glass" id="seg" aria-label="Jour"></nav>
@@ -258,7 +262,7 @@ function screenRadius(){
   const map={'402x874':62,'440x956':62,'393x852':55,'430x932':55,'390x844':47.33,'428x926':53.33,'375x812':39,'414x896':41.5,'360x780':44};
   return map[w+'x'+h] || 55;
 }
-const EDGE=8, R_SCREEN=screenRadius(), R_BOTTOM=Math.max(16,R_SCREEN-EDGE), R_TOP=28;
+const EDGE=8, R_SCREEN=screenRadius(), R_BOTTOM=Math.max(16,R_SCREEN-EDGE), R_TOP=R_BOTTOM;
 function clipCard(){
   const c=$('card'); const w=c.offsetWidth, h=c.offsetHeight; if(!w||!h) return;
   const atBottom = Math.abs(window.innerHeight - c.getBoundingClientRect().bottom - EDGE) < 2 && Math.abs(c.getBoundingClientRect().left - EDGE) < 2;
