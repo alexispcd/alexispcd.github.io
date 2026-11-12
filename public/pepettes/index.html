@@ -330,7 +330,14 @@ function renderSteps(){
     </article>`;}).join('')}</div>`;
   $('closeStep').onclick=closeStep;
   const car=$('car'); let t=null;
-  car.addEventListener('scroll',()=>{ const k=Math.round(car.scrollLeft/car.clientWidth); paintBars(k); clearTimeout(t); t=setTimeout(()=>{ if(k!==cur){ cur=k; focusStop(); } },140); },{passive:true});
+  // Des que le doigt engage le slide, la carte part vers l'etape visee ; retour arriere, elle revient.
+  car.addEventListener('scroll',()=>{
+    const w=car.clientWidth; if(!w) return; const n=dayStops(curDay).length;
+    const d=car.scrollLeft/w-cur; let k=cur;
+    if(d>0.08) k=Math.min(n-1,cur+Math.ceil(d-0.08)); else if(d<-0.08) k=Math.max(0,cur-Math.ceil(-d-0.08));
+    if(k!==aimed){ aimed=k; paintBars(k); focusStop(k,true); }
+    clearTimeout(t); t=setTimeout(()=>{ const r=Math.round(car.scrollLeft/w); cur=r; if(r!==aimed){ aimed=r; paintBars(r); focusStop(r,true); } },120);
+  },{passive:true});
 }
 function paintBars(k){ const b=$('bars'); if(!b) return; const c=DAYS[curDay].css; [...b.children].forEach((el,j)=>el.style.background=j<=k?c:''); }
 function showView(step,after){
@@ -350,14 +357,17 @@ function setDay(id){
   renderSeg(); renderDay(); renderSteps(); updateLayers(); showView(false,fitDay);
 }
 function openStep(k){
-  sel=k; cur=k;
+  sel=k; cur=k; aimed=k;
   paintBars(k);
   showView(true,()=>{ const car=$('car'); if(car){ car.style.scrollBehavior='auto'; car.scrollLeft=k*car.clientWidth; car.style.scrollBehavior=''; } focusStop(); });
 }
 function closeStep(){ sel=null; drawPins(); showView(false,fitDay); }
-function focusStop(){
-  const [s,i]=dayStops(curDay)[cur]; drawPins(i);
-  if(map){ const p=pad(); map.flyTo({center:[s.lon,s.lat],zoom:s.name==='Vannes'?10:13,offset:[(p.left-p.right)/2,(p.top-p.bottom)/2],duration:DUR}); }
+let aimed=-1;
+function focusStop(k=cur,fast=false){
+  const [s,i]=dayStops(curDay)[k]; drawPins(i);
+  if(!map) return; const p=pad();
+  const o={center:[s.lon,s.lat],zoom:s.name==='Vannes'?10:13,offset:[(p.left-p.right)/2,(p.top-p.bottom)/2]};
+  if(fast) map.easeTo({...o,duration:REDUCED?0:450,easing:x=>1-Math.pow(1-x,3)}); else map.flyTo({...o,duration:DUR});
 }
 
 /* ---------- map ---------- */
