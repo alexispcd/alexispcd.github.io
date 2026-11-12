@@ -71,7 +71,7 @@ button{font:inherit;color:inherit}
 .tap:active .dot{transform:scale(.88)}
 .tap .lab{position:absolute;top:42px;left:50%;transform:translateX(-50%);width:var(--lw,56px);text-align:center;font-size:11px;line-height:1.2;font-weight:500;hyphens:manual;letter-spacing:-0.01em}
 /* step carousel */
-.car{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
+.car{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
 .car::-webkit-scrollbar{display:none}
 .slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:14px;min-width:0}
 .bars-row{display:flex;align-items:center;gap:var(--s2);padding:22px var(--s6) 0 var(--s6)}
@@ -228,10 +228,12 @@ const ICON={
 };
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+String(m%60).padStart(2,'0'):'');
-const dayStops=d=>STOPS.map((s,i)=>[s,i]).filter(([s])=>s.day===d);
+// Chaque jour commence au logement de la veille (sauf le jour du depart, qui part de Vannes).
+const startHome=d=>{ if(d<=0) return -1; return STOPS.findIndex(s=>s.day===d-1&&s.home); };
+const dayStops=d=>{ const l=STOPS.map((s,i)=>[s,i]).filter(([s])=>s.day===d); const h=startHome(d); return h<0?l:[[{...STOPS[h],time:'Départ'},h],...l]; };
 const totals=d=>{const l=ROUTES[d].legs;return [l.reduce((a,x)=>a+x[0],0),l.reduce((a,x)=>a+x[1],0)];};
-const legBefore=(d,k)=>{const o=d===0?0:1;const li=k-1+o;return li>=0?ROUTES[d].legs[li]:null;};
-const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le logement':(SHORT[p.name]||p.name);} return d===0?null:'le logement'; };
+const legBefore=(d,k)=>k>0?ROUTES[d].legs[k-1]:null;
+const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le logement':(SHORT[p.name]||p.name);} return null; };
 const numOf=i=>{const s=STOPS[i]; if(s.home) return null; let n=0; for(let j=0;j<=i;j++) if(STOPS[j].day===s.day&&!STOPS[j].home) n++; return n;};
 const badge=i=>STOPS[i].home?ICON.home:numOf(i);
 const waze=s=>s.addr?`https://waze.com/ul?q=${encodeURIComponent(s.addr)}&navigate=yes`:`https://waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes`;
@@ -336,7 +338,7 @@ function renderSteps(){
   <div class="car" id="car">${list.map(([s,i],k)=>{
     const lg=legBefore(curDay,k), from=fromName(curDay,k);
     return `<article class="slide" aria-label="${esc(s.name)}">
-      <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+(k+1)+' sur '+n}</span></div>
+      <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+numOf(i)+' sur '+list.filter(([x])=>!x.home).length}</span></div>
       <div><h2>${esc(s.name)}</h2>${lg&&from?`<div class="leg">${fmt(lg[0])} depuis ${esc(from)} · ${lg[1]} km</div>`:''}</div>
       <p class="desc">${esc(s.desc)}</p>
       <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a><button class="rech" data-k="${k}">${ICON.search}Rechercher</button></div>
@@ -349,8 +351,8 @@ function renderSteps(){
     const w=car.clientWidth; if(!w) return; const n=dayStops(curDay).length;
     const d=car.scrollLeft/w-cur; let k=cur;
     if(d>0.08) k=Math.min(n-1,cur+Math.ceil(d-0.08)); else if(d<-0.08) k=Math.max(0,cur-Math.ceil(-d-0.08));
-    if(k!==aimed){ aimed=k; paintBars(k); focusStop(k,true); }
-    clearTimeout(t); t=setTimeout(()=>{ const r=Math.round(car.scrollLeft/w); cur=r; if(r!==aimed){ aimed=r; paintBars(r); focusStop(r,true); } },120);
+    if(k!==aimed){ aimed=k; paintBars(k); sizeCard(); focusStop(k,true); }
+    clearTimeout(t); t=setTimeout(()=>{ const r=Math.round(car.scrollLeft/w); cur=r; if(r!==aimed){ aimed=r; paintBars(r); sizeCard(); focusStop(r,true); } },120);
   },{passive:true});
 }
 function paintBars(k){ const b=$('bars'); if(!b) return; const c=DAYS[curDay].css; [...b.children].forEach((el,j)=>el.style.background=j<=k?c:''); }
@@ -361,7 +363,9 @@ function showView(step,after){
   requestAnimationFrame(()=>{ sizeCard(); after&&after(); });
 }
 function sizeCard(){
-  const el=searching?$('srchv'):sel===null?$('dayv'):$('stepv'); const h=el.scrollHeight;
+  let h;
+  if(!searching&&sel!==null){ const sl=$('stepv').querySelectorAll('.slide')[aimed<0?cur:aimed], br=$('stepv').querySelector('.bars-row'); h=(br?br.offsetHeight:0)+(sl?sl.offsetHeight:0); }
+  else h=(searching?$('srchv'):sel===null?$('dayv'):$('stepv')).scrollHeight;
   document.documentElement.style.setProperty('--cardH',h+'px');
 }
 function pad(h){ h=h||parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cardH'))||280; const top=$('seg').getBoundingClientRect().bottom+12; const mb=$('map').getBoundingClientRect().bottom, cb=$('card').getBoundingClientRect().bottom; return {top, left:24, right:72, bottom:h+(mb-cb)+24}; }
@@ -405,20 +409,20 @@ function focusStop(k=cur,fast=false){
 }
 
 /* ---------- map ---------- */
-function routeGeo(){ return {type:'FeatureCollection',features:DAYS.map(d=>({type:'Feature',properties:{color:d.hex,on:(curDay===-1||curDay===d.id)?1:0},geometry:{type:'LineString',coordinates:ROUTES[d.id].coords}})).sort((a,b)=>a.properties.on-b.properties.on)}; }
+function routeGeo(){ return {type:'FeatureCollection',features:DAYS.map(d=>({type:'Feature',properties:{id:d.id,color:d.hex,on:(curDay===-1||curDay===d.id)?1:0},geometry:{type:'LineString',coordinates:ROUTES[d.id].coords}})).sort((a,b)=>a.properties.on-b.properties.on)}; }
 function boundsFor(day){ const b=new maplibregl.LngLatBounds(); if(day===-1) STOPS.filter(s=>s.name!=='Vannes').forEach(s=>b.extend([s.lon,s.lat])); else ROUTES[day].coords.forEach(c=>b.extend(c)); return b; }
 function fitDay(){ if(map) map.fitBounds(boundsFor(curDay),{padding:pad(),maxZoom:12.5,duration:DUR}); }
 function drawPins(selI){
   if(!map) return; markers.forEach(m=>m.remove()); markers=[];
   const seen=new Set();
   STOPS.forEach((s,i)=>{
-    if(curDay!==-1&&s.day!==curDay) return;
+    if(curDay!==-1&&s.day!==curDay&&i!==startHome(curDay)) return;
     if(curDay===-1){ if(seen.has(s.name)) return; seen.add(s.name); }
-    const d=DAYS[s.day]; const n=s.home?ICON.home:(curDay===-1?'':numOf(i));
+    const d=DAYS[curDay===-1?s.day:curDay]; const n=s.home?ICON.home:(curDay===-1?'':numOf(i));
     const label=(curDay!==-1&&!s.home)||['Granville','Honfleur','Étretat','Coutances','Deauville','Pointe du Hoc','Vannes'].includes(s.name);
     const el=document.createElement('div'); el.className='pin'+(selI===i?' sel':'');
     el.innerHTML=`<span class="c" style="background:${d.hex}">${n}</span>${label?`<span class="l">${esc(short(s.name))}</span>`:''}`;
-    el.addEventListener('click',e=>{e.stopPropagation(); if(curDay!==s.day) setDay(s.day); const k=dayStops(s.day).findIndex(([,j])=>j===i); openStep(k);});
+    el.addEventListener('click',e=>{e.stopPropagation(); const dd=(curDay!==-1&&dayStops(curDay).some(([,j])=>j===i))?curDay:s.day; if(curDay!==dd) setDay(dd); const k=dayStops(dd).findIndex(([,j])=>j===i); openStep(k);});
     markers.push(new maplibregl.Marker({element:el,anchor:'left',offset:[-14,0]}).setLngLat([s.lon,s.lat]).addTo(map));
     el.setAttribute('aria-label',s.name);
   });
@@ -450,6 +454,12 @@ async function initMap(){
       map.addSource('routes',{type:'geojson',data:routeGeo()});
       map.addLayer({id:'route-casing',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':['case',['==',['get','on'],1],8,4],'line-opacity':['case',['==',['get','on'],1],0.95,0.3]}});
       map.addLayer({id:'route',type:'line',source:'routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['case',['==',['get','on'],1],4.5,2.5],'line-opacity':['case',['==',['get','on'],1],1,0.3]}});
+      // Sens du trajet : pastilles de la couleur du jour avec un chevron blanc.
+      DAYS.forEach(d=>{ const c=document.createElement('canvas'); c.width=c.height=28; const x=c.getContext('2d'); x.scale(2,2);
+        x.fillStyle=d.hex; x.beginPath(); x.arc(7,7,7,0,Math.PI*2); x.fill();
+        x.strokeStyle='#fff'; x.lineWidth=2.2; x.lineCap='round'; x.lineJoin='round'; x.beginPath(); x.moveTo(5,3.8); x.lineTo(8.6,7); x.lineTo(5,10.2); x.stroke();
+        map.addImage('sens'+d.id,x.getImageData(0,0,28,28),{pixelRatio:2}); });
+      map.addLayer({id:'sens',type:'symbol',source:'routes',filter:['==',['get','on'],1],layout:{'symbol-placement':'line','symbol-spacing':90,'icon-image':['concat','sens',['to-string',['get','id']]],'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map'}});
       drawPins(sel===null?undefined:dayStops(curDay)[cur][1]);
       suivrePosition();
     });
