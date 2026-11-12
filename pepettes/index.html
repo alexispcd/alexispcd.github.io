@@ -24,30 +24,31 @@
   --ease:cubic-bezier(.2,.8,.2,1); --cardH:280px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+/* App installee sous la barre d'etat : iOS remonte la page de la hauteur de la barre sans l'allonger.
+   Le document est allonge d'autant (env(safe-area-inset-top), 0 dans Safari) et tout est place dedans en absolu. */
+html,body{height:calc(100% + env(safe-area-inset-top));overflow:hidden;overscroll-behavior:none}
+body{position:relative}
 *{-webkit-tap-highlight-color:transparent}
 button,a{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 :focus:not(:focus-visible){outline:none}
 body{font-family:Inter,system-ui,sans-serif;font-kerning:normal;color:var(--ink);-webkit-font-smoothing:antialiased;background:#eef0f2;line-height:1.4}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-#map{position:fixed;left:0;right:0;top:0;height:calc(100lvh + var(--gap))}
-/* App installee en black-translucent : iOS decale la page sous la barre d'etat sans l'allonger, le bas de l'ecran sort du viewport. --gap le recupere. */
-@media (display-mode: standalone){:root{--gap:env(safe-area-inset-top)}}
+#map{position:absolute;inset:0}
 .glass{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 /* top segmented */
-.seg{position:fixed;top:var(--top);left:var(--s4);right:var(--s4);max-width:520px;margin:0 auto;height:44px;padding:var(--s1);border-radius:999px;box-shadow:0 4px 20px rgba(20,30,50,.12);display:flex;gap:2px;z-index:6}
-.seg{position:fixed}
+.seg{position:absolute;top:var(--top);left:var(--s4);right:var(--s4);max-width:520px;margin:0 auto;height:44px;padding:var(--s1);border-radius:999px;box-shadow:0 4px 20px rgba(20,30,50,.12);display:flex;gap:2px;z-index:6}
+.seg{position:absolute}
 .seg .thumb{position:absolute;top:4px;left:0;height:36px;border-radius:999px;background:#fff;box-shadow:0 1px 4px rgba(20,30,50,.16);transition:transform .35s var(--ease),width .35s var(--ease);z-index:0}
 .seg .thumb.noanim{transition:none}
 .seg button{position:relative;z-index:1;flex:1 1 0;min-width:0;height:36px;border:0;border-radius:999px;background:transparent;font-size:13px;font-weight:500;cursor:pointer;transition:font-weight .2s}
 .seg button[aria-pressed="true"]{font-weight:600}
 /* recenter */
-.fab{position:fixed;right:var(--s4);bottom:calc(var(--bot) - var(--gap) + var(--cardH) + var(--s3));width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:0 4px 16px rgba(20,30,50,.16);cursor:pointer;z-index:5;transition:bottom .38s var(--ease)}
+.fab{position:absolute;right:var(--s4);bottom:calc(var(--bot) - var(--gap) + var(--cardH) + var(--s3));width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:0 4px 16px rgba(20,30,50,.16);cursor:pointer;z-index:5;transition:bottom .38s var(--ease)}
 .fab:active{transform:scale(.94)}
 /* card */
-.cardshadow{position:fixed;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) - var(--gap) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
-.card{position:fixed;left:var(--edge);right:var(--edge);bottom:calc(var(--edge) - var(--gap));max-width:560px;margin:0 auto;height:var(--cardH);border-radius:var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
+.cardshadow{position:absolute;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) - var(--gap) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
+.card{position:absolute;left:var(--edge);right:var(--edge);bottom:calc(var(--edge) - var(--gap));max-width:560px;margin:0 auto;height:var(--cardH);border-radius:var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
 .view{grid-area:1/1;align-self:start;min-width:0;width:100%;transition:opacity .28s ease-out,transform .38s var(--ease),visibility 0s linear .38s}
 .view.off{opacity:0;visibility:hidden;pointer-events:none}
 .view.on{opacity:1;visibility:visible;transform:none;transition:opacity .28s ease-out .06s,transform .38s var(--ease),visibility 0s}
@@ -92,7 +93,7 @@ button{font:inherit;color:inherit}
 .pin.sel .c{transform:scale(1.3)}
 .pin .l{font:600 12px/1.2 Inter,sans-serif;color:var(--ink);background:rgba(255,255,255,.92);padding:2px 6px;border-radius:6px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 /* overlays */
-.ov{position:fixed;inset:0;display:none;place-items:center;z-index:4;text-align:center;padding:var(--s6)}
+.ov{position:absolute;inset:0;display:none;place-items:center;z-index:4;text-align:center;padding:var(--s6)}
 .ov.show{display:grid}
 #skel{background:linear-gradient(100deg,#eef0f2 30%,#f6f7f8 50%,#eef0f2 70%) 0 0/200% 100%;animation:sh 1.4s linear infinite}
 @keyframes sh{to{background-position:-200% 0}}
@@ -408,6 +409,7 @@ $('recenter').onclick=()=>{ if(sel===null) fitDay(); else focusStop(); };
 window.addEventListener('resize',()=>requestAnimationFrame(()=>{ const th=$('seg').querySelector('.thumb'); th&&th.classList.add('noanim'); moveThumb(); sizeCard(); if(sel===null) fitDay(); }));
 document.documentElement.style.setProperty('--innerR',R_BOTTOM+'px');
 new ResizeObserver(clipCard).observe($('card')); window.addEventListener('resize',clipCard);
+window.addEventListener('scroll',()=>{ if(window.scrollY||window.scrollX) window.scrollTo(0,0); },{passive:true});
 setDay(-1); initMap();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.error('[pepettes] sw',e)); }); }
 </script>
