@@ -20,13 +20,13 @@
   --ink:oklch(0.25 0.02 250); --muted:oklch(0.48 0.015 250); --blue:oklch(0.55 0.17 255);
   --glass:rgba(255,255,255,.84); --blur:blur(20px) saturate(1.6); --tint:rgba(120,130,150,.12); --tint2:rgba(120,130,150,.25);
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
-  --top:calc(env(safe-area-inset-top) + 12px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px); --gap:0px;
+  --top:calc(env(safe-area-inset-top) + 28px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px); --gap:0px;
   --ease:cubic-bezier(.2,.8,.2,1); --cardH:280px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-/* App installee sous la barre d'etat : iOS remonte la page de la hauteur de la barre sans l'allonger.
-   Le document est allonge d'autant (env(safe-area-inset-top), 0 dans Safari) et tout est place dedans en absolu. */
-html,body{height:calc(100% + env(safe-area-inset-top));overflow:hidden;overscroll-behavior:none}
+/* App installee sous la barre d'etat : la zone d'affichage d'iOS ne couvre pas tout l'ecran.
+   --appH (posee en JS dans l'app installee) donne au document la hauteur reelle de l'ecran, tout est place dedans en absolu. */
+html,body{height:var(--appH,100%);overflow:hidden;overscroll-behavior:none}
 body{position:relative}
 *{-webkit-tap-highlight-color:transparent}
 button,a{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
@@ -82,8 +82,12 @@ button{font:inherit;color:inherit}
 .slide h2{font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-0.02em;text-wrap:balance}
 .slide .leg{font-size:15px;color:var(--muted);margin-top:var(--s1);font-variant-numeric:tabular-nums}
 .slide p.desc{font-size:16px;line-height:1.5;text-wrap:pretty;max-width:65ch}
-.go{min-height:56px;border-radius:16px;background:var(--blue);color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;transition:transform .15s ease-out}
+.goRow{display:flex;gap:var(--s2)}
+.go{flex:1 1 auto;min-height:56px;border-radius:16px;background:var(--blue);color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;transition:transform .15s ease-out}
 .go:active{transform:scale(.98)}
+.park{flex:0 0 auto;min-height:56px;padding:0 var(--s4);border-radius:16px;background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:var(--s2);font-size:15px;font-weight:600;transition:transform .15s ease-out}
+.park:active{transform:scale(.97)}
+.pIcon{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
 .food{display:flex;gap:var(--s2)}
 .food a{flex:1 1 0;min-width:0;min-height:44px;padding:0 var(--s3);border-radius:14px;background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:var(--s2);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .15s ease-out}
 .food a:active{transform:scale(.97)}
@@ -215,6 +219,7 @@ const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le lo
 const numOf=i=>{const s=STOPS[i]; if(s.home) return null; let n=0; for(let j=0;j<=i;j++) if(STOPS[j].day===s.day&&!STOPS[j].home) n++; return n;};
 const badge=i=>STOPS[i].home?ICON.home:numOf(i);
 const waze=s=>s.addr?`https://waze.com/ul?q=${encodeURIComponent(s.addr)}&navigate=yes`:`https://waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes`;
+const wazePark=s=>`https://waze.com/ul?q=parking&ll=${s.lat},${s.lon}`;
 const gsearch=(q,s)=>`https://www.google.com/maps/search/${encodeURIComponent(q)}/@${s.lat},${s.lon},15z`;
 const short=n=>SHORT[n]||n;
 const HY={Coutances:'Cou\u00adtances',Regnéville:'Regné\u00adville',Granville:'Gran\u00adville',Gouville:'Gou\u00adville',Colleville:'Colle\u00adville',Deauville:'Deau\u00adville',Honfleur:'Hon\u00adfleur',Logement:'Loge\u00adment','Étretat':'Étre\u00adtat',Vannes:'Van\u00adnes'};
@@ -319,7 +324,7 @@ function renderSteps(){
       <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+(k+1)+' sur '+n}</span></div>
       <div><h2>${esc(s.name)}</h2>${lg&&from?`<div class="leg">${fmt(lg[0])} depuis ${esc(from)} · ${lg[1]} km</div>`:''}</div>
       <p class="desc">${esc(s.desc)}</p>
-      <a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a>
+      <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a>${s.home?'':`<a class="park" href="${wazePark(s)}" target="_blank" rel="noopener" aria-label="Voir les parkings autour dans Waze"><span class="pIcon" aria-hidden="true">P</span>Parkings</a>`}</div>
       <div class="food">${s.food.slice(0,3).map(f=>`<a href="${gsearch(f[1],s)}" target="_blank" rel="noopener">${esc(f[0])}</a>`).join('')}</div>
     </article>`;}).join('')}</div>`;
   $('closeStep').onclick=closeStep;
@@ -409,6 +414,14 @@ $('recenter').onclick=()=>{ if(sel===null) fitDay(); else focusStop(); };
 window.addEventListener('resize',()=>requestAnimationFrame(()=>{ const th=$('seg').querySelector('.thumb'); th&&th.classList.add('noanim'); moveThumb(); sizeCard(); if(sel===null) fitDay(); }));
 document.documentElement.style.setProperty('--innerR',R_BOTTOM+'px');
 new ResizeObserver(clipCard).observe($('card')); window.addEventListener('resize',clipCard);
+function fixAppHeight(){
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if(!standalone){ document.documentElement.style.removeProperty('--appH'); return; }
+  const portrait = innerHeight >= innerWidth;
+  const h = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
+  document.documentElement.style.setProperty('--appH', h+'px');
+}
+fixAppHeight(); window.addEventListener('resize', fixAppHeight); window.addEventListener('orientationchange', fixAppHeight);
 window.addEventListener('scroll',()=>{ if(window.scrollY||window.scrollX) window.scrollTo(0,0); },{passive:true});
 setDay(-1); initMap();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.error('[pepettes] sw',e)); }); }
