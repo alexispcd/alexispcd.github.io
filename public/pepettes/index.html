@@ -20,7 +20,7 @@
   --ink:oklch(0.25 0.02 250); --muted:oklch(0.48 0.015 250); --blue:oklch(0.55 0.17 255);
   --glass:rgba(255,255,255,.84); --blur:blur(20px) saturate(1.6); --tint:rgba(120,130,150,.12); --tint2:rgba(120,130,150,.25);
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
-  --top:calc(env(safe-area-inset-top) + 12px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px);
+  --top:calc(env(safe-area-inset-top) + 12px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px); --gap:0px;
   --ease:cubic-bezier(.2,.8,.2,1); --cardH:280px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,9 +31,9 @@ button,a{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
 body{font-family:Inter,system-ui,sans-serif;font-kerning:normal;color:var(--ink);-webkit-font-smoothing:antialiased;background:#eef0f2;line-height:1.4}
 button{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
-#map{position:fixed;inset:0;height:100lvh}
-.statusfade{position:fixed;left:0;right:0;top:0;height:calc(env(safe-area-inset-top) + 24px);background:linear-gradient(rgba(20,25,35,.38),rgba(20,25,35,0));pointer-events:none;z-index:3;display:none}
-@media (display-mode: standalone){.statusfade{display:block}}
+#map{position:fixed;left:0;right:0;top:0;height:calc(100lvh + var(--gap))}
+/* App installee en black-translucent : iOS decale la page sous la barre d'etat sans l'allonger, le bas de l'ecran sort du viewport. --gap le recupere. */
+@media (display-mode: standalone){:root{--gap:env(safe-area-inset-top)}}
 .glass{background:var(--glass);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur)}
 /* top segmented */
 .seg{position:fixed;top:var(--top);left:var(--s4);right:var(--s4);max-width:520px;margin:0 auto;height:44px;padding:var(--s1);border-radius:999px;box-shadow:0 4px 20px rgba(20,30,50,.12);display:flex;gap:2px;z-index:6}
@@ -43,11 +43,11 @@ button{font:inherit;color:inherit}
 .seg button{position:relative;z-index:1;flex:1 1 0;min-width:0;height:36px;border:0;border-radius:999px;background:transparent;font-size:13px;font-weight:500;cursor:pointer;transition:font-weight .2s}
 .seg button[aria-pressed="true"]{font-weight:600}
 /* recenter */
-.fab{position:fixed;right:var(--s4);bottom:calc(var(--bot) + var(--cardH) + var(--s3));width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:0 4px 16px rgba(20,30,50,.16);cursor:pointer;z-index:5;transition:bottom .38s var(--ease)}
+.fab{position:fixed;right:var(--s4);bottom:calc(var(--bot) - var(--gap) + var(--cardH) + var(--s3));width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;box-shadow:0 4px 16px rgba(20,30,50,.16);cursor:pointer;z-index:5;transition:bottom .38s var(--ease)}
 .fab:active{transform:scale(.94)}
 /* card */
-.cardshadow{position:fixed;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
-.card{position:fixed;left:var(--edge);right:var(--edge);bottom:var(--edge);max-width:560px;margin:0 auto;height:var(--cardH);border-radius:var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
+.cardshadow{position:fixed;left:calc(var(--edge) + 6px);right:calc(var(--edge) + 6px);bottom:calc(var(--edge) - var(--gap) + 6px);max-width:548px;margin:0 auto;height:calc(var(--cardH) - 12px);border-radius:var(--innerR);box-shadow:0 8px 32px rgba(20,30,50,.20);z-index:5;pointer-events:none;transition:height .38s var(--ease)}
+.card{position:fixed;left:var(--edge);right:var(--edge);bottom:calc(var(--edge) - var(--gap));max-width:560px;margin:0 auto;height:var(--cardH);border-radius:var(--innerR);overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr);z-index:6;transition:height .38s var(--ease)}
 .view{grid-area:1/1;align-self:start;min-width:0;width:100%;transition:opacity .28s ease-out,transform .38s var(--ease),visibility 0s linear .38s}
 .view.off{opacity:0;visibility:hidden;pointer-events:none}
 .view.on{opacity:1;visibility:visible;transform:none;transition:opacity .28s ease-out .06s,transform .38s var(--ease),visibility 0s}
@@ -110,7 +110,6 @@ button{font:inherit;color:inherit}
 </head>
 <body>
 <div id="map" role="region" aria-label="Carte du roadtrip"></div>
-<div class="statusfade" aria-hidden="true"></div>
 <div class="ov" id="skel"><div class="msg">Chargement de la carte<div class="progress"><i id="bar"></i></div></div></div>
 <div class="ov" id="err"><div><p>La carte n'a pas pu se charger. Vérifie ta connexion, les étapes restent consultables.</p><button id="retry">Réessayer</button></div></div>
 <nav class="seg glass" id="seg" aria-label="Jour"></nav>
@@ -337,7 +336,7 @@ function sizeCard(){
   const el=sel===null?$('dayv'):$('stepv'); const h=el.scrollHeight;
   document.documentElement.style.setProperty('--cardH',h+'px');
 }
-function pad(h){ h=h||parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cardH'))||280; const top=$('seg').getBoundingClientRect().bottom+12; return {top, left:24, right:72, bottom:h+parseFloat(getComputedStyle($('card')).bottom)+24}; }
+function pad(h){ h=h||parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cardH'))||280; const top=$('seg').getBoundingClientRect().bottom+12; const mb=$('map').getBoundingClientRect().bottom, cb=$('card').getBoundingClientRect().bottom; return {top, left:24, right:72, bottom:h+(mb-cb)+24}; }
 
 function setDay(id){
   curDay=id; sel=null; cur=0;
