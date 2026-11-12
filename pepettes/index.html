@@ -219,7 +219,6 @@ const fromName=(d,k)=>{ if(k>0){const p=dayStops(d)[k-1][0];return p.home?'le lo
 const numOf=i=>{const s=STOPS[i]; if(s.home) return null; let n=0; for(let j=0;j<=i;j++) if(STOPS[j].day===s.day&&!STOPS[j].home) n++; return n;};
 const badge=i=>STOPS[i].home?ICON.home:numOf(i);
 const waze=s=>s.addr?`https://waze.com/ul?q=${encodeURIComponent(s.addr)}&navigate=yes`:`https://waze.com/ul?ll=${s.lat},${s.lon}&navigate=yes`;
-const wazePark=s=>`https://waze.com/ul?q=parking&ll=${s.lat},${s.lon}`;
 const gsearch=(q,s)=>`https://www.google.com/maps/search/${encodeURIComponent(q)}/@${s.lat},${s.lon},15z`;
 const short=n=>SHORT[n]||n;
 const HY={Coutances:'Cou\u00adtances',Regnéville:'Regné\u00adville',Granville:'Gran\u00adville',Gouville:'Gou\u00adville',Colleville:'Colle\u00adville',Deauville:'Deau\u00adville',Honfleur:'Hon\u00adfleur',Logement:'Loge\u00adment','Étretat':'Étre\u00adtat',Vannes:'Van\u00adnes'};
@@ -324,7 +323,7 @@ function renderSteps(){
       <div class="meta"><span>${d.name} · ${esc(s.time)}</span><span>${s.home?'Logement':'Étape '+(k+1)+' sur '+n}</span></div>
       <div><h2>${esc(s.name)}</h2>${lg&&from?`<div class="leg">${fmt(lg[0])} depuis ${esc(from)} · ${lg[1]} km</div>`:''}</div>
       <p class="desc">${esc(s.desc)}</p>
-      <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a>${s.home?'':`<a class="park" href="${wazePark(s)}" target="_blank" rel="noopener" aria-label="Voir les parkings autour dans Waze"><span class="pIcon" aria-hidden="true">P</span>Parkings</a>`}</div>
+      <div class="goRow"><a class="go" href="${waze(s)}" target="_blank" rel="noopener">${ICON.nav}Y aller avec Waze</a>${s.home?'':`<a class="park" href="${gsearch('parking',s).replace(',15z',',16z')}" target="_blank" rel="noopener" aria-label="Voir les parkings autour dans Google Maps"><span class="pIcon" aria-hidden="true">P</span>Parkings</a>`}</div>
       <div class="food">${s.food.slice(0,3).map(f=>`<a href="${gsearch(f[1],s)}" target="_blank" rel="noopener">${esc(f[0])}</a>`).join('')}</div>
     </article>`;}).join('')}</div>`;
   $('closeStep').onclick=closeStep;
