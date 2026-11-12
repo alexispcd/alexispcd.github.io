@@ -437,5 +437,36 @@ window.addEventListener('scroll',()=>{ if(window.scrollY||window.scrollX) window
 setDay(-1); initMap();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.error('[pepettes] sw',e)); }); }
 </script>
+
+<style>
+#install{position:fixed;inset:0;z-index:100;display:none;align-items:flex-end;justify-content:center;padding:var(--edge,8px);background:rgba(20,30,50,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+#install.on{display:flex}
+#install .box{width:100%;max-width:560px;background:#F6EFE4;color:#1d2330;border-radius:var(--innerR,47px);padding:28px 24px calc(max(env(safe-area-inset-bottom),16px) + 8px);display:flex;flex-direction:column;gap:20px;box-shadow:0 8px 32px rgba(20,30,50,.25)}
+#install .head{display:flex;align-items:center;gap:14px}
+#install .head img{width:56px;height:56px;border-radius:14px;flex:0 0 auto}
+#install h2{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+#install .mot{margin:0;font-size:16px;line-height:1.5}
+#install ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;counter-reset:n}
+#install li{display:flex;align-items:center;gap:12px;font-size:16px;line-height:1.4;counter-increment:n}
+#install li::before{content:counter(n);flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:#c8443c;color:#fff;font-size:14px;font-weight:600;display:grid;place-items:center}
+#install .ic{display:inline-flex;vertical-align:-4px;color:#1a6fd6}
+#install b{font-weight:600}
+</style>
+<div id="install" role="dialog" aria-modal="true" aria-labelledby="installT">
+  <div class="box">
+    <div class="head"><img src="icons/icon-180.png" alt=""><h2 id="installT">Pepettes</h2></div>
+    <p class="mot">Coucou ma pepette, je t'ai fait une petite appli pour le roadtrip, j'espère qu'elle te plaira. Je te laisse suivre les instructions pour l'installer.<br>T❤️</p>
+    <ol>
+      <li><span>Dans Safari, touche <span class="ic" aria-label="Partager"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></span> <b>Partager</b> (dans le menu <b>···</b> si tu ne le vois pas).</span></li>
+      <li><span>Choisis <b>Sur l'écran d'accueil</b> (touche <b>Voir plus</b> s'il n'apparaît pas).</span></li>
+      <li><span>Touche <b>Ajouter</b>.</span></li>
+      <li><span>Ouvre <b>Pepettes</b> depuis ton écran d'accueil.</span></li>
+    </ol>
+  </div>
+</div>
+<script>
+(()=>{ const pwa = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  if(!pwa) document.getElementById('install').classList.add('on'); })();
+</script>
 </body>
 </html>
