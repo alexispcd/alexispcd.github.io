@@ -1,6 +1,6 @@
 // Service worker de Pepettes, limite a /pepettes/.
 // Changer VERSION a chaque modification des fichiers pour renouveler le cache.
-const VERSION = 'pepettes-v13'
+const VERSION = 'pepettes-v14'
 const FONTS = 'pepettes-fonts'
 const PRECACHE = [
   './', 'index.html', 'manifest.webmanifest',

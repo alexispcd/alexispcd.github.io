@@ -1,0 +1,1 @@
+import{dr as e,ir as t,pr as n}from"./index-zl-DxZMH.js";var r=t(),i=()=>{let{search:t}=n();return(0,r.jsx)(e,{to:{pathname:`/compte/sources`,search:t},replace:!0})};export{i as default};
