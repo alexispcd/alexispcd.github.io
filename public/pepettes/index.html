@@ -20,7 +20,7 @@
   --ink:oklch(0.25 0.02 250); --muted:oklch(0.48 0.015 250); --blue:oklch(0.55 0.17 255);
   --glass:rgba(255,255,255,.84); --blur:blur(20px) saturate(1.6); --tint:rgba(120,130,150,.12); --tint2:rgba(120,130,150,.25);
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
-  --top:calc(env(safe-area-inset-top) + 28px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px); --gap:0px;
+  --top:calc(env(safe-area-inset-top) + 28px); --edge:8px; --bot:var(--edge); --screenR:55px; --innerR:calc(var(--screenR) - var(--edge)); --safeB:max(env(safe-area-inset-bottom), 16px); --gap:0px; --btnR:max(calc(var(--innerR) - var(--s6)), 12px);
   --ease:cubic-bezier(.2,.8,.2,1); --cardH:280px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -83,14 +83,16 @@ button{font:inherit;color:inherit}
 .slide .leg{font-size:15px;color:var(--muted);margin-top:var(--s1);font-variant-numeric:tabular-nums}
 .slide p.desc{font-size:16px;line-height:1.5;text-wrap:pretty;max-width:65ch}
 .goRow{display:flex;gap:var(--s2)}
-.go{flex:1 1 auto;min-height:56px;border-radius:16px;background:var(--blue);color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;transition:transform .15s ease-out}
+.go{flex:1 1 auto;min-height:56px;border-radius:var(--btnR);background:var(--blue);color:#fff;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px;font-weight:600;transition:transform .15s ease-out}
 .go:active{transform:scale(.98)}
-.park{flex:0 0 auto;min-height:56px;padding:0 var(--s4);border-radius:16px;background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:var(--s2);font-size:15px;font-weight:600;transition:transform .15s ease-out}
+.park{flex:0 0 auto;min-height:56px;padding:0 var(--s4);border-radius:var(--btnR);background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:var(--s2);font-size:15px;font-weight:600;transition:transform .15s ease-out}
 .park:active{transform:scale(.97)}
 .pIcon{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
 .food{display:flex;gap:var(--s2)}
-.food a{flex:1 1 0;min-width:0;min-height:44px;padding:0 var(--s3);border-radius:14px;background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:var(--s2);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .15s ease-out}
+.food a{flex:1 1 0;min-width:0;min-height:44px;padding:0 var(--s3);border-radius:var(--btnR);background:var(--tint);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center;gap:var(--s2);font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .15s ease-out}
 .food a:active{transform:scale(.97)}
+.go{white-space:nowrap}
+@media (max-width:380px){.go{font-size:16px;gap:8px;padding:0 var(--s2)}.park{padding:0 var(--s3);gap:6px}}
 /* pins */
 .pin{display:flex;align-items:center;gap:var(--s1);cursor:pointer}
 .pin .c{width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:600 12px/1 Inter,sans-serif;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
@@ -130,8 +132,8 @@ button{font:inherit;color:inherit}
 <script>
 const DAYS = [{"id": 0, "short": "Jeu 12", "name": "Jeudi 12", "title": "Route vers Granville", "night": "Nuit à Donville-les-Bains", "css": "oklch(0.55 0.03 250)", "hex": "#657383"}, {"id": 1, "short": "Ven 13", "name": "Vendredi 13", "title": "Granville, Coutances et la côte", "night": "Nuit à Bayeux", "css": "oklch(0.55 0.11 185)", "hex": "#00867a"}, {"id": 2, "short": "Sam 14", "name": "Samedi 14", "title": "Plages du Débarquement", "night": "Nuit à Bayeux", "css": "oklch(0.6 0.14 55)", "hex": "#be6517"}, {"id": 3, "short": "Dim 15", "name": "Dimanche 15", "title": "Deauville et Honfleur", "night": "Nuit à Villainville", "css": "oklch(0.52 0.17 310)", "hex": "#8745b0"}, {"id": 4, "short": "Lun 16", "name": "Lundi 16", "title": "Étretat puis retour", "night": "Retour à Vannes", "css": "oklch(0.58 0.12 230)", "hex": "#0086b3"}];
 // food: [label, query]
-const F_RESTO = ["Restos","restaurants"], F_MER = ["Fruits de mer","fruits de mer"],
-      F_BOUL = ["Boulangeries","boulangerie"], F_CAFE = ["Cafés","café"], F_BAR = ["Bars","bar"], F_CIDRE = ["Cidre","producteur cidre"];
+const F_RESTO = ["Restaurants","restaurants"],
+      F_BOUL = ["Boulangeries","boulangerie"], F_CAFE = ["Cafés","café"], F_BAR = ["Bars","bar"];
 
 const STOPS = [
   {day:0, name:"Vannes", lat:47.6582, lon:-2.7600, time:"17h30",
@@ -152,10 +154,10 @@ const STOPS = [
    food:[F_CAFE], legBefore:"15 min"},
   {day:1, name:"Pointe d'Agon", lat:49.0031, lon:-1.5771, time:"Aprem",
    desc:"Dunes, phare et balade sur la plage.",
-   food:[F_CAFE, F_MER], legBefore:"10 min"},
+   food:[F_CAFE], legBefore:"10 min"},
   {day:1, name:"Gouville-sur-Mer", lat:49.0970, lon:-1.6099, time:"Fin d'aprem",
    desc:"Les petites cabines de plage colorées, au moment du coucher de soleil (vers 17h15).",
-   food:[F_CAFE, F_MER], legBefore:"15 min"},
+   food:[F_CAFE], legBefore:"15 min"},
   {day:1, name:"B&B Hotel Bayeux", home:true, addr:"B&B HOTEL Bayeux, Chemin de la Cambette, 14400 Bayeux", lat:49.2692, lon:-0.7070, time:"Soir",
    desc:"B&B Hotel, chemin de la Cambette, 14400 Bayeux. Parking gratuit sur place, le centre et la cathédrale sont à environ 10 min à pied, pour une balade le soir. La Tapisserie n'est pas visible (musée en travaux, œuvre prêtée à Londres).",
    food:[F_RESTO, F_BAR]},
@@ -168,30 +170,30 @@ const STOPS = [
    food:[F_CAFE, F_RESTO], legBefore:"10 min"},
   {day:2, name:"Cimetière de Colleville", lat:49.3592, lon:-0.8554, time:"Midi / aprem",
    desc:"Le cimetière et son centre d'interprétation, avec vue sur Omaha. Fermeture à 16h30. Pique-nique prévu : mi-novembre, prévoyez chaud, ça peut souffler.",
-   food:[F_BOUL, ["Supérettes","supérette"]], legBefore:"5 min"},
+   food:[F_BOUL, ["Supermarchés","supermarché"]], legBefore:"5 min"},
   {day:2, name:"Port-en-Bessin-Huppain", lat:49.3465, lon:-0.7550, time:"Aprem",
    desc:"Petit port de pêche et tour Vauban. Plan B si le pique-nique ne le fait pas : restos sur le port.",
-   food:[F_MER, F_RESTO, F_CAFE], legBefore:"10 min"},
+   food:[F_RESTO, F_CAFE], legBefore:"10 min"},
   {day:2, name:"B&B Hotel Bayeux", home:true, addr:"B&B HOTEL Bayeux, Chemin de la Cambette, 14400 Bayeux", lat:49.2692, lon:-0.7070, time:"Soir",
    desc:"B&B Hotel, chemin de la Cambette, 14400 Bayeux. 2e nuit. Si ce n'est pas fait : cathédrale Notre-Dame, maisons à colombages et moulins le long de l'Aure.",
    food:[F_RESTO, F_BAR]},
 
   {day:3, name:"Deauville", lat:49.3608, lon:0.0666, time:"Matin + midi",
    desc:"Environ 1h de route depuis Bayeux. Balade sur les Planches et la plage, puis déjeuner à Deauville ou en face à Trouville (marché aux poissons, brasseries). Pensez à réserver.",
-   food:[F_MER, F_RESTO, ["Trouville","restaurants Trouville-sur-Mer"]], legBefore:"Environ 1h depuis Bayeux"},
+   food:[F_RESTO], legBefore:"Environ 1h depuis Bayeux"},
   {day:3, name:"Honfleur", lat:49.4202, lon:0.2332, time:"Aprem",
    desc:"Vieux Bassin, église Sainte-Catherine en bois et petites rues. Pour finir, le point de vue de la chapelle Notre-Dame-de-Grâce pour le coucher de soleil vers 17h.",
    food:[F_CAFE, F_RESTO], legBefore:"30 min"},
   {day:3, name:"Logement à Villainville", home:true, addr:"3 Route de Pierrefiques, 76280 Villainville", lat:49.6630, lon:0.2395, time:"Soir",
    desc:"3 route de Pierrefiques, 76280 Villainville, à une dizaine de minutes d'Étretat. Le pont de Normandie est payant.",
-   food:[F_RESTO, F_MER, F_BAR]},
+   food:[F_RESTO, F_BAR]},
 
   {day:4, name:"Étretat", lat:49.7073, lon:0.1936, time:"Matin",
    desc:"Balade sur les falaises : Porte d'Aval et l'Aiguille d'un côté, chapelle Notre-Dame-de-la-Garde de l'autre.",
    food:[F_CAFE, F_BOUL]},
   {day:4, name:"Vannes", lat:47.6582, lon:-2.7600, time:"Après la balade",
    desc:"Environ 4h10 sans pause, plutôt 4h30 à 5h avec un arrêt.",
-   food:[["Aires / restos sur la route","restaurant"]], legBefore:"4h10 de route"}
+   food:[F_RESTO], legBefore:"4h10 de route"}
 ];
 
 // Route paths per day (lat, lon). Straight-ish, indicative.
