@@ -53,7 +53,7 @@ button{font:inherit;color:inherit}
 .view.off{opacity:0;visibility:hidden;pointer-events:none}
 .view.on{opacity:1;visibility:visible;transform:none;transition:opacity .28s ease-out .06s,transform .38s var(--ease),visibility 0s}
 #dayv.off{transform:translateX(-24px)} #stepv.off{transform:translateX(24px)} #stepv.off.left{transform:translateX(-24px)} #srchv.off{transform:translateX(24px)}
-.dayin{padding:var(--s6) var(--s6) calc(var(--safeB) + 4px);display:flex;flex-direction:column;gap:var(--s4)}
+.dayin{padding:var(--s6) var(--s6) var(--s6);display:flex;flex-direction:column;gap:var(--s4)}
 .kick{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
 .dayin h1{font-size:24px;line-height:1.15;font-weight:600;letter-spacing:-0.02em;text-wrap:balance;margin-top:2px}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s2)}
@@ -73,7 +73,7 @@ button{font:inherit;color:inherit}
 /* step carousel */
 .car{display:flex;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scroll-behavior:smooth;scrollbar-width:none}
 .car::-webkit-scrollbar{display:none}
-.slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.slide{flex:0 0 100%;scroll-snap-align:start;padding:var(--s3) var(--s6) var(--s6);display:flex;flex-direction:column;gap:var(--s3);min-width:0}
 .bars-row{display:flex;align-items:center;gap:var(--s2);padding:var(--s6) var(--s6) 0 var(--s6)}
 .bars{flex:1 1 auto;display:grid;gap:var(--s1)}
 .bars i{height:4px;border-radius:2px;background:var(--tint2);transition:background-color .3s ease-out}
@@ -88,7 +88,7 @@ button{font:inherit;color:inherit}
 /* recherche */
 .rech{min-height:52px;border:0;border-radius:var(--btnR);background:var(--tint);color:var(--ink);font:inherit;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:var(--s2);cursor:pointer;transition:transform .15s ease-out}
 .rech:active{transform:scale(.98)}
-.srin{padding:var(--s4) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:var(--s4)}
+.srin{padding:var(--s4) var(--s6) var(--s6);display:flex;flex-direction:column;gap:var(--s4)}
 .srhd{display:flex;align-items:center;gap:var(--s1);height:44px}
 .srhd h2{font-size:24px;font-weight:700;letter-spacing:-0.02em;flex:1}
 .back{flex:0 0 auto;width:44px;height:44px;margin-left:-12px;border:0;border-radius:50%;background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer}
@@ -100,28 +100,44 @@ button{font:inherit;color:inherit}
 .go{white-space:nowrap}
 /* pins */
 .pin{display:flex;align-items:center;gap:var(--s1);cursor:pointer}
-.wxp{position:absolute;right:var(--s4);top:calc(var(--top) + 64px);z-index:5;height:44px;max-width:calc(100% - 200px);padding:0 var(--s4);border:0;border-radius:999px;display:none;align-items:center;gap:var(--s2);font:600 16px/1 Inter,sans-serif;color:var(--ink);box-shadow:0 4px 16px rgba(20,30,50,.14);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap;transition:transform .15s ease-out}
-.wxp.show{display:flex}.wxp:active{transform:scale(.96)}
-.wxp .wxl{font-weight:500;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.wxp{position:absolute;right:var(--s4);top:calc(var(--top) + 64px);z-index:5;height:44px;max-width:calc(100% - 88px);border-radius:999px;display:none;align-items:center;box-shadow:0 4px 16px rgba(20,30,50,.14)}
+.wxp.show{display:flex}
+.wxm{all:unset;box-sizing:border-box;height:44px;padding:0 var(--s4);display:flex;align-items:center;gap:var(--s2);font:600 16px/1 Inter,sans-serif;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap;min-width:0;border-radius:999px;transition:transform .15s ease-out}
+.wxm:active{transform:scale(.96)}.wxm:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+#wxS{flex:0 0 auto;gap:var(--s1);padding-left:var(--s3)}#wxM{flex:0 1 auto}
+.wxsep,#wxS{display:none}.wxp.mer .wxsep{display:block;flex:0 0 1px;height:24px;background:var(--tint2)}.wxp.mer #wxS{display:flex}.wxp.mer #wxM{padding-right:var(--s3)}
+.wxm svg{flex:0 0 auto}
+.wxm .wxl{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:500;color:var(--muted)}
 #wxv.off{transform:translateY(16px)}
-.wxin{padding:var(--s4) var(--s6) calc(var(--safeB) + 8px);display:flex;flex-direction:column;gap:var(--s4)}
+.wxin{padding:var(--s4) var(--s6) var(--s6);display:flex;flex-direction:column;gap:var(--s4)}
+.wxjours{display:flex;gap:var(--s1);padding:var(--s1);border-radius:999px;background:var(--tint)}
+.wxjours button{all:unset;flex:1;height:44px;border-radius:999px;display:grid;place-items:center;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s,box-shadow .2s}
+.wxjours button.on{background:#fff;font-weight:600;box-shadow:0 1px 4px rgba(20,30,50,.12)}
+.wxlieux{display:flex;gap:var(--s2);overflow-x:auto;margin:0 calc(-1 * var(--s6));padding:0 var(--s6);scrollbar-width:none;overscroll-behavior-x:contain}
+.wxlieux::-webkit-scrollbar{display:none}
+.wxlieux button{all:unset;flex:0 0 auto;height:44px;padding:0 var(--s4);border-radius:999px;background:var(--tint);display:flex;align-items:center;gap:var(--s1);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.wxlieux button.on{background:var(--ink);color:#fff;font-weight:600}.wxlieux button.on svg{color:#fff!important}
+.wxjours button:focus-visible,.wxlieux button:focus-visible,.wxhb:focus-visible,.wxcz:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .wxnow{display:flex;align-items:center;gap:var(--s4)}
 .wxt{font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1.1;font-variant-numeric:tabular-nums}
 .wxs{font-size:14px;color:var(--muted);margin-top:var(--s1)}
 .wxh{list-style:none;display:flex;gap:var(--s1);overflow-x:auto;margin:0 calc(-1 * var(--s6));padding:0 var(--s6);scrollbar-width:none;overscroll-behavior-x:contain}
 .wxh::-webkit-scrollbar{display:none}
-.wxh li{flex:0 0 48px;display:flex;flex-direction:column;align-items:center;gap:var(--s2);font-size:14px;font-variant-numeric:tabular-nums}
-.wxh li.sol{flex-basis:56px}.wxh li.sol b{font-size:12px;font-weight:500;color:var(--muted)}
-.wxh li span{font-size:12px;color:var(--muted)}.wxh li b{font-weight:600}
-.wxlist{list-style:none;max-height:240px;overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--tint2)}
-.wxmar{display:flex;align-items:baseline;gap:var(--s3);font-size:14px;color:var(--muted);flex-wrap:wrap}.wxmar b{color:var(--ink);font-weight:600}
-.wxrow{all:unset;box-sizing:border-box;width:100%;min-height:48px;display:flex;align-items:center;gap:var(--s3);border-bottom:1px solid var(--tint2);font-size:16px;cursor:pointer;font-variant-numeric:tabular-nums}
-.wxrow:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
-.wxrow .chk{flex:0 0 20px;display:grid;place-items:center;color:var(--blue)}
-.wxrow .wh{flex:0 0 64px;font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;color:var(--muted)}
-.wxrow .wn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wxrow b{flex:0 0 36px;text-align:right;font-weight:600}
-.wxrow.on .wn{font-weight:600}
+.wxh li{flex:0 0 52px;font-variant-numeric:tabular-nums}
+.wxhb{all:unset;box-sizing:border-box;width:52px;padding:var(--s2) 0;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:var(--s2);font-size:14px;cursor:pointer}
+.wxhb.on{background:var(--ink);color:#fff}.wxhb.on span{color:#fff}
+.wxh li.sol{display:flex;flex-direction:column;align-items:center;gap:var(--s2);padding:var(--s2) 0;font-size:14px}.wxh li.sol b{font-size:12px;font-weight:500;color:var(--muted)}
+.wxh span{font-size:12px;color:var(--muted)}.wxh b{font-weight:600}
+.wxvide{font-size:14px;color:var(--muted)}
+.wxetat{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--muted)}.wxetat b{font-size:16px;font-weight:600;color:var(--ink)}
+.wxcz{touch-action:none;cursor:pointer;border-radius:8px}
+.wxcourbe{display:block;width:100%;height:96px;overflow:visible}
+.wxcourbe .g{stroke:var(--tint2);stroke-width:1}.wxcourbe .a{fill:#d8ebfa}.wxcourbe .c{fill:none;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke}
+.wxcourbe .p{fill:var(--ink)}.wxcourbe .s{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}.wxcourbe .m{fill:#fff;stroke:var(--ink);stroke-width:2;vector-effect:non-scaling-stroke}
+.wxex{position:relative;height:36px;font-size:12px;color:var(--muted)}
+.wxex span{position:absolute;transform:translateX(-50%);text-align:center;line-height:1.3;white-space:nowrap}.wxex b{display:block;color:var(--ink);font-weight:600;font-size:14px}
+.wxstats{display:flex;gap:var(--s4);border-top:1px solid var(--tint2);padding-top:var(--s3)}
+.wxstats div{flex:1;display:flex;flex-direction:column;gap:var(--s1)}.wxstats span{font-size:12px;color:var(--muted)}.wxstats b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .me{width:18px;height:18px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35),0 0 0 8px rgba(26,115,232,.18);pointer-events:none}
 .pin .c{width:28px;height:28px;border-radius:50%;border:2px solid #fff;color:#fff;font:600 12px/1 Inter,sans-serif;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
 .pin.sel .c{transform:scale(1.3)}
@@ -150,7 +166,7 @@ button{font:inherit;color:inherit}
 <nav class="seg glass" id="seg" aria-label="Jour"></nav>
 <button class="fab glass" id="recenter" aria-label="Recentrer la carte"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg></button>
 <div class="cardshadow" aria-hidden="true"></div>
-<button class="wxp glass" id="wx" aria-label="Météo"></button>
+<div class="wxp glass" id="wx"><button id="wxM" class="wxm"></button><span class="wxsep" aria-hidden="true"></span><button id="wxS" class="wxm"></button></div>
 <section class="card glass" id="card" aria-live="polite">
   <div class="view on" id="dayv"></div>
   <div class="view off" id="stepv" aria-hidden="true"></div>
@@ -243,6 +259,9 @@ const ICON={
   nav:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>',
   check:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
   locate:'<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--blue)" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
+  vagues:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)" aria-hidden="true"><path d="M2 10c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>',
+  haut:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+  bas:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
   search:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   back:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>',
   resto:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 1-3 4-3 7h3v11"/></svg>',
@@ -403,7 +422,7 @@ function setDay(id){
   renderSeg(); renderDay(); renderSteps(); updateLayers(); showView(false,fitDay);
 }
 function openStep(k){
-  closeWx(true); wxChoix=null;
+  closeWx(true);
   sel=k; cur=k; aimed=k;
   paintBars(k);
   showView(true,()=>{ const car=$('car'); if(car){ car.style.scrollBehavior='auto'; car.scrollLeft=k*car.clientWidth; car.style.scrollBehavior=''; } focusStop(); });
@@ -477,6 +496,8 @@ async function initMap(){
       style:{version:8,glyphs:'glyph://{fontstack}/{range}',sprite:BASE+'sprites/light',sources:{protomaps:{type:'vector',url:'pmtiles://normandie.pmtiles',attribution:'© OpenStreetMap'}},
         layers:basemaps.layers('protomaps',Object.assign({},basemaps.namedFlavor('light'),FLAVOR),{lang:'fr'})}});
     map.addControl(new maplibregl.AttributionControl({compact:true}),'top-left');
+    // Credits replies sur le bouton i, pour laisser la place a la pastille meteo.
+    map.once('load',()=>{ const a=document.querySelector('.maplibregl-ctrl-attrib'); if(a) a.classList.remove('maplibregl-compact-show'); });
     map.on('load',()=>{
       clearTimeout(t); skel.classList.remove('show');
       map.addSource('routes',{type:'geojson',data:routeGeo()});
@@ -529,134 +550,232 @@ const dateJour=d=>`2026-11-${String(12+d).padStart(2,'0')}`;
 const pad2=n=>String(n).padStart(2,'0');
 const isoHeure=(date,h)=>`${date}T${pad2(h)}:00`;
 const cle=(lat,lon)=>lat.toFixed(3)+','+lon.toFixed(3);
-const WX_KEY='pepettes-meteo-2';
-let wx={places:{},at:0}, wxPos=null, wxPosAt=0, wxOpen=false, wxPrev=[], wxChoix=null, wxLoading=false;
-try{ const c=JSON.parse(localStorage.getItem(WX_KEY)||'null'); if(c&&c.places) wx=c; }catch(e){}
-const URL_WX=pts=>'https://api.open-meteo.com/v1/forecast?latitude='+pts.map(p=>p[0].toFixed(3)).join(',')+'&longitude='+pts.map(p=>p[1].toFixed(3)).join(',')
-  +'&current=temperature_2m,weather_code,wind_speed_10m,is_day&hourly=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max,sunrise,sunset&timezone=Europe%2FParis&forecast_days=7';
+const WX_KEY='pepettes-meteo-3';
+// wx.places : previsions meteo par point ; wx.mer : serie marine par point (hauteur d'eau, eau, vagues).
+let wx={places:{},mer:{},at:0}, wxPos=null, wxPosAt=0, wxLoading=false;
+try{ const c=JSON.parse(localStorage.getItem(WX_KEY)||'null'); if(c&&c.places){ wx=c; wx.mer=wx.mer||{}; } }catch(e){}
+const sauverWx=()=>{ try{ localStorage.setItem(WX_KEY,JSON.stringify(wx)); }catch(e){} };
+const lstr=pts=>'latitude='+pts.map(p=>p[0].toFixed(3)).join(',')+'&longitude='+pts.map(p=>p[1].toFixed(3)).join(',');
+const URL_WX=pts=>'https://api.open-meteo.com/v1/forecast?'+lstr(pts)
+  +'&current=temperature_2m,weather_code,wind_speed_10m,is_day&hourly=temperature_2m,weather_code,is_day,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max,sunrise,sunset&timezone=Europe%2FParis&forecast_days=7';
+const URL_MER=pts=>'https://marine-api.open-meteo.com/v1/marine?'+lstr(pts)+'&hourly=sea_level_height_msl,sea_surface_temperature,wave_height&timezone=Europe%2FParis&forecast_days=7';
+async function getJson(url){ const r=await fetch(url); if(!r.ok) throw new Error(r.status); const j=await r.json(); return Array.isArray(j)?j:[j]; }
 async function wxFetch(pts){
-  const r=await fetch(URL_WX(pts)); if(!r.ok) throw new Error('meteo '+r.status);
-  let j=await r.json(); if(!Array.isArray(j)) j=[j];
+  const j=await getJson(URL_WX(pts));
   j.forEach((d,n)=>{ wx.places[cle(pts[n][0],pts[n][1])]={current:d.current,hourly:d.hourly,daily:d.daily}; });
-  wx.at=Date.now(); try{ localStorage.setItem(WX_KEY,JSON.stringify(wx)); }catch(e){}
+  wx.at=Date.now(); sauverWx();
 }
-// Marees : hauteur de la mer heure par heure (Open-Meteo Marine), pleines et basses mers deduites.
+async function merFetch(pts){
+  const j=await getJson(URL_MER(pts));
+  j.forEach((d,n)=>{ const h=d.hourly; if(h&&h.sea_level_height_msl&&h.sea_level_height_msl.some(x=>x!=null)) wx.mer[cle(pts[n][0],pts[n][1])]=h; });
+  sauverWx();
+}
+// Lieux en bord de mer : la serie marine n'est demandee que pour eux (et pour la position).
 const COTE=new Set(['Granville',"Pointe d'Agon",'Gouville-sur-Mer','Regnéville-sur-Mer','Pointe du Hoc','Omaha Beach','Port-en-Bessin-Huppain','Deauville','Honfleur','Étretat','Logement à Donville-les-Bains']);
-const URL_MAREE=pts=>'https://marine-api.open-meteo.com/v1/marine?latitude='+pts.map(p=>p[0].toFixed(3)).join(',')+'&longitude='+pts.map(p=>p[1].toFixed(3)).join(',')+'&hourly=sea_level_height_msl&timezone=Europe%2FParis&forecast_days=7';
-async function mareeFetch(pts){
-  const r=await fetch(URL_MAREE(pts)); if(!r.ok) throw new Error('marees '+r.status);
-  let j=await r.json(); if(!Array.isArray(j)) j=[j];
-  wx.marees=wx.marees||{};
-  j.forEach((d,n)=>{ const h=d.hourly; if(h&&h.sea_level_height_msl&&h.sea_level_height_msl.some(x=>x!=null)) wx.marees[cle(pts[n][0],pts[n][1])]=extremes(h.time,h.sea_level_height_msl); });
-  try{ localStorage.setItem(WX_KEY,JSON.stringify(wx)); }catch(e){}
-}
-// Extremes locaux, affines a la minute par interpolation parabolique sur trois heures.
-function extremes(times,v){
-  const out=[];
-  for(let i=1;i<v.length-1;i++){ const a=v[i-1],b=v[i],c=v[i+1]; if(a==null||b==null||c==null) continue;
-    const haut=b>a&&b>=c, bas=b<a&&b<=c; if(!haut&&!bas) continue;
-    const den=a-2*b+c, off=den?Math.max(-0.5,Math.min(0.5,(a-c)/(2*den))):0;
-    const m=Math.round((+times[i].slice(11,13)+off)*60);
-    out.push({d:times[i].slice(0,10),m,haute:haut}); }
-  return out;
-}
-const hm=m=>{ m=(m+1440)%1440; return Math.floor(m/60)+'h'+pad2(m%60); };
+const pointsUniques=f=>{ const seen=new Set(), pts=[]; STOPS.forEach(s=>{ const k=cle(s.lat,s.lon); if(f(s)&&!seen.has(k)){ seen.add(k); pts.push([s.lat,s.lon]); } }); return pts; };
 function wxRefresh(force){
   if(wxLoading) return; if(!force&&Date.now()-wx.at<30*60e3&&Object.keys(wx.places).length) return;
-  const seen=new Set(), pts=[];
-  STOPS.forEach(s=>{ const k=cle(s.lat,s.lon); if(!seen.has(k)){ seen.add(k); pts.push([s.lat,s.lon]); } });
-  if(wxPos) pts.push(wxPos);
-  const cote=[], sc=new Set(); STOPS.forEach(s=>{ const k=cle(s.lat,s.lon); if(COTE.has(s.name)&&!sc.has(k)){ sc.add(k); cote.push([s.lat,s.lon]); } });
-  mareeFetch(cote).then(()=>wxOpen&&wxRender()).catch(e=>console.warn('[pepettes] marees',e.message));
-  wxLoading=true; wxFetch(pts).then(wxRender).catch(e=>console.warn('[pepettes] meteo',e.message)).finally(()=>{wxLoading=false;});
+  const pts=pointsUniques(()=>true); if(wxPos) pts.push(wxPos);
+  const mer=pointsUniques(s=>COTE.has(s.name)); if(wxPos) mer.push(wxPos);
+  wxLoading=true;
+  Promise.allSettled([wxFetch(pts),merFetch(mer)]).then(r=>{ r.forEach(x=>x.status==='rejected'&&console.warn('[pepettes] meteo',x.reason&&x.reason.message)); wxRender(); }).finally(()=>{wxLoading=false;});
 }
 function wxPosition(lat,lon){
   const moved=!wxPos||Math.abs(lat-wxPos[0])+Math.abs(lon-wxPos[1])>0.05;
   wxPos=[lat,lon];
-  if(moved||Date.now()-wxPosAt>30*60e3){ wxPosAt=Date.now(); wxFetch([wxPos]).then(wxRender).catch(e=>console.warn('[pepettes] meteo',e.message)); }
+  if(moved||Date.now()-wxPosAt>30*60e3){ wxPosAt=Date.now();
+    Promise.allSettled([wxFetch([wxPos]),merFetch([wxPos])]).then(wxRender); }
   else wxRender();
 }
-// Jour de reference pour la liste des lieux : jour choisi, sinon jour du roadtrip, sinon vendredi.
-const wxJour=()=>curDay!==-1?curDay:(jourDuJour()!==-1?jourDuJour():1);
-// Lieu cible : choix manuel, sinon etape ouverte, sinon position, sinon premiere etape du jour.
+
+// ---------- Temps ----------
+const maintenant=()=>{ const n=new Date(); return {date:`${n.getFullYear()}-${pad2(n.getMonth()+1)}-${pad2(n.getDate())}`,h:n.getHours(),m:n.getMinutes()}; };
 const wxPosOk=()=>!!(wxPos&&wx.places[cle(wxPos[0],wxPos[1])]);
-function wxCible(){
-  if(wxChoix!==null){ if(wxChoix==='pos'&&wxPosOk()) return {pos:true}; if(wxChoix!=='pos') return wxChoix; }
-  if(sel!==null&&curDay!==-1){ const k=aimed<0?cur:aimed; const [s,i]=dayStops(curDay)[k]; return {i,s,d:curDay}; }
-  if(wxPosOk()) return {pos:true};
-  const d=wxJour(), [s,i]=dayStops(d)[0]; return {i,s,d};
-}
-// Valeurs pour une cible : maintenant pour la position, a l'heure de l'etape sinon (maintenant si l'heure est passee).
-function wxValeurs(c){
-  const p=c.pos?wx.places[cle(wxPos[0],wxPos[1])]:wx.places[cle(c.s.lat,c.s.lon)]; if(!p) return null;
-  const now=new Date(), today=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
-  let date=today, h=now.getHours(), live=true;
-  if(!c.pos){ const dd=dateJour(c.d), he=heureEtape(c.s); if(dd>today||(dd===today&&he>h)){ date=dd; h=he; live=false; } }
-  const idx=p.hourly.time.indexOf(isoHeure(date,h)); const di=p.daily.time.indexOf(date);
-  const temp=live&&p.current?p.current.temperature_2m:(idx>=0?p.hourly.temperature_2m[idx]:null);
-  const code=live&&p.current?p.current.weather_code:(idx>=0?p.hourly.weather_code[idx]:null);
-  const jour=live&&p.current&&p.current.is_day!=null?p.current.is_day:(idx>=0&&p.hourly.is_day?p.hourly.is_day[idx]:1);
-  if(temp==null) return null;
-  return {p,date,h,idx,di,live,jour,temp:Math.round(temp),code,wind:live&&p.current?Math.round(p.current.wind_speed_10m):(di>=0?Math.round(p.daily.wind_speed_10m_max[di]):null),
-    max:di>=0?Math.round(p.daily.temperature_2m_max[di]):null,min:di>=0?Math.round(p.daily.temperature_2m_min[di]):null};
+const cleLieu=l=>l.pos?cle(wxPos[0],wxPos[1]):cle(l.s.lat,l.s.lon);
+const meteoDe=l=>(l.pos&&!wxPosOk())?null:wx.places[cleLieu(l)];
+// Pour la position, la grille marine peut tomber a terre : on prend alors le lieu cotier le plus proche (moins de 15 km).
+function merDe(l){
+  if(l.pos&&!wxPos) return null; const m=wx.mer||{}; if(m[cleLieu(l)]) return m[cleLieu(l)]; if(!l.pos) return null;
+  let best=null, bd=15; STOPS.forEach(s=>{ const k=cle(s.lat,s.lon); if(!m[k]) return; const d=Math.hypot((s.lat-wxPos[0])*111,(s.lon-wxPos[1])*73); if(d<bd){ bd=d; best=m[k]; } });
+  return best;
 }
 const NOM_LOGEMENT={'Logement à Donville-les-Bains':'Donville','B&B Hotel Bayeux':'B&B Bayeux','Logement à Villainville':'Villainville'};
-const wxNom=c=>c.pos?'Ma position':(NOM_LOGEMENT[c.s.name]||SHORT[c.s.name]||short(c.s.name));
+const wxNom=l=>l.pos?'Ici':(NOM_LOGEMENT[l.s.name]||SHORT[l.s.name]||short(l.s.name)).replace(/\u2011/g,'-');
+// Valeurs d'un lieu a une date et une heure ; « maintenant » prend les mesures du moment.
+function meteoA(l,date,h){
+  const p=meteoDe(l); if(!p) return null;
+  const n=maintenant(), live=date===n.date&&h===n.h&&p.current;
+  const i=p.hourly.time.indexOf(isoHeure(date,h)), di=p.daily.time.indexOf(date);
+  if(i<0&&!live) return null;
+  const temp=live?p.current.temperature_2m:p.hourly.temperature_2m[i];
+  const code=live?p.current.weather_code:p.hourly.weather_code[i];
+  const jour=live&&p.current.is_day!=null?p.current.is_day:(p.hourly.is_day?p.hourly.is_day[i]:1);
+  const vent=live?p.current.wind_speed_10m:(p.hourly.wind_speed_10m?p.hourly.wind_speed_10m[i]:null);
+  return {p,i,di,temp:Math.round(temp),code,jour,vent:vent==null?null:Math.round(vent),
+    max:di>=0?Math.round(p.daily.temperature_2m_max[di]):null,min:di>=0?Math.round(p.daily.temperature_2m_min[di]):null};
+}
+// Pleines et basses mers d'une serie, affinees a la minute (interpolation parabolique sur trois heures).
+function extremes(h){
+  const t=h.time, v=h.sea_level_height_msl, out=[];
+  for(let i=1;i<v.length-1;i++){ const a=v[i-1],b=v[i],c=v[i+1]; if(a==null||b==null||c==null) continue;
+    const haut=b>a&&b>=c, bas=b<a&&b<=c; if(!haut&&!bas) continue;
+    const den=a-2*b+c, off=den?Math.max(-0.5,Math.min(0.5,(a-c)/(2*den))):0;
+    const m=Math.round((+t[i].slice(11,13)+off)*60);
+    out.push({d:t[i].slice(0,10),m,haute:haut,v:b-(a-c)*off/4}); }
+  return out;
+}
+const hm=m=>{ m=(m+1440)%1440; return Math.floor(m/60)+'h'+pad2(m%60); };
+// Prochaine pleine ou basse mer apres un instant donne.
+function prochaineMaree(l,date,minutes){ const h=merDe(l); if(!h) return null; return extremes(h).find(e=>e.d>date||(e.d===date&&e.m>minutes))||null; }
+
+// ---------- Cible de la pastille ----------
+// Etape ouverte, sinon position, sinon premiere etape du jour du roadtrip.
+const jourActuel=()=>{ const n=maintenant().date; for(let d=0;d<=4;d++) if(dateJour(d)===n) return d; return -1; };
+function wxCible(){
+  if(sel!==null&&curDay!==-1){ const k=aimed<0?cur:aimed; const [s,i]=dayStops(curDay)[k]; return {i,s,d:curDay}; }
+  if(wxPosOk()) return {pos:true};
+  const d=curDay!==-1?curDay:(jourActuel()!==-1?jourActuel():1); const [s,i]=dayStops(d)[0]; return {i,s,d};
+}
+// Instant de reference d'un lieu : son heure de passage si elle est a venir, sinon maintenant.
+function instantDe(l){
+  const n=maintenant();
+  if(!l.pos){ const dd=dateJour(l.d), he=heureEtape(l.s); if(dd>n.date||(dd===n.date&&he>n.h)) return {date:dd,h:he}; }
+  return {date:n.date,h:n.h};
+}
 function wxRender(){
-  const b=$('wx'), c=wxCible(), v=wxValeurs(c);
+  const b=$('wx'), c=wxCible(), t=instantDe(c), v=meteoA(c,t.date,t.h);
   if(!v){ b.classList.remove('show'); return; }
   const [k,lab]=wxCode(v.code,v.jour);
-  b.innerHTML=`${wxIcon(k)}<span>${v.temp}°</span>${c.pos?'':`<span class="wxl">· ${esc(wxNom(c))}</span>`}`;
-  b.setAttribute('aria-label',`Météo ${c.pos?'à ta position':'à '+wxNom(c)} : ${v.temp} degrés, ${lab}. Voir le détail`);
+  const nom=c.pos?'':`<span class="wxl">${esc(wxNom(c))}</span>`;
+  $('wxM').innerHTML=`${wxIcon(k)}<span>${v.temp}°</span>${nom}`;
+  $('wxM').setAttribute('aria-label',`Météo ${c.pos?'ici':'à '+wxNom(c)} : ${v.temp} degrés, ${lab}`);
+  const pm=prochaineMaree(c,t.date,t.h*60+(t.date===maintenant().date&&t.h===maintenant().h?maintenant().m:0));
+  if(pm){ $('wxS').innerHTML=`${ICON.vagues}${pm.haute?ICON.haut:ICON.bas}<span>${hm(pm.m)}</span>`;
+    $('wxS').setAttribute('aria-label',`Mer : ${pm.haute?'pleine mer':'basse mer'} à ${hm(pm.m)}`); b.classList.add('mer'); }
+  else b.classList.remove('mer');
   b.classList.add('show');
-  if(wxOpen) wxVue(c,v);
+  if(wxOpen) wxVue();
 }
-function wxVue(c,v){
-  const [k,lab]=wxCode(v.code,v.jour), p=v.p;
+
+// ---------- Vue Meteo et vue Mer ----------
+let wxOpen=false, wxMode='meteo', wxPrev=[], wxEtat=null;
+// Jours proposes : ceux du roadtrip qui ne sont pas passes et que la prevision couvre.
+const joursDispo=()=>{ const n=maintenant().date; return DAYS.map(d=>d.id).filter(d=>d>=0&&dateJour(d)>=n&&Object.values(wx.places)[0]?.hourly.time.some(x=>x.startsWith(dateJour(d)))); };
+const JOURS_COURTS=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const libJour=d=>{ const x=new Date(dateJour(d)+'T12:00'); return JOURS_COURTS[x.getDay()]+' '+x.getDate(); };
+// Lieux d'un jour : Ici, puis les etapes du jour sans doublon ; en mode Mer, seulement ceux qui ont une serie marine.
+function lieuxDu(d,mode){
+  const l=[]; if(wxPosOk()) l.push({pos:true});
+  dayStops(d).forEach(([s,i])=>{ if(!l.some(x=>!x.pos&&x.s.lat===s.lat&&x.s.lon===s.lon)) l.push({i,s,d}); });
+  return mode==='mer'?l.filter(x=>merDe(x)):l;
+}
+const memeLieu=(a,b)=>a&&b&&(a.pos?!!b.pos:(!b.pos&&a.s.lat===b.s.lat&&a.s.lon===b.s.lon));
+// Etat initial : depuis une etape ouverte, son jour, son lieu et son heure ; sinon aujourd'hui, ici, maintenant.
+function etatInitial(mode){
+  const jours=joursDispo(), n=maintenant(), auj=jourActuel();
+  let d=jours.includes(auj)?auj:(jours[0]??1), lieu=null, h=n.h;
+  if(sel!==null&&curDay!==-1&&jours.includes(curDay)){ const c=wxCible(); d=curDay; lieu=c; h=heureEtape(c.s); }
+  if(d!==auj&&!lieu) h=12;
+  const ls=lieuxDu(d,mode);
+  if(!lieu||!ls.some(x=>memeLieu(x,lieu))) lieu=ls.find(x=>memeLieu(x,lieu))||ls[0]||null;
+  return {d,lieu,h};
+}
+function choisirJour(d){
+  const n=maintenant(), ls=lieuxDu(d,wxMode);
+  let lieu=ls.find(x=>memeLieu(x,wxEtat.lieu))||ls.find(x=>!x.pos&&!x.s.home)||ls[0]||null;
+  let h=dateJour(d)===n.date?n.h:(lieu&&!lieu.pos?heureEtape(lieu.s):12);
+  wxEtat={d,lieu,h}; wxVue(true);
+}
+function choisirLieu(n){
+  const l=lieuxDu(wxEtat.d,wxMode)[n]; if(!l) return;
+  const now=maintenant();
+  wxEtat.lieu=l; wxEtat.h=l.pos?(dateJour(wxEtat.d)===now.date?now.h:wxEtat.h):heureEtape(l.s);
+  wxVue(true);
+}
+function choisirHeure(h){ wxEtat.h=Math.max(0,Math.min(23,h)); wxVue(); }
+
+function blocMeteo(l,date,h){
+  const v=meteoA(l,date,h); if(!v) return '<p class="wxvide">Pas encore de prévision pour ce moment.</p>';
+  const [k,lab]=wxCode(v.code,v.jour), p=v.p, n=maintenant();
+  const ici=date===n.date&&h===n.h?'maintenant':`à ${h}h`;
+  const soleil=[]; (p.daily.sunrise||[]).forEach((x,j)=>{ if(x.startsWith(date)) soleil.push({t:x,lever:true}); const c=p.daily.sunset&&p.daily.sunset[j]; if(c&&c.startsWith(date)) soleil.push({t:c,lever:false}); });
   let heures='';
-  // Heures, avec le lever et le coucher du soleil glisses a leur place.
-  const soleil=[]; (p.daily.sunrise||[]).forEach((x,n)=>{ soleil.push({t:x,lever:true}); if(p.daily.sunset) soleil.push({t:p.daily.sunset[n],lever:false}); });
-  if(v.idx>=0){ for(let n=0;n<24;n++){ const j=v.idx+n; if(j>=p.hourly.time.length) break;
-    const jour=p.hourly.is_day?p.hourly.is_day[j]:1; const [hk]=wxCode(p.hourly.weather_code[j],jour);
-    heures+=`<li><span>${n===0&&v.live?'Maint.':+p.hourly.time[j].slice(11,13)+'h'}</span>${wxIcon(hk)}<b>${Math.round(p.hourly.temperature_2m[j])}°</b></li>`;
-    const deb=p.hourly.time[j], fin=p.hourly.time[j+1]||'9';
-    soleil.filter(s=>s.t>(n===0&&v.live?deb.slice(0,11)+pad2(new Date().getHours())+':'+pad2(new Date().getMinutes()):deb)&&s.t<fin).forEach(s=>{
-      heures+=`<li class="sol"><span>${+s.t.slice(11,13)}h${s.t.slice(14,16)}</span>${wxIcon(s.lever?'sunrise':'sunset')}<b>${s.lever?'Lever':'Coucher'}</b></li>`; }); } }
-  const d=wxJour(), lieux=[];
-  if(wxPosOk()) lieux.push({pos:true});
-  dayStops(d).forEach(([s,i])=>{ if(!lieux.some(x=>!x.pos&&x.s.lat===s.lat&&x.s.lon===s.lon&&x.s.time===s.time)) lieux.push({i,s,d}); });
-  const actif=x=>x.pos?!!c.pos:(!c.pos&&c.i===x.i&&c.s.time===x.s.time);
-  const lignes=lieux.map((x,n)=>{ const w=wxValeurs(x); const [ik]=w?wxCode(w.code,w.jour):['cloud'];
-    return `<li><button class="wxrow${actif(x)?' on':''}" data-n="${n}" aria-pressed="${actif(x)}"><span class="chk" aria-hidden="true">${actif(x)?ICON.check:''}</span><span class="wh">${x.pos?ICON.locate:esc(x.s.time)}</span><span class="wn">${esc(wxNom(x))}</span>${w?wxIcon(ik)+`<b>${w.temp}°</b>`:'<b></b>'}</button></li>`; }).join('');
-  const quand=v.live?lab:`${lab} à ${v.h}h`;
-  let maree=''; const mx=!c.pos&&wx.marees&&wx.marees[cle(c.s.lat,c.s.lon)];
-  if(mx){ const depuis=v.h*60-60; const l=mx.filter(e=>e.d>v.date||(e.d===v.date&&e.m>=depuis)).slice(0,3);
-    if(l.length) maree=`<div class="wxmar"><span class="kick">Marées</span><span>${l.map(e=>`${e.haute?'Haute':'Basse'} <b>${e.d!==v.date?'dem. ':''}${hm(e.m)}</b>`).join(' · ')}</span></div>`; }
-  const v2=$('wxv');
-  const html=`<div class="wxin"><div class="srhd"><div class="kick" style="flex:1">Météo · ${esc(wxNom(c))}</div><button class="x" id="wxClose" aria-label="Fermer la météo">${ICON.x}</button></div>
-    <div class="wxnow">${wxIcon(k,44)}<div><div class="wxt">${v.temp}°</div><div class="wxs">${esc(quand)}${v.max!=null?` · ${v.max}° / ${v.min}°`:''}${v.wind!=null?` · vent ${v.wind} km/h`:''}</div></div></div>
-    <ol class="wxh">${heures}</ol>${maree}
-    <div><div class="kick" style="margin-bottom:8px">Choisir le lieu</div><ol class="wxlist">${lignes}</ol></div></div>`;
-  // La position GPS relance le rendu toutes les quelques secondes : on ne reconstruit que si le contenu change,
-  // et on garde alors le defilement des heures (meme lieu) et de la liste.
-  if(html===v2.dataset.html) return;
-  const memeLieu=v2.dataset.lieu===wxNom(c), h0=v2.querySelector('.wxh'), l0=v2.querySelector('.wxlist');
-  const sx=memeLieu&&h0?h0.scrollLeft:0, sy=l0?l0.scrollTop:0;
-  v2.innerHTML=html; v2.dataset.html=html; v2.dataset.lieu=wxNom(c);
-  v2.querySelector('.wxh').scrollLeft=sx; v2.querySelector('.wxlist').scrollTop=sy;
+  for(let hh=0;hh<24;hh++){ const j=p.hourly.time.indexOf(isoHeure(date,hh)); if(j<0) continue;
+    const [hk]=wxCode(p.hourly.weather_code[j],p.hourly.is_day?p.hourly.is_day[j]:1);
+    heures+=`<li><button class="wxhb${hh===h?' on':''}" data-h="${hh}" aria-pressed="${hh===h}" aria-label="${hh} heures, ${Math.round(p.hourly.temperature_2m[j])} degrés"><span>${hh}h</span>${wxIcon(hk)}<b>${Math.round(p.hourly.temperature_2m[j])}°</b></button></li>`;
+    soleil.filter(s=>+s.t.slice(11,13)===hh).forEach(s=>{ heures+=`<li class="sol"><span>${+s.t.slice(11,13)}h${s.t.slice(14,16)}</span>${wxIcon(s.lever?'sunrise':'sunset')}<b>${s.lever?'Lever':'Coucher'}</b></li>`; }); }
+  return `<div class="wxnow">${wxIcon(k,44)}<div><div class="wxt">${v.temp}°</div><div class="wxs">${esc(lab)} ${ici}${v.max!=null?` · ${v.max}° / ${v.min}°`:''}${v.vent!=null?` · vent ${v.vent} km/h`:''}</div></div></div>
+    <ol class="wxh">${heures}</ol>`;
+}
+// Courbe de la hauteur d'eau sur la journee, avec les pleines et basses mers et l'heure choisie.
+function blocMer(l,date,h){
+  const s=merDe(l); if(!s) return '<p class="wxvide">Pas de données de mer pour ce lieu.</p>';
+  const idx=[]; for(let hh=0;hh<24;hh++){ const j=s.time.indexOf(isoHeure(date,hh)); if(j>=0) idx.push(j); }
+  if(idx.length<2) return '<p class="wxvide">Pas encore de prévision pour ce jour.</p>';
+  const vals=idx.map(j=>s.sea_level_height_msl[j]).filter(x=>x!=null), lo=Math.min(...vals), hi=Math.max(...vals), W=320, H=96, pad=10;
+  const X=hh=>hh/24*W, Y=v=>pad+(1-(v-lo)/((hi-lo)||1))*(H-2*pad);
+  const pts=idx.map(j=>[+s.time[j].slice(11,13),s.sea_level_height_msl[j]]).filter(p=>p[1]!=null);
+  // Courbe lissee (Catmull-Rom) a travers les points horaires.
+  let dPath=`M${X(pts[0][0]).toFixed(1)},${Y(pts[0][1]).toFixed(1)}`;
+  for(let i=0;i<pts.length-1;i++){ const p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+    const c1=[X(p1[0])+(X(p2[0])-X(p0[0]))/6, Y(p1[1])+(Y(p2[1])-Y(p0[1]))/6], c2=[X(p2[0])-(X(p3[0])-X(p1[0]))/6, Y(p2[1])-(Y(p3[1])-Y(p1[1]))/6];
+    dPath+=` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${X(p2[0]).toFixed(1)},${Y(p2[1]).toFixed(1)}`; }
+  const last=pts[pts.length-1][0];
+  const ex=extremes(s).filter(e=>e.d===date&&e.m>=0&&e.m<1440);
+  const jh=s.time.indexOf(isoHeure(date,h)), vh=jh>=0?s.sea_level_height_msl[jh]:null;
+  const suivant=extremes(s).find(e=>e.d>date||(e.d===date&&e.m>h*60));
+  const etat=suivant?(suivant.haute?'Mer montante':'Mer descendante'):'';
+  const eau=jh>=0&&s.sea_surface_temperature?s.sea_surface_temperature[jh]:null, vag=jh>=0&&s.wave_height?s.wave_height[jh]:null;
+  const svg=`<svg class="wxcourbe" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    ${[6,12,18].map(g=>`<line x1="${X(g)}" x2="${X(g)}" y1="0" y2="${H}" class="g"/>`).join('')}
+    <path d="${dPath} L${X(last).toFixed(1)},${H} L${X(pts[0][0]).toFixed(1)},${H} Z" class="a"/><path d="${dPath}" class="c"/>
+    ${ex.map(e=>`<circle cx="${X(e.m/60).toFixed(1)}" cy="${Y(Math.max(lo,Math.min(hi,e.v))).toFixed(1)}" r="3.5" class="p"/>`).join('')}
+    <line x1="${X(h)}" x2="${X(h)}" y1="0" y2="${H}" class="s"/>${vh!=null?`<circle cx="${X(h)}" cy="${Y(vh).toFixed(1)}" r="5" class="m"/>`:''}</svg>`;
+  const labels=ex.map(e=>{ const pc=e.m/60/24*100, tr=pc<9?'0':pc>91?'-100%':'-50%'; return `<span style="left:${pc.toFixed(1)}%;transform:translateX(${tr});text-align:${pc<9?'left':pc>91?'right':'center'}"><b>${hm(e.m)}</b>${e.haute?'Pleine mer':'Basse mer'}</span>`; }).join('');
+  const stat=(lab,val)=>`<div><span>${lab}</span><b>${val}</b></div>`;
+  return `<div class="wxetat"><span>À ${h}h</span><b>${etat}</b></div>
+    <div class="wxcz" id="wxCz" role="slider" tabindex="0" aria-label="Heure" aria-valuemin="0" aria-valuemax="23" aria-valuenow="${h}" aria-valuetext="${h} heures, ${etat.toLowerCase()}">${svg}</div>
+    <div class="wxex">${labels}</div>
+    ${eau!=null||vag!=null?`<div class="wxstats">${eau!=null?stat('Eau',Math.round(eau)+'°'):''}${vag!=null?stat('Vagues',vag.toFixed(1).replace('.',',')+' m'):''}</div>`:''}`;
+}
+function wxVue(recentrer){
+  const v2=$('wxv'), e=wxEtat; if(!e) return;
+  const jours=joursDispo(), ls=lieuxDu(e.d,wxMode), date=dateJour(e.d);
+  const corps=!e.lieu?`<p class="wxvide">${wxMode==='mer'?'Aucun lieu en bord de mer ce jour-là.':'Pas encore de prévision.'}</p>`:(wxMode==='mer'?blocMer(e.lieu,date,e.h):blocMeteo(e.lieu,date,e.h));
+  const html=`<div class="wxin"><div class="srhd"><div class="kick" style="flex:1">${wxMode==='mer'?'Mer':'Météo'}</div><button class="x" id="wxClose" aria-label="Fermer">${ICON.x}</button></div>
+    <div class="wxjours" role="group" aria-label="Jour">${jours.map(d=>`<button data-d="${d}" class="${d===e.d?'on':''}" aria-pressed="${d===e.d}">${libJour(d)}</button>`).join('')}</div>
+    <div class="wxlieux" role="group" aria-label="Lieu">${ls.map((l,n)=>`<button data-n="${n}" class="${memeLieu(l,e.lieu)?'on':''}" aria-pressed="${memeLieu(l,e.lieu)}">${l.pos?ICON.locate:''}${esc(wxNom(l))}</button>`).join('')}</div>
+    ${corps}</div>`;
+  // La position GPS relance le rendu : on ne reconstruit que si le contenu change, en gardant les defilements.
+  if(html===v2.dataset.html&&!recentrer) return;
+  const h0=v2.querySelector('.wxh'), l0=v2.querySelector('.wxlieux');
+  const sx=h0?h0.scrollLeft:0, lx=l0?l0.scrollLeft:0;
+  v2.innerHTML=html; v2.dataset.html=html;
+  const h1=v2.querySelector('.wxh'), l1=v2.querySelector('.wxlieux');
+  if(l1){ const on=l1.querySelector('.on'); l1.scrollLeft=recentrer&&on?on.offsetLeft-l1.clientWidth/2+on.offsetWidth/2:lx; }
+  if(h1){ const on=h1.querySelector('.on'); h1.scrollLeft=recentrer&&on?on.parentNode.offsetLeft-h1.clientWidth/2+on.offsetWidth/2:sx; }
   $('wxClose').onclick=closeWx;
-  v2.querySelectorAll('.wxrow').forEach(bt=>bt.onclick=()=>{ const x=lieux[+bt.dataset.n]; wxChoix=x.pos?'pos':x; wxRender(); });
+  v2.querySelectorAll('.wxjours button').forEach(b=>b.onclick=()=>choisirJour(+b.dataset.d));
+  v2.querySelectorAll('.wxlieux button').forEach(b=>b.onclick=()=>choisirLieu(+b.dataset.n));
+  v2.querySelectorAll('.wxhb').forEach(b=>b.onclick=()=>choisirHeure(+b.dataset.h));
+  const cz=$('wxCz');
+  if(cz){ const lire=ev=>{ const r=cz.getBoundingClientRect(); choisirHeure(Math.round((ev.clientX-r.left)/r.width*24)); };
+    cz.onpointerdown=ev=>{ cz.setPointerCapture(ev.pointerId); lire(ev); };
+    cz.onpointermove=ev=>{ if(cz.hasPointerCapture(ev.pointerId)) lire(ev); };
+    cz.onkeydown=ev=>{ if(ev.key==='ArrowLeft'){ choisirHeure(wxEtat.h-1); ev.preventDefault(); } if(ev.key==='ArrowRight'){ choisirHeure(wxEtat.h+1); ev.preventDefault(); } }; }
   requestAnimationFrame(sizeCard);
 }
-function openWx(){
-  if(wxOpen) return; wxOpen=true;
-  wxPrev=['dayv','stepv','srchv'].filter(id=>$(id).classList.contains('on'));
-  wxPrev.forEach(id=>{ $(id).classList.replace('on','off'); $(id).setAttribute('aria-hidden',true); });
-  const v=$('wxv'); v.className='view on'; v.setAttribute('aria-hidden',false);
-  wxRender(); wxRefresh();
+function openWx(mode){
+  if(wxOpen&&wxMode===mode) return closeWx();
+  wxMode=mode; wxEtat=etatInitial(mode);
+  if(!wxOpen){ wxOpen=true;
+    wxPrev=['dayv','stepv','srchv'].filter(id=>$(id).classList.contains('on'));
+    wxPrev.forEach(id=>{ $(id).classList.replace('on','off'); $(id).setAttribute('aria-hidden',true); });
+    const v=$('wxv'); v.className='view on'; v.setAttribute('aria-hidden',false); }
+  delete $('wxv').dataset.html; wxVue(true); wxRefresh();
 }
 function closeWx(silent){
-  if(!wxOpen) return; wxOpen=false; wxChoix=null;
+  if(!wxOpen) return; wxOpen=false; wxEtat=null;
   $('wxv').className='view off'; $('wxv').setAttribute('aria-hidden',true); delete $('wxv').dataset.html;
   if(silent!==true) wxPrev.forEach(id=>{ $(id).classList.replace('off','on'); $(id).setAttribute('aria-hidden',false); });
   wxPrev=[]; wxRender(); requestAnimationFrame(sizeCard);
@@ -680,7 +799,7 @@ function jourDuJour(){
 }
 setDay(jourDuJour()); initMap();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(e=>console.error('[pepettes] sw',e)); }); }
-$('wx').onclick=()=>wxOpen?closeWx():openWx(); wxRender(); wxRefresh();
+$('wxM').onclick=()=>openWx('meteo'); $('wxS').onclick=()=>openWx('mer'); wxRender(); wxRefresh();
 </script>
 
 <style>
