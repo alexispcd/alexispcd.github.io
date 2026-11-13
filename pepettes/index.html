@@ -621,10 +621,17 @@ function wxVue(c,v){
   if(mx){ const depuis=v.h*60-60; const l=mx.filter(e=>e.d>v.date||(e.d===v.date&&e.m>=depuis)).slice(0,3);
     if(l.length) maree=`<div class="wxmar"><span class="kick">Marées</span><span>${l.map(e=>`${e.haute?'Haute':'Basse'} <b>${e.d!==v.date?'dem. ':''}${hm(e.m)}</b>`).join(' · ')}</span></div>`; }
   const v2=$('wxv');
-  v2.innerHTML=`<div class="wxin"><div class="srhd"><div class="kick" style="flex:1">Météo · ${esc(wxNom(c))}</div><button class="x" id="wxClose" aria-label="Fermer la météo">${ICON.x}</button></div>
+  const html=`<div class="wxin"><div class="srhd"><div class="kick" style="flex:1">Météo · ${esc(wxNom(c))}</div><button class="x" id="wxClose" aria-label="Fermer la météo">${ICON.x}</button></div>
     <div class="wxnow">${wxIcon(k,44)}<div><div class="wxt">${v.temp}°</div><div class="wxs">${esc(quand)}${v.max!=null?` · ${v.max}° / ${v.min}°`:''}${v.wind!=null?` · vent ${v.wind} km/h`:''}</div></div></div>
     <ol class="wxh">${heures}</ol>${maree}
     <div><div class="kick" style="margin-bottom:8px">Choisir le lieu</div><ol class="wxlist">${lignes}</ol></div></div>`;
+  // La position GPS relance le rendu toutes les quelques secondes : on ne reconstruit que si le contenu change,
+  // et on garde alors le defilement des heures (meme lieu) et de la liste.
+  if(html===v2.dataset.html) return;
+  const memeLieu=v2.dataset.lieu===wxNom(c), h0=v2.querySelector('.wxh'), l0=v2.querySelector('.wxlist');
+  const sx=memeLieu&&h0?h0.scrollLeft:0, sy=l0?l0.scrollTop:0;
+  v2.innerHTML=html; v2.dataset.html=html; v2.dataset.lieu=wxNom(c);
+  v2.querySelector('.wxh').scrollLeft=sx; v2.querySelector('.wxlist').scrollTop=sy;
   $('wxClose').onclick=closeWx;
   v2.querySelectorAll('.wxrow').forEach(bt=>bt.onclick=()=>{ const x=lieux[+bt.dataset.n]; wxChoix=x.pos?'pos':x; wxRender(); });
   requestAnimationFrame(sizeCard);
@@ -638,7 +645,7 @@ function openWx(){
 }
 function closeWx(silent){
   if(!wxOpen) return; wxOpen=false; wxChoix=null;
-  $('wxv').className='view off'; $('wxv').setAttribute('aria-hidden',true);
+  $('wxv').className='view off'; $('wxv').setAttribute('aria-hidden',true); delete $('wxv').dataset.html;
   if(silent!==true) wxPrev.forEach(id=>{ $(id).classList.replace('off','on'); $(id).setAttribute('aria-hidden',false); });
   wxPrev=[]; wxRender(); requestAnimationFrame(sizeCard);
 }
