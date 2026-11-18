@@ -1,0 +1,1 @@
+import{ar as e,fr as t,mr as n}from"./index-DKwep_K8.js";var r=e(),i=()=>{let{search:e}=n();return(0,r.jsx)(t,{to:{pathname:`/compte/sources`,search:e},replace:!0})};export{i as default};

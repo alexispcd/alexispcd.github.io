@@ -1,0 +1,1 @@
+import{ar as e,i as t,q as n}from"./index-DKwep_K8.js";var r=e(),i=({titre:e,onReessayer:i})=>(0,r.jsx)(n,{children:(0,r.jsx)(t,{titre:e,phrase:`Les données n'ont pas pu être chargées.`,bouton:`Réessayer`,onClick:i})});export{i as t};

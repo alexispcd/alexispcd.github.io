@@ -1,0 +1,1 @@
+import{Ct as e,It as t,Tt as n}from"./index-DKwep_K8.js";var r={display:`flex`,alignItems:`center`,gap:t[12],width:`100%`,textAlign:`left`,justifyContent:`flex-start`,color:`ink`,...e,...n};export{r as t};
