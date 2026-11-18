@@ -83,3 +83,12 @@ export const Plus = (props) => (
     <line x1="6" y1="12" x2="18" y2="12" />
   </Trait>
 )
+
+// Alerte : phrase qui dit comment corriger, sous un élément fautif (planche RenfoModifier).
+export const Alerte = (props) => (
+  <Trait {...props}>
+    <circle cx="12" cy="12" r="9" />
+    <line x1="12" y1="7.5" x2="12" y2="13" />
+    <line x1="12" y1="16.5" x2="12" y2="16.6" />
+  </Trait>
+)

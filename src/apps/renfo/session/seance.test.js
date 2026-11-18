@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ligneBloc, ligneDose, ligneEnTete, pastillesExercice, phraseReinitialisation, phraseSuppression, prevu,
-  rangSuperset, sousLigneRemplacer, themesSeance, titreBloc, titreRemplacer,
+  rangSuperset, sousLigneListe, themesSeance, titreBloc, titreListe, titreRemplacer, titreSectionListe,
 } from './seance.js'
 import { titreAffiche } from '../content.js'
 
@@ -128,20 +128,16 @@ test('pastillesExercice : barre, chaise, bande ou élastique générique', () =>
   assert.deepEqual(pastillesExercice('inconnu'), [])
 })
 
-test('Remplacer : titre et sous-ligne', () => {
+test('Liste Ajouter et Remplacer : titre, sous-ligne et sections', () => {
   assert.equal(titreRemplacer('tractions_assistees'), 'Remplacer Tractions assistées')
-  assert.equal(sousLigneRemplacer(nouvelle.content, 2, 'tractions_assistees'),
-    'Superset 2 · Haut du corps · exercices de tirage avec ton matériel')
-  assert.equal(sousLigneRemplacer(nouvelle.content, 1, 'squat_bulgare'),
-    'Superset 1 · Jambes · exercices de jambes avec ton matériel')
-  assert.equal(sousLigneRemplacer(nouvelle.content, 1, 'mollet_excentrique'),
-    'Superset 1 · Jambes · exercices de mollets et pieds avec ton matériel')
-  assert.equal(sousLigneRemplacer(nouvelle.content, 0, 'cercles_hanche'),
-    "Échauffement · exercices d'échauffement avec ton matériel")
-  assert.equal(sousLigneRemplacer(nouvelle.content, 4, 'etirement_flechisseurs'),
-    'Retour au calme · exercices de retour au calme avec ton matériel')
-  assert.equal(sousLigneRemplacer(ancienne.content, 3, 'equilibre_unipodal'),
-    "Superset 2 · Tronc · exercices d'équilibre avec ton matériel")
+  assert.equal(titreListe('squat_bulgare'), 'Remplacer Squat bulgare')
+  assert.equal(titreListe(null), 'Ajouter un exercice')
+  assert.equal(sousLigneListe(0, 'quads'), 'Superset 1 · Quadriceps · avec ton matériel')
+  assert.equal(sousLigneListe('warmup'), 'Échauffement · avec ton matériel')
+  assert.equal(sousLigneListe('cooldown'), 'Retour au calme · avec ton matériel')
+  assert.equal(titreSectionListe('theme', 'quads'), 'Quadriceps')
+  assert.equal(titreSectionListe('autres', 'quads'), 'Autres exercices')
+  assert.equal(titreSectionListe('echauffement'), null)
 })
 
 test('Confirmations : supprimer et réinitialiser', () => {

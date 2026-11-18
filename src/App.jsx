@@ -40,6 +40,8 @@ const AppLayout = () => {
   // l'arrière : la profondeur du chemin ne dit pas le sens (/admin vers /compte).
   // state.retourEtat : état rendu à la page cible, pour qu'elle garde son propre
   // retour (séance ouverte depuis l'Historique, voir src/lib/retour.js).
+  // state.retour = -1 : le chevron dépile l'étape d'historique, comme le geste retour
+  // (liste d'exercices ouverte sur le même chemin que Modifier, lot R7).
   const cible = location.state?.retour ?? backTo
   const retourEtat = location.state?.retourEtat
   const handleBack = cible !== undefined

@@ -5,8 +5,9 @@ import { withCors } from "../_shared/cors.ts"
 import { internalError } from "../_shared/http.ts"
 import { availableExercises, EXERCISE_INDEX } from "../_shared/strength/catalog.ts"
 import {
-  ajuster, assembler, type Bases, type Choix, type Composition, doseDe, dosesDeSeance, type DoneSession,
-  estNouveauFormat, groupesDe, planMiseAJour, remplacants, remplacer, sansBande, validateComposition,
+  ajuster, assembler, assemblerEdition, type Bases, blocDeContenu, type Choix, type Composition, doseDe,
+  dosesDeSeance, type DoneSession, type Edition, editionDe, estNouveauFormat, exercicesProposes, groupesDe,
+  planMiseAJour, remplacer, sansBande, slugDe, validateComposition, validerEdition,
 } from "../_shared/strength/compose.ts"
 import {
   DURATION_MAX_SEC, DURATION_MIN_SEC, type Dose, REPS_MAX, REPS_MIN, type SessionContent,
@@ -26,6 +27,7 @@ const NOT_FOUND = { error: "Séance introuvable" }
 const NOT_EDITABLE = { error: "Cette séance ne peut plus être modifiée", code: "session_non_modifiable" }
 const BAD_SETTING = { error: "Réglage invalide", code: "reglage_invalide" }
 const BAD_REPLACEMENT = { error: "Remplacement invalide", code: "remplacement_invalide" }
+const BAD_EDIT = { error: "Séance invalide", code: "edition_invalide" }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -64,7 +66,10 @@ async function handleRequest(req: Request): Promise<Response> {
     case "create":
       return await createAction(ctx, body)
     case "update":
+      // Ancien Modifier (recomposition par le modèle), gardé le temps que le front du lot R7 soit en ligne.
       return await updateAction(ctx, body)
+    case "edit":
+      return await editAction(ctx, body)
     case "adjust":
       return await adjustAction(ctx, body)
     case "replace":
@@ -382,9 +387,12 @@ async function replaceAction(ctx: Ctx, body: Record<string, unknown>): Promise<R
   const { setup } = loaded
   const available = availableExercises(setup.equipment, setup.bandsKg)
   const index = blockIndex as number
-  if (!remplacants(session.content, index, slug, available).some((e) => e.slug === newSlug)) {
-    return json(400, BAD_REPLACEMENT)
-  }
+  const bloc = blocDeContenu(session.content, index, slug)
+  // Même liste que la page « Remplacer » : thème du superset, puis le reste du catalogue faisable.
+  const proposes = bloc === null
+    ? []
+    : exercicesProposes(editionDe(session.content), { bloc, slug }, available).flatMap((s) => s.exercices)
+  if (!proposes.some((e) => e.slug === newSlug)) return json(400, BAD_REPLACEMENT)
 
   const content = session.content as SessionContent
   const old = dosesDeSeance({ blocks: [content.blocks[index]] }).find((d) => d.slug === slug)
@@ -398,6 +406,39 @@ async function replaceAction(ctx: Ctx, body: Record<string, unknown>): Promise<R
     bands_used: sansBande(session.bands_used, slug),
   })
   if (response.ok) await addMissingBases(ctx, [dose])
+  return response
+}
+
+/** Séance modifiée à la main (lot R7) : exercices, tours et thèmes choisis par l'utilisateur, sans le modèle. */
+async function editAction(ctx: Ctx, body: Record<string, unknown>): Promise<Response> {
+  const editable = await loadEditable(ctx, body.session_id)
+  if ("response" in editable) return editable.response
+  const { session } = editable
+  const loaded = await requireSetup(ctx)
+  if ("response" in loaded) return loaded.response
+  const { setup } = loaded
+  const available = availableExercises(setup.equipment, setup.bandsKg)
+  const errors = validerEdition(body.seance, available)
+  if (errors.length) return json(400, { ...BAD_EDIT, details: errors })
+  const edition = body.seance as Edition
+
+  const avant = new Set(dosesDeSeance(session.content).map((d) => d.slug))
+  const slugs = [
+    ...edition.warmup, ...edition.supersets.flatMap((s) => s.exercises), ...edition.cooldown,
+  ].map((x) => slugDe(x) as string)
+  const nouveaux = slugs.filter((slug) => !avant.has(slug))
+  const bases = nouveaux.length ? await loadBases(ctx, nouveaux) : {}
+  const content = assemblerEdition(session.content, edition, { bases, bandsKg: setup.bandsKg })
+
+  // Les élastiques joués des exercices retirés n'ont plus lieu d'être.
+  const gardes = new Set(slugs)
+  let bandsUsed = session.bands_used ?? null
+  for (const slug of avant) if (!gardes.has(slug)) bandsUsed = sansBande(bandsUsed, slug)
+
+  const response = await saveContent(ctx, session.id as string, content, { bands_used: bandsUsed })
+  if (response.ok && nouveaux.length) {
+    await addMissingBases(ctx, dosesDeSeance(content).filter((d) => !avant.has(d.slug)))
+  }
   return response
 }
 

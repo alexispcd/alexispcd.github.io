@@ -97,6 +97,9 @@ export const WARMUP_ITEMS_MIN = 1
 export const WARMUP_ITEMS_MAX = 2
 export const COOLDOWN_ITEMS_MIN = 1
 export const COOLDOWN_ITEMS_MAX = 2
+// Modification à la main (lot R7) : jusqu'à 3 ; les bornes du modèle restent à 2.
+export const WARMUP_EDIT_MAX = 3
+export const COOLDOWN_EDIT_MAX = 3
 
 // ── Schéma du contenu (strength_sessions.content) ────────────────────────────
 // reps ou duration_sec selon le mode du catalogue, jamais les deux ; valeur par

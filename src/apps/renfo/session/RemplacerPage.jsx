@@ -1,24 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { etatSeance } from '../../../lib/retour'
-import { Box, ButtonBase, Typography } from '@mui/material'
+import { Box } from '@mui/material'
 import { HEADER_HEIGHT } from '../../../components/AppHeader'
 import CarteSysteme from '../../../components/CarteSysteme'
 import { useAppNavigate } from '../../../hooks/useAppNavigate'
 import { DUREES } from '../../../lib/durees'
 import { getBands, getProfile, getSession, replaceExercise } from '../../../lib/renfo'
-import { border, radius, size, space } from '../../../styles/tokens'
+import { space } from '../../../styles/tokens'
 import BarreAttente from '../../../ui/BarreAttente'
-import Carte from '../../../ui/Carte'
 import Page from '../../../ui/Page'
 import { useAction } from '../../../ui/useAction'
 import { useFinAttente } from '../../../ui/useFinAttente'
 import { availableExercises } from '../../../../supabase/functions/_shared/strength/catalog.ts'
-import { estNouveauFormat, remplacants } from '../../../../supabase/functions/_shared/strength/compose.ts'
-import { ligneBouton } from '../compose/ligne'
-import ExerciseThumb from './ExerciseThumb'
-import PastillesExercice from './PastillesExercice'
-import { sousLigneRemplacer, titreRemplacer } from './seance'
+import {
+  blocDeContenu, editionDe, estNouveauFormat, exercicesProposes,
+} from '../../../../supabase/functions/_shared/strength/compose.ts'
+import ListeExercices from './ListeExercices'
+import { sousLigneListe, titreListe, titreSectionListe } from './seance'
 
 const charger = async (sessionId) => {
   const [session, profile, bands] = await Promise.all([getSession(sessionId), getProfile(), getBands()])
@@ -28,7 +27,10 @@ const charger = async (sessionId) => {
 // Seule une séance à faire et au nouveau format se modifie.
 const modifiable = (session) => session.status === 'planned' && estNouveauFormat(session.content)
 
-/** Route /renfo/session/:sessionId/remplacer/:blockIndex/:slug : les remplaçants d'un exercice. */
+/**
+ * Route /renfo/session/:sessionId/remplacer/:blockIndex/:slug : la liste élargie
+ * (lot R7, exercicesProposes), enregistrée tout de suite par replaceExercise.
+ */
 const RemplacerPage = () => {
   const { sessionId, blockIndex: brut, slug } = useParams()
   const blockIndex = Number(brut)
@@ -98,7 +100,11 @@ const RemplacerPage = () => {
 
   const { session, profile, bands } = chargement
   const available = availableExercises(profile?.equipment ?? [], bands.map((b) => b.kg))
-  const liste = remplacants(session.content, blockIndex, slug, available)
+  const bloc = blocDeContenu(session.content, blockIndex, slug)
+  const edition = editionDe(session.content)
+  const focus = typeof bloc === 'number' ? edition.supersets[bloc]?.focus : null
+  const sections = bloc === null ? [] : exercicesProposes(edition, { bloc, slug }, available)
+    .map((s) => ({ ...s, titre: titreSectionListe(s.cle, focus) }))
 
   const retour = () => {
     if (!montee.current) return
@@ -115,39 +121,15 @@ const RemplacerPage = () => {
   return (
     <Page gap={0}>
       <BarreAttente place="carte" {...action.barre} sx={{ '& .MuiCollapse-wrapperInner': { pb: space[12] } }} />
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4], px: space[4] }}>
-        <Typography variant="titre-section" component="h1">{titreRemplacer(slug)}</Typography>
-        <Typography variant="secondaire" sx={{ color: 'muted' }}>{sousLigneRemplacer(session.content, blockIndex, slug)}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[24] }}>
+        <ListeExercices
+          titre={titreListe(slug)}
+          sousLigne={bloc === null ? '' : sousLigneListe(bloc, focus)}
+          sections={sections}
+          onChoisir={choisir}
+          desactive={action.enCours}
+        />
       </Box>
-      {liste.length ? (
-        <Carte sx={{ py: space[4], px: space[16], mt: space[12] }}>
-          {liste.map((ex, i) => (
-            <ButtonBase
-              key={ex.slug}
-              disabled={action.enCours}
-              onClick={() => choisir(ex.slug)}
-              sx={{
-                ...ligneBouton,
-                minHeight: size.ligneDouble,
-                py: space[8],
-                borderTop: i > 0 ? `${border.filet} solid` : 'none',
-                borderColor: 'line',
-                '&.Mui-disabled': { color: 'ink' },
-              }}
-            >
-              <ExerciseThumb slug={ex.slug} size={40} radius={radius.inner} sansContour />
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[4], flex: '1 1 0', minWidth: 0 }}>
-                <Typography variant="corps-fort" component="span">{ex.name}</Typography>
-                <PastillesExercice slug={ex.slug} bandeGenerique />
-              </Box>
-            </ButtonBase>
-          ))}
-        </Carte>
-      ) : (
-        <Typography variant="secondaire" sx={{ color: 'muted', px: space[4], mt: space[12] }}>
-          Aucun autre exercice possible avec ton matériel.
-        </Typography>
-      )}
     </Page>
   )
 }

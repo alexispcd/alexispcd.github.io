@@ -4,11 +4,13 @@ import { availableExercises, EXERCISE_INDEX } from "./catalog.ts"
 import {
   ajuster, assembler, bandeDuMilieu, type Choix, compositionDe, type Composition, derniereFois, doseDe,
   type DoneSession, estimerComposition, estNouveauFormat, exercicesDuTheme, exercicesRecents, groupesDisponibles,
-  groupesTries, intensiteDeduite, maxExercices, planMiseAJour, preremplir, raisonSuggestion, remplacants, remplacer,
+  groupesTries, intensiteDeduite, maxExercices, planMiseAJour, preremplir, raisonSuggestion, remplacer,
   repartition, sansBande, themePourGroupe, titreSeance, validateComposition, validerChoix,
+  assemblerEdition, type BlocEdition, blocDeContenu, doseEnEdition, dosesParSlug, type Edition, editionDe,
+  exercicesProposes, validerEdition,
 } from "./compose.ts"
 import { BETWEEN_BLOCKS_SEC, estimateSessionMinutes, TRANSITION_SEC, workSeconds } from "./estimate.ts"
-import { groupOfFocus, type SessionContent, SUPERSET_EXERCISES_MAX, SUPERSET_REST_SEC } from "./rules.ts"
+import { groupOfFocus, type SessionContent, SUPERSET_EXERCISES_MAX, SUPERSET_REST_SEC, type TrisetFocus } from "./rules.ts"
 
 const BANDS = [5, 10, 15, 20, 30]
 const FULL = availableExercises(["bar", "chair"], BANDS)
@@ -269,23 +271,127 @@ const SEANCE: SessionContent = {
 
 const slugsOf = (list: { slug: string }[]) => list.map((e) => e.slug)
 
-Deno.test("remplacants : même catégorie, absents de la séance, une seule hauteur dans le superset", () => {
-  // Superset de tirage à barre en haut : mid et low exclus.
-  assertEquals(slugsOf(remplacants(SEANCE, 1, "tirage_vertical_genoux", FULL)), [
-    "tractions_pronation", "tractions_supination", "tractions_negatives", "rowing_bucheron",
+const proposes = (e: Edition, bloc: BlocEdition, slug?: string) => exercicesProposes(e, { bloc, slug }, FULL)
+const slugsProposes = (e: Edition, bloc: BlocEdition, slug?: string) =>
+  proposes(e, bloc, slug).flatMap((s) => slugsOf(s.exercices))
+
+Deno.test("editionDe et blocDeContenu : la séance telle qu'elle est", () => {
+  const e = editionDe(SEANCE)
+  assertEquals(e.warmup, ["cercles_hanche"])
+  assertEquals(e.cooldown, ["posture_enfant"])
+  assertEquals(e.supersets.map((s) => [s.focus, s.rounds, s.exercises.length]), [
+    ["pull", 3, 3], ["core_stability", 3, 3], ["posterior", 3, 3],
   ])
-  // Superset gainage à barre mi-hauteur : relevés suspendus (haut) exclus.
-  assertEquals(slugsOf(remplacants(SEANCE, 2, "planche", FULL)), ["planche_laterale", "copenhague", "planche_touchers_epaule"])
+  assertEquals(blocDeContenu(SEANCE, 0, "cercles_hanche"), "warmup")
+  assertEquals(blocDeContenu(SEANCE, 2, "planche"), 1)
+  assertEquals(blocDeContenu(SEANCE, 4, "posture_enfant"), "cooldown")
+  assertEquals(blocDeContenu(SEANCE, 2, "pompes"), null)
 })
 
-Deno.test("remplacants : deux hauteurs de barre au plus sur la séance", () => {
-  // La séance utilise déjà le haut et la mi-hauteur : nordic_curl et kickback (bas) exclus.
-  assertEquals(slugsOf(remplacants(SEANCE, 3, "pont_fessier_unipodal", FULL)), ["abduction_elastique"])
-  // Remplacer le seul exercice à mi-hauteur libère une hauteur : la barre en bas redevient possible.
-  const r = slugsOf(remplacants(SEANCE, 2, "pallof_press", FULL))
-  assert(r.includes("releve_genoux_suspendu"))
-  assert(!r.includes("dead_bug"))
-  assertEquals(remplacants(SEANCE, 1, "planche", FULL), [])
+Deno.test("exercicesProposes : thème puis autres, sans échauffement ni retour au calme, sans la séance", () => {
+  const e = editionDe(SEANCE)
+  const sections = proposes(e, 0, "tirage_vertical_genoux")
+  assertEquals(sections.map((s) => s.cle), ["theme", "autres"])
+  const theme = slugsOf(sections[0].exercices)
+  // Barre en haut dans le superset de tirage : mi-hauteur et bas exclus.
+  assert(theme.includes("tractions_pronation"))
+  assert(theme.includes("rowing_bucheron"))
+  assert(!theme.includes("tirage_horizontal") && !theme.includes("rowing_inverse"))
+  const tous = slugsProposes(e, 0, "tirage_vertical_genoux")
+  // Hors thème : pompes proposées, étirement et échauffement jamais.
+  assert(tous.includes("pompes"))
+  assert(!tous.some((s) => ["posture_enfant", "pigeon", "cercles_hanche", "balancements_jambe"].includes(s)))
+  // Déjà dans la séance : jamais.
+  assert(!tous.some((s) => ["tractions_assistees", "planche", "dead_bug", "marche_laterale"].includes(s)))
+})
+
+Deno.test("exercicesProposes : deux hauteurs de barre au plus, l'exercice remplacé ne compte pas", () => {
+  const e = editionDe(SEANCE)
+  // Haut et mi-hauteur déjà pris : rien à barre en bas pour le superset arrière.
+  const r = slugsProposes(e, 2, "pont_fessier_unipodal")
+  assert(!r.includes("nordic_curl") && !r.includes("kickback_elastique"))
+  assert(r.includes("abduction_elastique"))
+  // Remplacer le seul exercice à mi-hauteur libère une hauteur.
+  const p = slugsProposes(e, 1, "pallof_press")
+  assert(p.includes("nordic_curl"))
+})
+
+Deno.test("exercicesProposes : ajout dans un superset vide, échauffement et retour au calme", () => {
+  const e = editionDe(SEANCE)
+  e.supersets.push({ focus: "quads", rounds: 3, exercises: [] })
+  const sections = proposes(e, 3)
+  assertEquals(sections[0].cle, "theme")
+  assert(slugsOf(sections[0].exercices).includes("squat_bulgare"))
+  const w = proposes(e, "warmup")
+  assertEquals(w.map((s) => s.cle), ["echauffement"])
+  assert(slugsOf(w[0].exercices).includes("balancements_jambe"))
+  assert(slugsOf(w[0].exercices).includes("releves_pointes"))
+  assert(!slugsOf(w[0].exercices).includes("cercles_hanche"))
+  // marche_laterale est un extra d'échauffement, mais déjà dans un superset.
+  assert(!slugsOf(w[0].exercices).includes("marche_laterale"))
+  const c = proposes(e, "cooldown")
+  assertEquals(c.map((s) => s.cle), ["retour"])
+  assert(slugsOf(c[0].exercices).every((s) => EXERCISE_INDEX[s].category === "cooldown"))
+})
+
+const EDITION: Edition = {
+  warmup: ["cercles_hanche", "balancements_jambe", "ecartes_elastique"],
+  supersets: [
+    { focus: "pull", rounds: 4, exercises: ["tractions_assistees", { slug: "rowing_bucheron", remplace: "tirage_vertical_genoux" }] },
+    { focus: "core_stability", rounds: 3, exercises: ["pallof_press", "planche", "dead_bug"] },
+  ],
+  cooldown: ["posture_enfant"],
+}
+
+Deno.test("validerEdition : édition valide, échauffement à 3", () => {
+  assertEquals(validerEdition(EDITION, FULL), [])
+})
+
+Deno.test("validerEdition : chaque erreur", () => {
+  const avec = (fn: (e: Edition) => void) => {
+    const e = structuredClone(EDITION)
+    fn(e)
+    return validerEdition(e, FULL)
+  }
+  errorsOf(validerEdition(null, FULL), "objet")
+  errorsOf(avec((e) => { e.warmup = [] }), "Échauffement : 1 à 3")
+  errorsOf(avec((e) => { e.warmup.push("releves_pointes") }), "Échauffement : 1 à 3")
+  errorsOf(avec((e) => { e.cooldown = ["pigeon", "posture_enfant", "etirement_mollet_mur", "etirement_flechisseurs"] }), "Retour au calme : 1 à 3")
+  errorsOf(avec((e) => { e.supersets = [] }), "1 à 4 supersets")
+  errorsOf(avec((e) => { e.supersets[0].focus = "inconnu" as TrisetFocus }), "thème inconnu")
+  errorsOf(avec((e) => { e.supersets[0].rounds = 6 }), "1 à 5 tours")
+  errorsOf(avec((e) => { e.supersets[0].exercises = ["tractions_assistees"] }), "2 à 4 exercices")
+  errorsOf(avec((e) => { e.supersets[1].exercises.push("tractions_assistees") }), "plusieurs fois")
+  errorsOf(avec((e) => { e.warmup[0] = "pompes" }), "n'est pas autorisé")
+  errorsOf(avec((e) => { e.cooldown[0] = "cercles_hanche" }), "n'est pas autorisé")
+  errorsOf(avec((e) => { e.supersets[1].exercises[2] = "pigeon" }), "n'est pas autorisé")
+  errorsOf(avec((e) => { e.supersets[1].exercises[2] = "inconnu" }), "exercice inconnu")
+  errorsOf(avec((e) => { e.supersets[0].exercises.push("tirage_horizontal") }), "une seule par superset")
+  errorsOf(avec((e) => { e.supersets[1].exercises[2] = "nordic_curl" }), "deux au plus par séance")
+  errorsOf(validerEdition(EDITION, NOTHING), "matériel indisponible")
+})
+
+Deno.test("assemblerEdition : doses gardées, nouvelles par doseDe avec l'élastique remplacé", () => {
+  const c = assemblerEdition(SEANCE, EDITION, { bases: { balancements_jambe: { reps: 14 } }, bandsKg: BANDS })
+  assertEquals(c.title, "Haut du corps et tronc")
+  assertEquals(c.intensity, "legere")
+  assertEquals(c.estimated_min, estimateSessionMinutes(c))
+  const [warmup, s1, s2, cooldown] = c.blocks
+  assert(warmup.type === "warmup" && cooldown.type === "cooldown")
+  assertEquals(warmup.items[0], { slug: "cercles_hanche", reps: 8 })
+  assertEquals(warmup.items[1], { slug: "balancements_jambe", reps: 14 })
+  // Échauffement sans base : élastique du milieu.
+  assertEquals(warmup.items[2], { slug: "ecartes_elastique", reps: 15, band_kg: 15 })
+  assert(s1.type === "superset" && s2.type === "superset")
+  assertEquals(s1.rounds, 4)
+  assertEquals(s1.rest_sec, SUPERSET_REST_SEC)
+  assertEquals(s1.exercises?.[0], { slug: "tractions_assistees", reps: 8, band_kg: 30 })
+  // Remplace tirage_vertical_genoux (20 kg) : son élastique est repris.
+  assertEquals(s1.exercises?.[1], { slug: "rowing_bucheron", reps: 12, band_kg: 20 })
+  assertEquals(slugsOf(s2.exercises ?? []), ["pallof_press", "planche", "dead_bug"])
+  assertEquals(doseEnEdition("planche", null, { anciennes: dosesParSlug(SEANCE), bases: {}, bandsKg: BANDS }), {
+    slug: "planche", duration_sec: 45,
+  })
 })
 
 Deno.test("remplacer et ajuster : nouveau contenu, durée recalculée, original intact", () => {

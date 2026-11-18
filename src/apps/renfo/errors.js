@@ -7,6 +7,7 @@ const BY_CODE = {
   session_non_modifiable: 'Cette séance ne peut plus être modifiée.',
   reglage_invalide: "Ce réglage n'est pas possible pour cet exercice.",
   remplacement_invalide: "Cet exercice ne peut pas remplacer celui-ci dans ta séance.",
+  edition_invalide: "Cette séance n'est pas possible avec ton matériel. Change un exercice.",
 }
 
 /** Message lisible pour une erreur de renfo-session (ancien chemin et actions). */

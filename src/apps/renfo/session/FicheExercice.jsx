@@ -27,6 +27,17 @@ const ligneDoseSx = {
   ...focusContourInterieur,
 }
 
+// Même place que la ligne de dose, en texte : rien à ajuster depuis Modifier.
+const doseTexteSx = {
+  display: 'flex',
+  alignItems: 'center',
+  minHeight: size.ligne,
+  py: space[4],
+  borderTop: filet,
+  borderBottom: filet,
+  borderColor: 'line',
+}
+
 // Rendus internes (fonctions, pas des composants : un composant par fichier).
 const photo = (src, legende) => (
   <Box key={legende} sx={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: space[4], alignItems: 'center' }}>
@@ -51,18 +62,33 @@ const section = (etiquette, texte) => (
  * - cible : { dose, block } de l'exercice, gardée par le parent pendant la fermeture.
  * - modifiable : séance à faire au nouveau format ; sinon ni dose ni « Remplacer ».
  * - sansRemplacer : pas de « Remplacer l'exercice » (fiche ouverte dans le player).
+ * - enAttente : fiche ouverte depuis Modifier (lot R7) : dose en texte, sans Ajuster,
+ *   puis « Remplacer l'exercice » et « Retirer l'exercice » (onRetirer), en attente
+ *   jusqu'à « Enregistrer ».
  */
-const FicheExercice = ({ ouverte, onFermer, cible, bandsUsed, bands, modifiable, sansRemplacer = false, onAjuster, onRemplacer }) => {
+const FicheExercice = ({
+  ouverte, onFermer, cible, bandsUsed, bands, modifiable, sansRemplacer = false, enAttente = false,
+  onAjuster, onRemplacer, onRetirer,
+}) => {
   const dose = cible?.dose
   const ex = dose ? EXERCISE_INDEX[dose.slug] : null
   const depart = dose ? photoUrl(dose.slug, 0) : null
+  let lignes = []
+  if (enAttente) {
+    lignes = [
+      { libelle: "Remplacer l'exercice", onClick: onRemplacer },
+      { libelle: "Retirer l'exercice", onClick: onRetirer },
+    ]
+  } else if (modifiable && !sansRemplacer) {
+    lignes = [{ libelle: "Remplacer l'exercice", onClick: onRemplacer }]
+  }
 
   return (
     <FeuilleFlottante
       ouverte={ouverte && Boolean(ex)}
       onFermer={onFermer}
       libelleAria={ex ? `Fiche de l'exercice ${ex.name}` : "Fiche de l'exercice"}
-      lignes={modifiable && !sansRemplacer ? [{ libelle: "Remplacer l'exercice", onClick: onRemplacer }] : []}
+      lignes={lignes}
     >
       {ex && (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: space[12], p: space[16], textAlign: 'left' }}>
@@ -70,7 +96,14 @@ const FicheExercice = ({ ouverte, onFermer, cible, bandsUsed, bands, modifiable,
             <Typography component="h2" sx={{ ...textStyles['titre-barre'], fontWeight: 700 }}>{ex.name}</Typography>
             <PastillesExercice slug={dose.slug} kg={bandOf(dose, bandsUsed)} bands={bands} />
           </Box>
-          {modifiable && (
+          {enAttente && (
+            <Box sx={doseTexteSx}>
+              <Typography variant="secondaire" component="span" sx={{ color: 'muted', fontVariantNumeric: 'tabular-nums' }}>
+                {ligneDose(dose, bandsUsed, cible.block)}
+              </Typography>
+            </Box>
+          )}
+          {modifiable && !enAttente && (
             <ButtonBase aria-label="Ajuster l'exercice" onClick={onAjuster} sx={ligneDoseSx}>
               <Typography variant="corps-fort" component="span" sx={{ flex: '1 1 0', minWidth: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {ligneDose(dose, bandsUsed, cible.block)}

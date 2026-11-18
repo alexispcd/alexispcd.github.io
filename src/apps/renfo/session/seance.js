@@ -2,9 +2,7 @@
 // Testé par seance.test.js.
 
 import { EXERCISE_INDEX } from '../../../../supabase/functions/_shared/strength/catalog.ts'
-import {
-  GROUP_LABELS, groupOfFocus, TRISET_FOCUS_LABELS,
-} from '../../../../supabase/functions/_shared/strength/rules.ts'
+import { TRISET_FOCUS_LABELS } from '../../../../supabase/functions/_shared/strength/rules.ts'
 import { formatShortDay } from '../../../lib/dates.js'
 import { jourLocal, libelleSupersets } from '../accueil.js'
 import { formatKg } from '../bandColor.js'
@@ -100,36 +98,32 @@ export const pastillesExercice = (slug, { kg = null, bandeGenerique = false } = 
   return out
 }
 
-// Ce que proposent les remplaçants, par catégorie de l'exercice remplacé.
-const TERMES = {
-  warmup: "d'échauffement",
-  cooldown: 'de retour au calme',
-  legs: 'de jambes',
-  posterior_chain: "d'ischios et fessiers",
-  calves_feet: 'de mollets et pieds',
-  pull: 'de tirage',
-  push: 'de poussée',
-  arms: 'de bras',
-  core: 'de tronc',
-  balance: "d'équilibre",
-}
-
 /** Titre de Remplacer : « Remplacer Tractions assistées ». */
 export const titreRemplacer = (slug) => `Remplacer ${nomDe(slug)}`
 
+/** Titre de la liste d'exercices : « Remplacer Squat bulgare », ou « Ajouter un exercice » sans slug. */
+export const titreListe = (slug) => (slug ? titreRemplacer(slug) : 'Ajouter un exercice')
+
 /**
- * Sous-ligne de Remplacer : « Superset 2 · Haut du corps · exercices de tirage avec
- * ton matériel », « Échauffement · exercices d'échauffement avec ton matériel ».
+ * Sous-ligne de la liste : « Superset 1 · Quadriceps · avec ton matériel »,
+ * « Échauffement · avec ton matériel », « Retour au calme · avec ton matériel ».
+ * - bloc : 'warmup', 'cooldown' ou l'index du superset (à partir de 0) ; focus : son thème.
  */
-export const sousLigneRemplacer = (content, blockIndex, slug) => {
-  const block = blocsDe(content)[blockIndex]
-  const terme = TERMES[EXERCISE_INDEX[slug]?.category]
-  const fin = terme ? `exercices ${terme} avec ton matériel` : 'exercices avec ton matériel'
-  if (block?.type === 'superset') {
-    const groupe = GROUP_LABELS[groupOfFocus(block.focus)]
-    return [`Superset ${rangSuperset(content, blockIndex)}`, groupe, fin].filter(Boolean).join(' · ')
-  }
-  return `${titreBloc(block)} · ${fin}`
+export const sousLigneListe = (bloc, focus) => {
+  if (bloc === 'warmup') return 'Échauffement · avec ton matériel'
+  if (bloc === 'cooldown') return 'Retour au calme · avec ton matériel'
+  return [`Superset ${bloc + 1}`, TRISET_FOCUS_LABELS[focus], 'avec ton matériel'].filter(Boolean).join(' · ')
+}
+
+/**
+ * Étiquette d'une section de la liste (exercicesProposes) : le thème, « Autres
+ * exercices », ou null pour la seule section de l'échauffement et du retour au calme
+ * (la sous-ligne le dit déjà).
+ */
+export const titreSectionListe = (cle, focus) => {
+  if (cle === 'theme') return TRISET_FOCUS_LABELS[focus] ?? 'Exercices du thème'
+  if (cle === 'autres') return 'Autres exercices'
+  return null
 }
 
 /** Titre de la confirmation de suppression, à faire ou faite. */

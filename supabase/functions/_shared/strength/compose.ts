@@ -9,12 +9,12 @@
 import { type Anchor, EXERCISE_INDEX, type Exercise } from "./catalog.ts"
 import { BETWEEN_BLOCKS_SEC, estimateSessionMinutes, supersetMembers, TRANSITION_SEC, workSeconds } from "./estimate.ts"
 import {
-  COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, type Dose, effectiveTrisetRules, type Group, GROUP_LABELS,
+  COOLDOWN_EDIT_MAX, COOLDOWN_ITEMS_MAX, COOLDOWN_ITEMS_MIN, type Dose, effectiveTrisetRules, type Group, GROUP_LABELS,
   GROUP_ORDER, groupOfFocus, type Intensity, INTENSITY_SUPERSETS, isCurrentTheme, isIntensity,
   ROUNDS_MAX, ROUNDS_MIN, type SessionBlock, type SessionContent, SUPERSET_EXERCISES_MAX,
   SUPERSET_EXERCISES_MIN, SUPERSET_REST_SEC, type SupersetBlock, SUPERSETS_MAX, SUPERSETS_MIN,
-  THEMES_BY_GROUP, type TrisetFocus, type TrisetRequirement, WARMUP_EXTRAS, WARMUP_ITEMS_MAX,
-  WARMUP_ITEMS_MIN,
+  THEMES_BY_GROUP, type TrisetFocus, type TrisetRequirement, WARMUP_EDIT_MAX, WARMUP_EXTRAS,
+  WARMUP_ITEMS_MAX, WARMUP_ITEMS_MIN,
 } from "./rules.ts"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -711,28 +711,247 @@ export function sansBande(bandsUsed: unknown, slug: string): Record<string, numb
   return Object.keys(reste).length ? reste : null
 }
 
-/**
- * Remplaçants de `slug` dans le bloc `blockIndex` : même catégorie, absents de la
- * séance. Pour un exercice à barre : une seule hauteur dans son superset après
- * remplacement, deux au plus sur la séance.
- */
-export function remplacants(content: unknown, blockIndex: number, slug: string, available: Exercise[]): Exercise[] {
+// ── Modification à la main (lot R7) ──────────────────────────────────────────
+
+/** Un exercice de la séance voulue : son slug, ou { slug, remplace } (exercice remplacé). */
+export type ExerciceEdition = string | { slug: string; remplace?: string }
+
+/** Séance voulue par Modifier (action edit) : exercices par bloc, dans l'ordre de jeu. */
+export interface Edition {
+  warmup: ExerciceEdition[]
+  supersets: Array<{ focus: TrisetFocus; rounds: number; exercises: ExerciceEdition[] }>
+  cooldown: ExerciceEdition[]
+}
+
+/** Bloc visé dans une édition : l'échauffement, le retour au calme, ou un superset (index à partir de 0). */
+export type BlocEdition = "warmup" | "cooldown" | number
+
+export const slugDe = (x: unknown): string | null =>
+  typeof x === "string" ? x : isRecord(x) && typeof x.slug === "string" ? x.slug : null
+
+const remplaceDe = (x: unknown): string | null =>
+  isRecord(x) && typeof x.remplace === "string" ? x.remplace : null
+
+const listeDe = (x: unknown): unknown[] => (Array.isArray(x) ? x : [])
+
+/** Exercices d'un bloc d'édition. */
+const exercicesDeBloc = (edition: Edition, bloc: BlocEdition): unknown[] =>
+  bloc === "warmup"
+    ? listeDe(edition.warmup)
+    : bloc === "cooldown"
+    ? listeDe(edition.cooldown)
+    : listeDe(edition.supersets?.[bloc]?.exercises)
+
+const slugsEdition = (edition: Edition): string[] =>
+  [
+    ...listeDe(edition.warmup),
+    ...listeDe(edition.supersets).flatMap((s) => listeDe(isRecord(s) ? s.exercises : null)),
+    ...listeDe(edition.cooldown),
+  ].map(slugDe).filter((s): s is string => s !== null)
+
+/** Édition d'une séance au nouveau format, telle qu'elle est (point de départ de Modifier). */
+export function editionDe(content: unknown): Edition {
+  const blocks = blocksOf(content)
+  const slugs = (b: Rec | undefined) => (b ? blockDoses(b).map((d) => d.slug) : [])
+  return {
+    warmup: slugs(blocks.find((b) => b.type === "warmup")),
+    supersets: blocks.filter((b) => b.type === "superset").map((b) => ({
+      focus: b.focus as TrisetFocus,
+      rounds: Number(b.rounds),
+      exercises: membersOf(b).map((d) => d.slug),
+    })),
+    cooldown: slugs(blocks.find((b) => b.type === "cooldown")),
+  }
+}
+
+/** Bloc d'édition d'un bloc du contenu (blockIndex de content.blocks), ou null s'il ne contient pas `slug`. */
+export function blocDeContenu(content: unknown, blockIndex: number, slug: string): BlocEdition | null {
   const blocks = blocksOf(content)
   const block = blocks[blockIndex]
-  const current = EXERCISE_INDEX[slug]
-  if (!block || !current || !blockDoses(block).some((d) => d.slug === slug)) return []
-  const inSession = new Set(contentSlugs(content))
-  const anchorsOf = (doses: Dose[]) =>
-    doses.filter((d) => d.slug !== slug).map((d) => onBarAnchor(EXERCISE_INDEX[d.slug])).filter((a): a is Anchor => a !== null)
-  const blockAnchors = new Set(block.type === "superset" ? anchorsOf(blockDoses(block)) : [])
-  const sessionAnchors = new Set(anchorsOf(blocks.flatMap(blockDoses)))
-  return available.filter((e) => {
-    if (e.category !== current.category || inSession.has(e.slug)) return false
+  if (!block || !blockDoses(block).some((d) => d.slug === slug)) return null
+  if (block.type === "warmup") return "warmup"
+  if (block.type === "cooldown") return "cooldown"
+  if (block.type !== "superset") return null
+  return blocks.slice(0, blockIndex).filter((b) => b.type === "superset").length
+}
+
+/** Exercice admis dans un superset : ni échauffement ni retour au calme. */
+const permisEnSuperset = (e: Exercise): boolean => e.category !== "warmup" && e.category !== "cooldown"
+
+/** Section de la liste « Ajouter un exercice » et « Remplacer ». */
+export interface SectionProposee {
+  /** theme : exercices du thème du superset ; autres : le reste ; echauffement, retour : seule section. */
+  cle: "theme" | "autres" | "echauffement" | "retour"
+  exercices: Exercise[]
+}
+
+/**
+ * Exercices proposés pour ajouter un exercice au bloc `bloc`, ou remplacer `slug`
+ * dans ce bloc. Superset : les exercices du thème (catégories effectives du
+ * matériel), puis « autres » (tout le reste faisable, sans échauffement ni retour au
+ * calme). Échauffement et retour au calme : une seule section (echauffementPermis,
+ * retourAuCalmePermis). Jamais un exercice déjà dans la séance. Barre : une seule
+ * hauteur dans le superset, deux au plus sur la séance (l'exercice remplacé ne compte
+ * pas). Sections vides retirées.
+ */
+export function exercicesProposes(
+  edition: Edition,
+  { bloc, slug }: { bloc: BlocEdition; slug?: string | null },
+  available: Exercise[],
+): SectionProposee[] {
+  const inSession = new Set(slugsEdition(edition))
+  const anchorsOf = (items: unknown[]) =>
+    items.map(slugDe).filter((s) => s !== null && s !== slug)
+      .map((s) => onBarAnchor(EXERCISE_INDEX[s as string])).filter((a): a is Anchor => a !== null)
+  const blockAnchors = new Set(typeof bloc === "number" ? anchorsOf(exercicesDeBloc(edition, bloc)) : [])
+  const sessionAnchors = new Set(anchorsOf(slugsEdition(edition)))
+  const possible = (e: Exercise) => {
+    if (inSession.has(e.slug)) return false
     const anchor = onBarAnchor(e)
     if (!anchor) return true
     if (blockAnchors.size && !blockAnchors.has(anchor)) return false
     return new Set([...sessionAnchors, anchor]).size <= 2
+  }
+  let sections: SectionProposee[]
+  if (bloc === "warmup") {
+    sections = [{ cle: "echauffement", exercices: available.filter((e) => echauffementPermis(e) && possible(e)) }]
+  } else if (bloc === "cooldown") {
+    sections = [{ cle: "retour", exercices: available.filter((e) => retourAuCalmePermis(e) && possible(e)) }]
+  } else {
+    const focus = edition.supersets?.[bloc]?.focus
+    const { categories } = focus ? effectiveTrisetRules(focus, available) : { categories: [] as string[] }
+    const ok = available.filter((e) => permisEnSuperset(e) && possible(e))
+    sections = [
+      { cle: "theme", exercices: ok.filter((e) => categories.includes(e.category)) },
+      { cle: "autres", exercices: ok.filter((e) => !categories.includes(e.category)) },
+    ]
+  }
+  return sections.filter((s) => s.exercices.length > 0)
+}
+
+/** Contrôle d'une édition reçue du client (action edit). Liste d'erreurs en français, vide si valide. */
+export function validerEdition(raw: unknown, available: Exercise[]): string[] {
+  if (!isRecord(raw)) return ["La séance doit être un objet"]
+  const errors: string[] = []
+  const availableSlugs = new Set(available.map((e) => e.slug))
+  const seen = new Set<string>()
+  const anchors = new Set<Anchor>()
+
+  const checkItem = (item: unknown, where: string, allowed: (e: Exercise) => boolean): Exercise | null => {
+    const slug = slugDe(item)
+    if (slug === null || (isRecord(item) && item.remplace !== undefined && typeof item.remplace !== "string")) {
+      errors.push(`${where} : exercice illisible`)
+      return null
+    }
+    const exercise = EXERCISE_INDEX[slug]
+    if (!exercise) {
+      errors.push(`${where} : exercice inconnu « ${slug} »`)
+      return null
+    }
+    if (!availableSlugs.has(slug)) {
+      errors.push(`${where} : « ${slug} » demande du matériel indisponible`)
+      return null
+    }
+    if (seen.has(slug)) errors.push(`${where} : « ${slug} » apparaît plusieurs fois dans la séance`)
+    seen.add(slug)
+    if (!allowed(exercise)) errors.push(`${where} : « ${slug} » (${exercise.category}) n'est pas autorisé ici`)
+    const anchor = onBarAnchor(exercise)
+    if (anchor) anchors.add(anchor)
+    return exercise
+  }
+
+  const checkList = (key: "warmup" | "cooldown", label: string, max: number, allowed: (e: Exercise) => boolean) => {
+    const list = raw[key]
+    const min = key === "warmup" ? WARMUP_ITEMS_MIN : COOLDOWN_ITEMS_MIN
+    if (!Array.isArray(list) || list.length < min || list.length > max) {
+      errors.push(`${label} : ${min} à ${max} exercices attendus`)
+      return
+    }
+    list.forEach((item, i) => checkItem(item, `${label} ${i + 1}`, allowed))
+  }
+
+  checkList("warmup", "Échauffement", WARMUP_EDIT_MAX, echauffementPermis)
+
+  const supersets = raw.supersets
+  if (!Array.isArray(supersets) || supersets.length < SUPERSETS_MIN || supersets.length > SUPERSETS_MAX) {
+    errors.push(`${SUPERSETS_MIN} à ${SUPERSETS_MAX} supersets attendus`)
+  } else {
+    supersets.forEach((s: unknown, i) => {
+      const label = `Superset ${i + 1}`
+      if (!isRecord(s)) {
+        errors.push(`${label} : objet attendu`)
+        return
+      }
+      if (!isCurrentTheme(s.focus)) errors.push(`${label} : thème inconnu`)
+      if (!isIntIn(s.rounds, ROUNDS_MIN, ROUNDS_MAX)) errors.push(`${label} : ${ROUNDS_MIN} à ${ROUNDS_MAX} tours`)
+      const list = s.exercises
+      if (!Array.isArray(list) || list.length < SUPERSET_EXERCISES_MIN || list.length > SUPERSET_EXERCISES_MAX) {
+        errors.push(`${label} : ${SUPERSET_EXERCISES_MIN} à ${SUPERSET_EXERCISES_MAX} exercices`)
+        if (!Array.isArray(list)) return
+      }
+      const members = list
+        .map((item: unknown, k: number) => checkItem(item, `${label} exercice ${k + 1}`, permisEnSuperset))
+        .filter((e: Exercise | null): e is Exercise => e !== null)
+      if (new Set(members.map(onBarAnchor).filter((a: Anchor | null) => a !== null)).size > 1) {
+        errors.push(`${label} : barre à des hauteurs différentes, une seule par superset`)
+      }
+    })
+  }
+
+  checkList("cooldown", "Retour au calme", COOLDOWN_EDIT_MAX, retourAuCalmePermis)
+
+  if (anchors.size > 2) errors.push(`Barre utilisée à ${anchors.size} hauteurs différentes, deux au plus par séance`)
+  return errors
+}
+
+/**
+ * Dose d'un exercice de l'édition : celle qu'il a déjà dans la séance (`anciennes`),
+ * sinon doseDe (base du compte, sinon référence ; élastique de l'exercice remplacé,
+ * sinon le plus proche, sinon celui du milieu). Partagée par le front (aperçu) et edit.
+ */
+export function doseEnEdition(
+  slug: string,
+  remplace: string | null | undefined,
+  { anciennes, bases, bandsKg }: { anciennes: Record<string, Dose>; bases: Bases; bandsKg: number[] },
+): Dose {
+  if (anciennes[slug]) return { ...anciennes[slug] }
+  return doseDe(EXERCISE_INDEX[slug], {
+    base: bases[slug],
+    bandsKg,
+    bandChoisie: remplace ? anciennes[remplace]?.band_kg ?? null : null,
   })
+}
+
+/** Doses d'une séance par slug. */
+export const dosesParSlug = (content: unknown): Record<string, Dose> =>
+  Object.fromEntries(dosesDeSeance(content).map((d) => [d.slug, d]))
+
+/**
+ * Contenu d'une séance modifiée à la main (édition déjà validée) : doses gardées ou
+ * posées par doseEnEdition, repos SUPERSET_REST_SEC, titre, intensité déduite du
+ * nombre de supersets, durée recalculée.
+ */
+export function assemblerEdition(
+  content: unknown,
+  edition: Edition,
+  { bases, bandsKg }: { bases: Bases; bandsKg: number[] },
+): SessionContent {
+  const anciennes = dosesParSlug(content)
+  const doses = (items: ExerciceEdition[]) =>
+    items.map((x) => doseEnEdition(slugDe(x) as string, remplaceDe(x), { anciennes, bases, bandsKg }))
+  const blocks: SessionBlock[] = [
+    { type: "warmup", items: doses(edition.warmup) },
+    ...edition.supersets.map((s): SupersetBlock => ({
+      type: "superset", focus: s.focus, rounds: s.rounds, rest_sec: SUPERSET_REST_SEC, exercises: doses(s.exercises),
+    })),
+    { type: "cooldown", items: doses(edition.cooldown) },
+  ]
+  return {
+    title: titreSeance(edition.supersets.map((s) => s.focus)),
+    estimated_min: estimateSessionMinutes({ blocks }),
+    intensity: intensiteDeduite(edition.supersets.length),
+    blocks,
+  }
 }
 
 /** Séance au nouveau format : au moins un superset, tous avec `exercises`, aucun bloc principal. */

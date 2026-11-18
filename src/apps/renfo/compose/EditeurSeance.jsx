@@ -8,7 +8,7 @@ import Bouton from '../../../ui/Bouton'
 import Carte from '../../../ui/Carte'
 import ControleSegmente from '../../../ui/ControleSegmente'
 import FeuilleFlottante from '../../../ui/FeuilleFlottante'
-import GardeChangements from '../../../ui/GardeChangements'
+import Compteur from '../../../ui/Compteur'
 import Page from '../../../ui/Page'
 import { ChevronDroit } from '../../../ui/Icones'
 import { useMessage } from '../../../ui/useMessage'
@@ -16,12 +16,14 @@ import { availableExercises } from '../../../../supabase/functions/_shared/stren
 import {
   estimerComposition, groupesDisponibles, intensiteDeduite, maxExercices, preremplir, themePourGroupe, titreSeance,
 } from '../../../../supabase/functions/_shared/strength/compose.ts'
-import { GROUP_LABELS, groupOfFocus, SUPERSETS_MAX } from '../../../../supabase/functions/_shared/strength/rules.ts'
+import {
+  GROUP_LABELS, groupOfFocus, ROUNDS_MAX, ROUNDS_MIN, SUPERSET_EXERCISES_MIN, SUPERSETS_MAX, TRISET_FOCUS_LABELS,
+} from '../../../../supabase/functions/_shared/strength/rules.ts'
 import { INTENSITE_LABELS, libelleSupersets, resumeComposition } from '../accueil'
 import { generationErrorMessage } from '../errors'
 import CarteEtat from './CarteEtat'
 import Depli from './Depli'
-import LigneSuperset from './LigneSuperset'
+import LigneBloc from './LigneBloc'
 import { ligneBouton } from './ligne'
 
 const INTENSITES = Object.entries(INTENSITE_LABELS).map(([valeur, libelle]) => ({ valeur, libelle }))
@@ -33,40 +35,25 @@ let prochainId = 1
 const avecId = (s, apparait = false) => ({ ...s, id: prochainId++, apparait })
 
 const filet = { borderTop: `${border.filet} solid`, borderColor: 'line' }
+const decale = { pl: space[24] }
 
-// Attente par défaut : le modèle choisit les exercices.
+// Attente : le modèle choisit les exercices.
 const PREPARATION = {
   titre: 'Préparation de ta séance',
   detail: "Jusqu'à 30 secondes, reste sur cet écran.",
   duree: DUREES.preparationRenfo,
 }
 
-/** Deux compositions identiques : intensité, puis chaque superset dans l'ordre (thème, exercices, tours). */
-const memeComposition = (a, b) =>
-  a.intensity === b.intensity &&
-  a.supersets.length === b.supersets.length &&
-  a.supersets.every((s, i) => {
-    const t = b.supersets[i]
-    return s.focus === t.focus && s.exercise_count === t.exercise_count && s.rounds === t.rounds
-  })
-
 /**
- * Composition d'une séance, sa préparation et ses échecs, sur la même route. Sert à
- * créer une séance (ComposerPage) et à la modifier (session/ModifierPage) :
+ * Composition d'une nouvelle séance (ComposerPage), sa préparation et ses échecs, sur
+ * la même route. Modifier une séance à faire passe par session/ModifierPage :
  * - depart : { intensity (ou null : aucun segment choisi), supersets: [{ focus, exercise_count, rounds }] }.
  * - donnees : { profile, bands, done, bases }.
  * - libelleEnvoi : texte du bouton (« Créer la séance »).
  * - envoyer(composition) : promesse de { session } ; onSession(session) une fois prête.
  * - onEnAttente(err) : renvoie l'identifiant de séance d'une erreur qui doit ouvrir une séance existante, sinon null.
- * Modification seulement :
- * - onInchange : appelé au lieu d'envoyer quand la composition est celle du départ.
- * - attenteDe(composition) : { titre, detail, duree } de l'attente ; la préparation par défaut.
- * - garde : confirmation avant de quitter une composition changée (GardeChangements),
- *   coupée pendant l'envoi pour que la navigation de fin passe.
  */
-const EditeurSeance = ({
-  depart, donnees, libelleEnvoi, envoyer, onSession, onEnAttente, onInchange, attenteDe, garde = false,
-}) => {
+const EditeurSeance = ({ depart, donnees, libelleEnvoi, envoyer, onSession, onEnAttente }) => {
   const { afficher } = useMessage()
   const available = useMemo(
     () => availableExercises(donnees.profile?.equipment ?? [], donnees.bands.map((b) => b.kg)),
@@ -133,10 +120,8 @@ const EditeurSeance = ({
     modifier(id, { retire: true })
   }
 
-  const change = !memeComposition(composition, depart)
-
   const lancer = (c) => {
-    setEnvoi({ phase: 'preparation', composition: c, attente: attenteDe?.(c) ?? PREPARATION })
+    setEnvoi({ phase: 'preparation', composition: c, attente: PREPARATION })
     envoyer(c).then(
       ({ session }) => setEnvoi((e) => ({ ...e, issue: { session } })),
       (err) => {
@@ -222,18 +207,50 @@ const EditeurSeance = ({
         {supersets.map((s) => {
           const numero = actifs.indexOf(s) + 1
           return (
-            <LigneSuperset
+            <LigneBloc
               key={s.id}
               numero={numero > 0 ? numero : ''}
-              superset={s}
+              titre={TRISET_FOCUS_LABELS[s.focus] ?? ''}
+              sousLigne={`${GROUP_LABELS[groupOfFocus(s.focus)] ?? ''} · ${s.exercise_count} exercices, ${s.rounds} tours`}
               ouvert={ouvert === s.id && !s.retire}
-              max={maxExercices(s.focus, available)}
+              present={!s.retire}
+              apparait={s.apparait}
               onBasculer={() => setOuvert((o) => (o === s.id ? null : s.id))}
-              onGroupe={() => ouvrirFeuille(s.id, numero)}
-              onChange={(champs) => modifier(s.id, champs)}
-              onRetirer={() => retirer(s.id)}
               onExited={() => setSupersets((list) => list.filter((x) => x.id !== s.id))}
-            />
+            >
+              <ButtonBase
+                aria-label="Changer le groupe du superset"
+                onClick={() => ouvrirFeuille(s.id, numero)}
+                sx={{ ...ligneBouton, ...decale, minHeight: size.ligne }}
+              >
+                <Typography variant="corps" component="span" sx={{ flex: '1 1 0' }}>Groupe</Typography>
+                <Typography variant="corps-fort" component="span">{GROUP_LABELS[groupOfFocus(s.focus)] ?? ''}</Typography>
+                <Box component="span" sx={{ display: 'flex', flexShrink: 0, color: 'muted' }}><ChevronDroit taille={16} /></Box>
+              </ButtonBase>
+              <Compteur
+                libelle="Exercices"
+                valeur={s.exercise_count}
+                min={SUPERSET_EXERCISES_MIN}
+                max={maxExercices(s.focus, available)}
+                onChange={(v) => modifier(s.id, { exercise_count: v })}
+                labelMoins="Un exercice de moins"
+                labelPlus="Un exercice de plus"
+                sx={decale}
+              />
+              <Compteur
+                libelle="Tours"
+                valeur={s.rounds}
+                min={ROUNDS_MIN}
+                max={ROUNDS_MAX}
+                onChange={(v) => modifier(s.id, { rounds: v })}
+                labelMoins="Un tour de moins"
+                labelPlus="Un tour de plus"
+                sx={decale}
+              />
+              <ButtonBase onClick={() => retirer(s.id)} sx={{ ...ligneBouton, ...decale, minHeight: size.cible, color: 'muted' }}>
+                <Typography variant="corps" component="span">Retirer ce superset</Typography>
+              </ButtonBase>
+            </LigneBloc>
           )
         })}
         <Depli ouvert={actifs.length < SUPERSETS_MAX}>
@@ -256,7 +273,7 @@ const EditeurSeance = ({
           pleineLargeur
           disabled={!actifs.length}
           raison="Ajoute au moins un superset."
-          onClick={() => (onInchange && !change ? onInchange() : lancer(composition))}
+          onClick={() => lancer(composition)}
         >
           {libelleEnvoi}
         </Bouton>
@@ -268,8 +285,6 @@ const EditeurSeance = ({
         titre={`Groupe du superset ${feuille?.numero ?? ''}`}
         lignes={groupesDisponibles(available).map((g) => ({ libelle: GROUP_LABELS[g], onClick: () => choisirGroupe(g) }))}
       />
-
-      {garde && <GardeChangements actif={change} />}
     </Page>
   )
 }

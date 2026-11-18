@@ -116,7 +116,7 @@ export const deleteSession = async (sessionId) =>
 
 // ── Séances composées ────────────────────────────────────────────────────────
 // Chaque action renvoie { session }. createSession : l'accueil et la composition ;
-// updateSession : Modifier ; adjustExercise : Ajuster (page séance et player) ;
+// editSession : Modifier ; adjustExercise : Ajuster (page séance et player) ;
 // replaceExercise : Remplacer.
 
 /** Bases des exercices du compte (dernier réglage) : { [slug]: { reps, duration_sec, band_kg } }. */
@@ -132,9 +132,13 @@ export const getExerciseBases = async () => {
  */
 export const createSession = (composition) => callFunction('renfo-session', { action: 'create', composition })
 
-/** Recompose une séance à faire. */
-export const updateSession = (sessionId, composition) =>
-  callFunction('renfo-session', { action: 'update', session_id: sessionId, composition })
+/**
+ * Modifie une séance à faire (Modifier, lot R7) : seance = { warmup: [slug],
+ * supersets: [{ focus, rounds, exercises: [{ slug, remplace? }] }], cooldown: [slug] }.
+ * 400 edition_invalide si la séance n'est pas possible avec le matériel.
+ */
+export const editSession = (sessionId, seance) =>
+  callFunction('renfo-session', { action: 'edit', session_id: sessionId, seance })
 
 /** Ajuste un exercice : reglage = { slug, reps } ou { slug, duration_sec }, avec band_kg facultatif. */
 export const adjustExercise = (sessionId, reglage) =>
